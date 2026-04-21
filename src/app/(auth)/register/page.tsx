@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { authApi } from "@/modules/auth/api";
 import { registerSchema, type RegisterFormValues } from "@/modules/auth/schema";
@@ -19,6 +21,7 @@ import { FormField } from "@/components/forms/form-field";
 export default function RegisterPage() {
   const router = useRouter();
   const setPendingVerificationEmail = useAuthStore((state) => state.setPendingVerificationEmail);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -66,7 +69,18 @@ export default function RegisterPage() {
               </Select>
             </FormField>
             <FormField label="Password" required error={form.formState.errors.password?.message}>
-              <Input type="password" {...form.register("password")} />
+              <div className="relative">
+                <Input type={showPassword ? "text" : "password"} className="pr-10" {...form.register("password")} />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-500 hover:text-slate-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </FormField>
             <Button className="w-full" disabled={!form.formState.isValid || mutation.isPending} type="submit">
               Register
