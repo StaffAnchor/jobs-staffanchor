@@ -605,6 +605,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
 
   const jobsForm = useForm<{ jobs: JobFormValues[] }>({
     resolver: zodResolver(jobsArraySchema),
+    mode: "onChange",
     defaultValues: {
       jobs:
         snapshot.jobs.length > 0
@@ -705,6 +706,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
 
   const skillsForm = useForm<SkillsFormValues>({
     resolver: zodResolver(skillsSchema),
+    mode: "onChange",
     defaultValues: {
       skills: [],
       toolsCrm: [],
@@ -1140,7 +1142,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                     control={careerForm.control}
                     name="salesSubtypes"
                     render={({ field }) => (
-                      <FormField label="Sales Sub-types" required>
+                      <FormField label="Sales Sub-types (Multiselect)" required>
                         <div className="space-y-3">
                           {(primarySalesType === "B2B" || primarySalesType === "BOTH") && (
                             <div className="space-y-2">
@@ -1174,7 +1176,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                     control={careerForm.control}
                     name="customerSegments"
                     render={({ field }) => (
-                      <FormField label="Customer Segments" required>
+                      <FormField label="Customer Segments (Multiselect)" required>
                         <MultiSelectDropdownChips
                           options={customerSegmentOptions}
                           labels={customerSegmentOptionLabels}
@@ -1190,7 +1192,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                     control={careerForm.control}
                     name="geographyCovered"
                     render={({ field }) => (
-                      <FormField label="Geography Covered" required>
+                      <FormField label="Geography Covered (Multiselect)" required>
                         <MultiSelectDropdownChips
                           options={geographyCoveredOptions}
                           labels={geographyCoveredOptionLabels}
@@ -1204,7 +1206,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                     control={careerForm.control}
                     name="markets"
                     render={({ field }) => (
-                      <FormField label="Market Sold To" required>
+                      <FormField label="Market Sold To (Multiselect)" required>
                         <MultiSelectDropdownChips
                           options={marketSoldToOptions}
                           labels={marketSoldToOptionLabels}
@@ -1219,7 +1221,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                       control={careerForm.control}
                       name="industriesWorkedIn"
                       render={({ field }) => (
-                        <FormField label="Industries Worked In" required>
+                        <FormField label="Industries Worked In (Multiselect)" required>
                           <MultiSelectDropdownChips
                             options={industryOptions}
                             labels={industryOptionLabels}
@@ -1236,7 +1238,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                       control={careerForm.control}
                       name="industriesSoldInto"
                       render={({ field }) => (
-                        <FormField label="Industries Sold Into" required>
+                        <FormField label="Industries Sold Into (Multiselect)" required>
                           <MultiSelectDropdownChips
                             options={industryOptions}
                             labels={industryOptionLabels}
@@ -1337,7 +1339,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                           );
 
                           return (
-                            <FormField label="Sales Sub-types" required>
+                            <FormField label="Sales Sub-types (Multiselect)" required>
                               <div className="space-y-3">
                                 {(type === "B2B" || type === "BOTH") && (
                                   <div className="space-y-2">
@@ -1487,7 +1489,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                         control={jobsForm.control}
                         name={`jobs.${idx}.industriesSoldInto`}
                         render={({ field }) => (
-                          <FormField label="Industries Sold Into" required>
+                          <FormField label="Industries Sold Into (Multiselect)" required>
                             <MultiSelectDropdownChips
                               options={industryOptions}
                               labels={industryOptionLabels}
@@ -1504,7 +1506,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                         control={jobsForm.control}
                         name={`jobs.${idx}.geography`}
                         render={({ field }) => (
-                          <FormField label="Geography" required>
+                          <FormField label="Geography (Multiselect)" required>
                             <MultiSelectDropdownChips
                               options={jobGeographyOptions}
                               labels={jobGeographyOptionLabels}
@@ -1533,7 +1535,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                             control={jobsForm.control}
                             name={`jobs.${idx}.b2bContext.salesMethodologies`}
                             render={({ field }) => (
-                              <FormField label="Sales Methodology">
+                              <FormField label="Sales Methodologies (Multiselect)">
                                 <MultiSelectDropdownChips
                                   options={salesMethodologyOptions}
                                   labels={salesMethodologyOptionLabels}
@@ -1765,7 +1767,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                   >
                     Add Job
                   </Button>
-                  <Button type="submit" disabled={jobsMutation.isPending}>Save & Next</Button>
+                  <Button type="submit" disabled={!jobsForm.formState.isValid || jobsMutation.isPending}>Save & Next</Button>
                 </div>
               </div>
             </form>
@@ -1788,7 +1790,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
                 control={skillsForm.control}
                 name="toolsCrm"
                 render={({ field }) => (
-                  <FormField label="Tools & CRM" required>
+                  <FormField label="Tools & CRM (Multiselect)" required>
                     <MultiSelectDropdownChips
                       options={crmSalesPlatformOptions}
                       labels={crmSalesPlatformOptionLabels}
@@ -1838,7 +1840,7 @@ export function OnboardingWizard({ initialStep = 1 }: WizardProps) {
 
               <div className="flex justify-between">
                 <Button type="button" variant="outline" onClick={() => setCurrentStep(3)}>Back</Button>
-                <Button type="submit" disabled={skillsMutation.isPending}>Save & Next</Button>
+                <Button type="submit" disabled={!skillsForm.formState.isValid || skillsMutation.isPending}>Save & Next</Button>
               </div>
             </form>
           )}

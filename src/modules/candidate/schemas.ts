@@ -66,7 +66,7 @@ export const careerSchema = z
     customerSegments: z.array(z.string().min(1)).min(1),
     geographyCovered: z.array(z.string().min(1)).min(1),
     markets: z.array(z.string().min(1)).min(1),
-    highestQuotaValue: z.number().positive(),
+    highestQuotaValue: z.number().nonnegative(),
     quotaCurrency: z.enum(quotaCurrencyOptions),
     teamManagement: z.boolean(),
     largestTeamManaged: z.enum(largestTeamManagedOptions),

@@ -22,7 +22,9 @@ interface SearchableSkillPickerProps {
 export function SearchableSkillPicker({ value, onChange, maxCoreSkills = 5 }: SearchableSkillPickerProps) {
   const [query, setQuery] = useState("");
 
-  const normalizedQuery = query.trim().toLowerCase();
+  const trimmedQuery = query.trim();
+  const normalizedQuery = trimmedQuery.toLowerCase();
+  const shouldShowDropdown = normalizedQuery.length > 0;
 
   const filteredGroups = useMemo(() => {
     return skillOptionGroups
@@ -43,11 +45,17 @@ export function SearchableSkillPicker({ value, onChange, maxCoreSkills = 5 }: Se
   }, [normalizedQuery]);
 
   const addSkill = (name: string, category: string) => {
-    if (value.some((item) => item.name === name)) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       return;
     }
 
-    onChange([...value, { name, category, isCore: false }]);
+    if (value.some((item) => item.name.toLowerCase() === trimmedName.toLowerCase())) {
+      return;
+    }
+
+    onChange([...value, { name: trimmedName, category, isCore: false }]);
+    setQuery("");
   };
 
   const removeSkill = (name: string) => {
@@ -71,49 +79,84 @@ export function SearchableSkillPicker({ value, onChange, maxCoreSkills = 5 }: Se
     onChange(next);
   };
 
+  const hasExactSkillMatch = useMemo(
+    () =>
+      skillOptionGroups.some((group) =>
+        group.skills.some((skill) => skill.toLowerCase() === normalizedQuery)
+      ),
+    [normalizedQuery]
+  );
+
+  const hasTypedSkillAlreadySelected = value.some(
+    (item) => item.name.toLowerCase() === normalizedQuery
+  );
+
+  const canAddCustomSkill =
+    shouldShowDropdown &&
+    normalizedQuery.length >= 2 &&
+    !hasExactSkillMatch &&
+    !hasTypedSkillAlreadySelected;
+
   return (
     <div className="space-y-3">
+      <p className="text-sm font-medium text-slate-700">Skills</p>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <Input
           className="pl-9"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && canAddCustomSkill) {
+              event.preventDefault();
+              addSkill(trimmedQuery, "Custom");
+            }
+          }}
           placeholder="Search skills by keyword or category"
         />
       </div>
 
-      <div className="max-h-72 space-y-3 overflow-auto rounded-lg border border-slate-200 bg-white p-3">
-        {filteredGroups.length === 0 ? (
-          <p className="text-sm text-slate-500">No matching skills found.</p>
-        ) : (
-          filteredGroups.map((group) => (
-            <div key={group.category} className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{group.category}</p>
-              <div className="flex flex-wrap gap-2">
-                {group.skills.map((skill) => {
-                  const isSelected = value.some((item) => item.name === skill);
-                  return (
-                    <button
-                      key={skill}
-                      type="button"
-                      onClick={() => addSkill(skill, group.category)}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-left text-xs transition",
-                        isSelected
-                          ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
-                      )}
-                    >
-                      {skill}
-                    </button>
-                  );
-                })}
+      {shouldShowDropdown ? (
+        <div className="max-h-72 space-y-3 overflow-auto rounded-lg border border-slate-200 bg-white p-3">
+          {filteredGroups.length === 0 ? (
+            <p className="text-sm text-slate-500">No matching skills found.</p>
+          ) : (
+            filteredGroups.map((group) => (
+              <div key={group.category} className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{group.category}</p>
+                <div className="flex flex-wrap gap-2">
+                  {group.skills.map((skill) => {
+                    const isSelected = value.some((item) => item.name === skill);
+                    return (
+                      <button
+                        key={skill}
+                        type="button"
+                        onClick={() => addSkill(skill, group.category)}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-left text-xs transition",
+                          isSelected
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+                        )}
+                      >
+                        {skill}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+            ))
+          )}
+
+          {canAddCustomSkill ? (
+            <div className="border-t border-slate-200 pt-3">
+              <Button type="button" variant="outline" onClick={() => addSkill(trimmedQuery, "Custom")}> 
+                Add "{trimmedQuery}" as a custom skill
+              </Button>
             </div>
-          ))
-        )}
-      </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         {value.map((item) => (
