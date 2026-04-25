@@ -20,10 +20,23 @@ export interface ResendOtpInput {
   email: string;
 }
 
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export interface ResetPasswordInput {
+  token: string;
+  password: string;
+}
+
 export interface RegisterResponse {
   message: string;
 }
 
 export interface AccessTokenResponse {
   accessToken: string;
+}
+
+export interface MessageResponse {
+  message: string;
 }

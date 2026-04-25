@@ -105,6 +105,11 @@ export default function LoginPage() {
                 </button>
               </div>
             </FormField>
+            <div className="text-right text-sm">
+              <Link href="/forgot-password" className="font-medium text-slate-900 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             {form.formState.errors.root?.message ? (
               <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {form.formState.errors.root.message}

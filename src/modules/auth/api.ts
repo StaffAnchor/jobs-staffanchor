@@ -1,10 +1,13 @@
 import { axiosClient } from "@/lib/axios";
 import type {
   AccessTokenResponse,
+  ForgotPasswordInput,
   LoginInput,
+  MessageResponse,
   RegisterInput,
   RegisterResponse,
   ResendOtpInput,
+  ResetPasswordInput,
   VerifyEmailInput,
 } from "./types";
 
@@ -26,6 +29,16 @@ export const authApi = {
 
   async login(payload: LoginInput) {
     const { data } = await axiosClient.post<AccessTokenResponse>("/auth/login", payload);
+    return data;
+  },
+
+  async forgotPassword(payload: ForgotPasswordInput) {
+    const { data } = await axiosClient.post<MessageResponse>("/auth/forgot-password", payload);
+    return data;
+  },
+
+  async resetPassword(payload: ResetPasswordInput) {
+    const { data } = await axiosClient.post<MessageResponse>("/auth/reset-password", payload);
     return data;
   },
 };
