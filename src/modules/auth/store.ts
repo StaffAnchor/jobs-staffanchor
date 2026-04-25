@@ -22,34 +22,42 @@ interface AuthState {
   logout: () => void;
 }
 
+let setAuthState: ((state: Partial<AuthState>) => void) | null = null;
+
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
-      token: null,
-      role: null,
-      profileType: null,
-      isAuthenticated: false,
-      hasHydrated: false,
-      pendingVerificationEmail: "",
-      setPendingVerificationEmail: (email) => set({ pendingVerificationEmail: email }),
-      login: (token) => {
-        const payload = decodeJwtPayload<AuthTokenPayload>(token);
-        setStoredToken(token);
-        useOnboardingStore.getState().reset();
-        set({
-          token,
-          role: payload?.role ?? null,
-          profileType: payload?.profileType ?? null,
-          isAuthenticated: true,
-          hasHydrated: true,
-        });
-      },
-      logout: () => {
-        clearStoredToken();
-        useOnboardingStore.getState().reset();
-        set({ token: null, role: null, profileType: null, isAuthenticated: false, hasHydrated: true });
-      },
-    }),
+    (set) => {
+      if (!setAuthState) {
+        setAuthState = (state) => set(state);
+      }
+
+      return {
+        token: null,
+        role: null,
+        profileType: null,
+        isAuthenticated: false,
+        hasHydrated: false,
+        pendingVerificationEmail: "",
+        setPendingVerificationEmail: (email) => set({ pendingVerificationEmail: email }),
+        login: (token) => {
+          const payload = decodeJwtPayload<AuthTokenPayload>(token);
+          setStoredToken(token);
+          useOnboardingStore.getState().reset();
+          set({
+            token,
+            role: payload?.role ?? null,
+            profileType: payload?.profileType ?? null,
+            isAuthenticated: true,
+            hasHydrated: true,
+          });
+        },
+        logout: () => {
+          clearStoredToken();
+          useOnboardingStore.getState().reset();
+          set({ token: null, role: null, profileType: null, isAuthenticated: false, hasHydrated: true });
+        },
+      };
+    },
     {
       name: "staffanchor-auth",
       partialize: (state) => ({
@@ -62,7 +70,7 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => (state, error) => {
         if (error) {
           clearStoredToken();
-          useAuthStore.setState({
+          setAuthState?.({
             token: null,
             role: null,
             profileType: null,
@@ -73,18 +81,20 @@ export const useAuthStore = create<AuthState>()(
         }
 
         const hydratedToken = state?.token ?? null;
-        if (hydratedToken) {
+        const payload = hydratedToken ? decodeJwtPayload<AuthTokenPayload>(hydratedToken) : null;
+        const isTokenValid = Boolean(hydratedToken && payload);
+
+        if (isTokenValid && hydratedToken) {
           setStoredToken(hydratedToken);
         } else {
           clearStoredToken();
         }
 
-        const payload = hydratedToken ? decodeJwtPayload<AuthTokenPayload>(hydratedToken) : null;
-        useAuthStore.setState({
-          token: hydratedToken,
+        setAuthState?.({
+          token: isTokenValid ? hydratedToken : null,
           role: payload?.role ?? null,
           profileType: payload?.profileType ?? null,
-          isAuthenticated: Boolean(hydratedToken),
+          isAuthenticated: isTokenValid,
           hasHydrated: true,
         });
       },
