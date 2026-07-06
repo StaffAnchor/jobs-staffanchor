@@ -28,7 +28,22 @@ export const b2cSubDomains = [
   "Other Consumer Sales",
 ];
 
-export const nonSalesSubDomains = ["Marketing", "Operations", "Customer Success", "Other"];
+export const nonSalesSubDomains = [
+  "Marketing",
+  "Operations",
+  "Human Resources (HR)",
+  "Finance & Accounts",
+  "Customer Success",
+  "Information Technology (IT)",
+  "Product Management",
+  "Business Development / Strategy",
+  "Supply Chain & Procurement",
+  "Legal & Compliance",
+  "Administration",
+  "Design (UI/UX/Graphic)",
+  "Data & Analytics",
+  "Other",
+];
 
 export const roleLevelOptions = [
   "IC – Sales Development",
@@ -40,8 +55,148 @@ export const roleLevelOptions = [
   "VP / Head",
 ];
 
+// Legacy flat lists (kept for reference / backward compatibility) — superseded by
+// the currency-aware deal size bands below.
 export const dealSizeOptions = ["<5L", "5-25L", "25L-1Cr", "1Cr+"];
 export const ticketSizeOptions = ["<1L", "1-5L", "5-25L", "25L+"];
+
+// ---- Currency-aware deal size bands ----
+// B2B deal sizes run much higher than B2C ticket sizes, so each gets its own ladder,
+// and each is offered in both INR and USD since candidates may quote either.
+export const currencyOptions = ["INR", "USD"] as const;
+export type CurrencyValue = (typeof currencyOptions)[number];
+
+export const dealSizeBandsB2B: Record<CurrencyValue, string[]> = {
+  INR: [
+    "<5L",
+    "5L-10L",
+    "10L-15L",
+    "15L-20L",
+    "20L-30L",
+    "30L-50L",
+    "50L-1Cr",
+    "1Cr-5Cr",
+    "5Cr-10Cr",
+    "10Cr-20Cr",
+    "20Cr-40Cr",
+    "40Cr-75Cr",
+    "75Cr+",
+  ],
+  USD: [
+    "<$10K",
+    "$10K-$25K",
+    "$25K-$50K",
+    "$50K-$100K",
+    "$100K-$250K",
+    "$250K-$500K",
+    "$500K-$1M",
+    "$1M-$5M",
+    "$5M-$10M",
+    "$10M+",
+  ],
+};
+
+// B2C ticket sizes sit much lower than B2B deal sizes.
+export const dealSizeBandsB2C: Record<CurrencyValue, string[]> = {
+  INR: ["<10K", "10K-25K", "25K-50K", "50K-1L", "1L-2L", "2L-5L", "5L-10L", "10L-25L", "25L+"],
+  USD: ["<$500", "$500-$1K", "$1K-$5K", "$5K-$10K", "$10K-$25K", "$25K-$50K", "$50K+"],
+};
+
+export function dealSizeBandsFor(category: CategoryValue | null, currency: CurrencyValue | ""): string[] {
+  if (!currency) return [];
+  if (category === "b2c_sales") return dealSizeBandsB2C[currency];
+  return dealSizeBandsB2B[currency];
+}
+
+// ---- Role type / team size ----
+export const roleTypeOptions = ["Individual Contributor (IC)", "Leading a Team"] as const;
+
+export const teamSizeOptions = [
+  "1-5",
+  "6-10",
+  "11-20",
+  "21-30",
+  "31-40",
+  "41-50",
+  "51-75",
+  "76-100",
+  "101-150",
+  "151-200",
+  "201-300",
+  "301-400",
+  "401-500",
+  "501-750",
+  "751-1000",
+  "1000+",
+];
+
+// ---- Inside Sales specific fields ----
+export const insideSalesSubDomains = ["Inside Sales (B2B)", "Inside Sales (B2C)"];
+
+export const ahtOptions = [
+  "<3 mins",
+  "3-5 mins",
+  "5-8 mins",
+  "8-12 mins",
+  "12-20 mins",
+  "20+ mins",
+];
+
+export const dailyCallTargetOptions = [
+  "<20",
+  "20-40",
+  "40-60",
+  "60-80",
+  "80-100",
+  "100-150",
+  "150+",
+];
+
+export const dailyTalkTimeOptions = [
+  "<1 hour",
+  "1-2 hours",
+  "2-3 hours",
+  "3-4 hours",
+  "4-5 hours",
+  "5+ hours",
+];
+
+export const leadSourceOptions = [
+  "Inbound",
+  "Outbound",
+  "Social Media Campaigns",
+  "Contact Us / Website Forms",
+  "Influencer Leads",
+  "Referrals",
+  "Paid Ads",
+  "Events / Field",
+  "Partner / Channel",
+];
+
+// ---- Industries (multi-select, so profiles are searchable by industry) ----
+export const industryOptions = [
+  "SaaS / IT Products",
+  "IT Services / Consulting",
+  "BFSI (Banking / Fintech / Insurance)",
+  "Real Estate",
+  "Healthcare / Pharma",
+  "EdTech",
+  "Retail / E-commerce",
+  "FMCG / Consumer Goods",
+  "Manufacturing / Industrial",
+  "Telecom",
+  "Media / Entertainment",
+  "Travel / Hospitality",
+  "Logistics / Supply Chain",
+  "Automotive",
+  "Energy / Utilities",
+  "Government / Public Sector",
+  "NBFC",
+  "Insurance",
+  "Consulting",
+  "Agriculture / Agritech",
+  "Other",
+];
 export const defaultNoticePeriods = ["Immediate", "15 days", "30 days", "60 days", "90+ days"];
 
 export const salesCycleOptions = [
@@ -222,4 +377,103 @@ export const skillSuggestionsBySubDomain: Record<string, string[]> = {
 export function skillSuggestionsFor(subDomain: string | null): string[] {
   if (!subDomain) return [];
   return skillSuggestionsBySubDomain[subDomain] ?? [];
+}
+
+// ---- Master skills list, for typeahead search across ALL domains (not just the
+// suggested chips for the candidate's own sub-domain) — "type 's' and relevant
+// skills should show up" regardless of specialization. Deduplicated union of every
+// sub-domain's suggestions plus general/cross-functional skills.
+export const masterSkillsList: string[] = Array.from(
+  new Set([
+    ...Object.values(skillSuggestionsBySubDomain).flat(),
+    "Salesforce",
+    "HubSpot",
+    "Zoho CRM",
+    "LeadSquared",
+    "Freshsales",
+    "Pipedrive",
+    "MS Dynamics 365",
+    "SAP CRM",
+    "Oracle Sales Cloud",
+    "Outreach.io",
+    "Apollo.io",
+    "LinkedIn Sales Navigator",
+    "ZoomInfo",
+    "Gong",
+    "Clari",
+    "MEDDIC",
+    "MEDDPICC",
+    "SPIN Selling",
+    "Challenger Sale",
+    "Sandler",
+    "Solution Selling",
+    "Consultative Selling",
+    "Negotiation",
+    "Cold Calling",
+    "Cold Emailing",
+    "Prospecting",
+    "Lead Qualification",
+    "Discovery Calls",
+    "Demoing",
+    "Objection Handling",
+    "Pipeline Management",
+    "Forecasting",
+    "Territory Planning",
+    "Account Management",
+    "Key Account Management",
+    "Upselling",
+    "Cross-Selling",
+    "Renewals Management",
+    "Channel Management",
+    "Partner Enablement",
+    "Contract Negotiation",
+    "RFP Response",
+    "Tendering",
+    "Stakeholder Management",
+    "C-Suite Selling",
+    "Team Management",
+    "Sales Coaching",
+    "Sales Enablement",
+    "Sales Operations",
+    "Data Analysis",
+    "Excel (Advanced)",
+    "PowerPoint / Presentation Skills",
+    "Communication Skills",
+    "Public Speaking",
+    "Marketing",
+    "Digital Marketing",
+    "SEO",
+    "SEM",
+    "Content Strategy",
+    "Social Media Marketing",
+    "Campaign Management",
+    "Brand Management",
+    "Product Management",
+    "Product Marketing",
+    "Project Management",
+    "Process Improvement",
+    "Vendor Management",
+    "SOPs",
+    "Recruitment",
+    "HR Operations",
+    "Payroll",
+    "Performance Management",
+    "Financial Analysis",
+    "Budgeting",
+    "Accounting",
+    "Taxation",
+    "Compliance",
+    "Data Analytics",
+    "SQL",
+    "Power BI",
+    "Tableau",
+  ])
+).sort((a, b) => a.localeCompare(b));
+
+export function searchSkills(query: string, exclude: string[] = [], limit = 8): string[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return masterSkillsList
+    .filter((skill) => skill.toLowerCase().includes(q) && !exclude.includes(skill))
+    .slice(0, limit);
 }

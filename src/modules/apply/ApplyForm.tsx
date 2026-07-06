@@ -9,28 +9,38 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/forms/form-field";
 import {
+  ahtOptions,
   b2bSubDomains,
   b2cSubDomains,
   categoryOptions,
   ctcOptions,
+  currencyOptions,
   customerSegmentOptions,
-  dealSizeOptions,
+  dailyCallTargetOptions,
+  dailyTalkTimeOptions,
+  dealSizeBandsFor,
   defaultNoticePeriods,
   employmentStatusOptions,
   experienceOptions,
   funnelStageOptions,
   highestQualificationOptions,
+  industryOptions,
+  insideSalesSubDomains,
+  leadSourceOptions,
   nonSalesSubDomains,
   relocationOptions,
   roleLevelOptions,
+  roleTypeOptions,
   salesCycleOptions,
   salesMotionOptions,
+  searchSkills,
   sellingStyleOptions,
   skillSuggestionsFor,
   subDomainsForCategory,
-  ticketSizeOptions,
+  teamSizeOptions,
   workModeOptions,
   type CategoryValue,
+  type CurrencyValue,
 } from "@/modules/apply/options";
 
 const FALLBACK_QUOTES = [
@@ -60,26 +70,39 @@ type FormState = {
   expectedFixedCtc: string;
   expectedVariableCtc: string;
   highestQualification: string;
-  industries: string;
   workMode: string;
   openToRelocation: string;
   category: CategoryValue | "";
   subDomain: string;
   secondarySubDomains: string[];
   roleLevel: string;
-  dealSize: string;
-  ticketSize: string;
+  roleType: string;
+  teamSize: string;
+  dealCurrency: CurrencyValue | "";
+  dealSizeBand: string;
   cycle: string;
   motion: string[];
   style: string;
   segment: string;
   funnel: string;
   scope: string;
-  quotaY1: string;
-  quotaY2: string;
-  quotaY3: string;
+  aht: string;
+  dailyCallTarget: string;
+  dailyTalkTime: string;
+  leadSources: string[];
+  hasIcTarget: string;
+  quotaQ1: string;
+  quotaQ2: string;
+  quotaQ3: string;
+  quotaQ4: string;
+  teamQuotaQ1: string;
+  teamQuotaQ2: string;
+  teamQuotaQ3: string;
+  teamQuotaQ4: string;
   bestWin: string;
   toughLoss: string;
+  selectedIndustries: string[];
+  customIndustry: string;
   consent: boolean;
 };
 
@@ -102,26 +125,39 @@ const initialState: FormState = {
   expectedFixedCtc: "",
   expectedVariableCtc: "",
   highestQualification: "",
-  industries: "",
   workMode: "",
   openToRelocation: "",
   category: "",
   subDomain: "",
   secondarySubDomains: [],
   roleLevel: "",
-  dealSize: "",
-  ticketSize: "",
+  roleType: "",
+  teamSize: "",
+  dealCurrency: "",
+  dealSizeBand: "",
   cycle: "",
   motion: [],
   style: "",
   segment: "",
   funnel: "",
   scope: "",
-  quotaY1: "",
-  quotaY2: "",
-  quotaY3: "",
+  aht: "",
+  dailyCallTarget: "",
+  dailyTalkTime: "",
+  leadSources: [],
+  hasIcTarget: "",
+  quotaQ1: "",
+  quotaQ2: "",
+  quotaQ3: "",
+  quotaQ4: "",
+  teamQuotaQ1: "",
+  teamQuotaQ2: "",
+  teamQuotaQ3: "",
+  teamQuotaQ4: "",
   bestWin: "",
   toughLoss: "",
+  selectedIndustries: [],
+  customIndustry: "",
   consent: false,
 };
 
@@ -154,9 +190,18 @@ export default function ApplyForm() {
   const quote = useMemo(() => quotes[step % quotes.length], [quotes, step]);
   const subDomainOptions = subDomainsForCategory(values.category || null);
   const suggestedSkills = useMemo(() => skillSuggestionsFor(values.subDomain || null), [values.subDomain]);
+  const dealSizeOptions = useMemo(
+    () => dealSizeBandsFor(values.category || null, values.dealCurrency),
+    [values.category, values.dealCurrency]
+  );
+  const isInsideSales = insideSalesSubDomains.includes(values.subDomain);
+  const skillSearchResults = useMemo(
+    () => searchSkills(values.customSkill, values.selectedSkills),
+    [values.customSkill, values.selectedSkills]
+  );
 
-  function addCustomSkill() {
-    const skill = values.customSkill.trim();
+  function addCustomSkill(skillOverride?: string) {
+    const skill = (skillOverride ?? values.customSkill).trim();
     if (!skill) return;
     setValues((prev) =>
       prev.selectedSkills.includes(skill)
@@ -165,11 +210,24 @@ export default function ApplyForm() {
     );
   }
 
+  function addCustomIndustry() {
+    const industry = values.customIndustry.trim();
+    if (!industry) return;
+    setValues((prev) =>
+      prev.selectedIndustries.includes(industry)
+        ? { ...prev, customIndustry: "" }
+        : { ...prev, selectedIndustries: [...prev.selectedIndustries, industry], customIndustry: "" }
+    );
+  }
+
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
   }
 
-  function toggleArrayValue(key: "secondarySubDomains" | "motion" | "selectedSkills", value: string) {
+  function toggleArrayValue(
+    key: "secondarySubDomains" | "motion" | "selectedSkills" | "leadSources" | "selectedIndustries",
+    value: string
+  ) {
     setValues((prev) => {
       const current = prev[key];
       const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
@@ -192,6 +250,8 @@ export default function ApplyForm() {
       if (!values.category) return "Please select a category.";
       if (!values.subDomain) return "Please select your primary specialization.";
       if (!values.roleLevel) return "Please select your role level.";
+      if (!values.roleType) return "Please select whether you are an IC or leading a team.";
+      if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
     }
     if (step === 4) {
       if (!values.consent) return "Please confirm consent to continue.";
@@ -236,15 +296,35 @@ export default function ApplyForm() {
         resumeFileUrl = path;
       }
 
-      const segmentData: Record<string, unknown> = { role_level: values.roleLevel };
-      const quota = [values.quotaY1, values.quotaY2, values.quotaY3]
+      const segmentData: Record<string, unknown> = {
+        role_level: values.roleLevel,
+        role_type: values.roleType === "Leading a Team" ? "Team Lead" : "IC",
+      };
+
+      if (values.roleType === "Leading a Team" && values.teamSize) {
+        segmentData.team_size = values.teamSize;
+      }
+
+      // Quarterly attainment: an IC (or a team lead who also carries an individual
+      // number) reports their own last-4-quarters target attainment under "quota";
+      // a team lead with no individual number reports the team's under "team_quota".
+      const icQuota = [values.quotaQ1, values.quotaQ2, values.quotaQ3, values.quotaQ4]
         .filter((v) => v.trim() !== "")
         .map((v) => Number(v));
-      if (quota.length) segmentData.quota = quota;
+      const teamQuota = [values.teamQuotaQ1, values.teamQuotaQ2, values.teamQuotaQ3, values.teamQuotaQ4]
+        .filter((v) => v.trim() !== "")
+        .map((v) => Number(v));
+
+      if (values.roleType === "Leading a Team" && values.hasIcTarget === "No") {
+        if (teamQuota.length) segmentData.team_quota = teamQuota;
+      } else if (icQuota.length) {
+        segmentData.quota = icQuota;
+      }
 
       if (values.category === "b2b_sales") {
         Object.assign(segmentData, {
-          deal_size: values.dealSize || undefined,
+          deal_size: values.dealSizeBand || undefined,
+          deal_size_currency: values.dealCurrency || undefined,
           cycle: values.cycle || undefined,
           style: values.style || undefined,
           motion: values.motion.length ? values.motion : undefined,
@@ -252,9 +332,19 @@ export default function ApplyForm() {
         });
       } else if (values.category === "b2c_sales") {
         Object.assign(segmentData, {
-          ticket: values.ticketSize || undefined,
+          ticket: values.dealSizeBand || undefined,
+          ticket_currency: values.dealCurrency || undefined,
           funnel: values.funnel || undefined,
           scope: values.scope || undefined,
+        });
+      }
+
+      if (isInsideSales) {
+        Object.assign(segmentData, {
+          aht: values.aht || undefined,
+          daily_call_target: values.dailyCallTarget || undefined,
+          daily_talk_time: values.dailyTalkTime || undefined,
+          lead_sources: values.leadSources.length ? values.leadSources : undefined,
         });
       }
 
@@ -295,9 +385,7 @@ export default function ApplyForm() {
         open_to_relocation: values.openToRelocation || null,
         work_mode: values.workMode || null,
         highest_qualification: values.highestQualification || null,
-        industries: values.industries
-          ? values.industries.split(",").map((s) => s.trim()).filter(Boolean)
-          : [],
+        industries: values.selectedIndustries,
         skills: values.selectedSkills.length ? values.selectedSkills.join(", ") : null,
         consent: values.consent,
       };
@@ -589,18 +677,128 @@ export default function ApplyForm() {
                     </Select>
                   </FormField>
 
-                  {values.category === "b2b_sales" && (
+                  <FormField label="Current Role Type" required>
+                    <Select
+                      value={values.roleType}
+                      onChange={(e) => {
+                        update("roleType", e.target.value);
+                        if (e.target.value !== "Leading a Team") update("teamSize", "");
+                      }}
+                    >
+                      <option value="">Select...</option>
+                      {roleTypeOptions.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+
+                  {values.roleType === "Leading a Team" && (
+                    <FormField label="Team Size" required>
+                      <Select value={values.teamSize} onChange={(e) => update("teamSize", e.target.value)}>
+                        <option value="">Select...</option>
+                        {teamSizeOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                  )}
+
+                  {isInsideSales && (
                     <>
-                      <FormField label="Typical Deal Size">
-                        <Select value={values.dealSize} onChange={(e) => update("dealSize", e.target.value)}>
+                      <p className="pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Inside Sales Specifics
+                      </p>
+                      <FormField label="Average Handling Time (AHT)">
+                        <Select value={values.aht} onChange={(e) => update("aht", e.target.value)}>
                           <option value="">Select...</option>
-                          {dealSizeOptions.map((o) => (
+                          {ahtOptions.map((o) => (
                             <option key={o} value={o}>
                               {o}
                             </option>
                           ))}
                         </Select>
                       </FormField>
+                      <FormField label="Daily Call Target (per user)">
+                        <Select
+                          value={values.dailyCallTarget}
+                          onChange={(e) => update("dailyCallTarget", e.target.value)}
+                        >
+                          <option value="">Select...</option>
+                          {dailyCallTargetOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                      <FormField label="Daily Talk-Time (hours, per user)">
+                        <Select
+                          value={values.dailyTalkTime}
+                          onChange={(e) => update("dailyTalkTime", e.target.value)}
+                        >
+                          <option value="">Select...</option>
+                          {dailyTalkTimeOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                      <FormField label="Lead Source / Process (select all that apply)">
+                        <div className="grid gap-1.5">
+                          {leadSourceOptions.map((o) => (
+                            <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={values.leadSources.includes(o)}
+                                onChange={() => toggleArrayValue("leadSources", o)}
+                              />
+                              {o}
+                            </label>
+                          ))}
+                        </div>
+                      </FormField>
+                    </>
+                  )}
+
+                  {values.category === "b2b_sales" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField label="Deal Size Currency">
+                          <Select
+                            value={values.dealCurrency}
+                            onChange={(e) => {
+                              update("dealCurrency", e.target.value as CurrencyValue | "");
+                              update("dealSizeBand", "");
+                            }}
+                          >
+                            <option value="">Select...</option>
+                            {currencyOptions.map((o) => (
+                              <option key={o} value={o}>
+                                {o}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormField>
+                        <FormField label="Typical Deal Size">
+                          <Select
+                            value={values.dealSizeBand}
+                            onChange={(e) => update("dealSizeBand", e.target.value)}
+                            disabled={!values.dealCurrency}
+                          >
+                            <option value="">{values.dealCurrency ? "Select..." : "Choose currency first"}</option>
+                            {dealSizeOptions.map((o) => (
+                              <option key={o} value={o}>
+                                {o}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormField>
+                      </div>
                       <FormField label="Typical Sales Cycle">
                         <Select value={values.cycle} onChange={(e) => update("cycle", e.target.value)}>
                           <option value="">Select...</option>
@@ -650,16 +848,38 @@ export default function ApplyForm() {
 
                   {values.category === "b2c_sales" && (
                     <>
-                      <FormField label="Typical Ticket Size">
-                        <Select value={values.ticketSize} onChange={(e) => update("ticketSize", e.target.value)}>
-                          <option value="">Select...</option>
-                          {ticketSizeOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField label="Ticket Size Currency">
+                          <Select
+                            value={values.dealCurrency}
+                            onChange={(e) => {
+                              update("dealCurrency", e.target.value as CurrencyValue | "");
+                              update("dealSizeBand", "");
+                            }}
+                          >
+                            <option value="">Select...</option>
+                            {currencyOptions.map((o) => (
+                              <option key={o} value={o}>
+                                {o}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormField>
+                        <FormField label="Typical Ticket Size">
+                          <Select
+                            value={values.dealSizeBand}
+                            onChange={(e) => update("dealSizeBand", e.target.value)}
+                            disabled={!values.dealCurrency}
+                          >
+                            <option value="">{values.dealCurrency ? "Select..." : "Choose currency first"}</option>
+                            {dealSizeOptions.map((o) => (
+                              <option key={o} value={o}>
+                                {o}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormField>
+                      </div>
                       <FormField label="Funnel Stage">
                         <Select value={values.funnel} onChange={(e) => update("funnel", e.target.value)}>
                           <option value="">Select...</option>
@@ -686,20 +906,75 @@ export default function ApplyForm() {
 
           {step === 3 && (
             <>
-              <p className="text-sm text-slate-600">
-                If applicable, share your last 3 years&apos; quota attainment (%). Leave blank if not applicable.
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                <FormField label="Year 1">
-                  <Input type="number" value={values.quotaY1} onChange={(e) => update("quotaY1", e.target.value)} />
+              {values.roleType === "Leading a Team" && (
+                <FormField label="Do you also carry an individual (IC) quota, on top of the team target?">
+                  <Select value={values.hasIcTarget} onChange={(e) => update("hasIcTarget", e.target.value)}>
+                    <option value="">Select...</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No — only a team target</option>
+                  </Select>
                 </FormField>
-                <FormField label="Year 2">
-                  <Input type="number" value={values.quotaY2} onChange={(e) => update("quotaY2", e.target.value)} />
-                </FormField>
-                <FormField label="Year 3">
-                  <Input type="number" value={values.quotaY3} onChange={(e) => update("quotaY3", e.target.value)} />
-                </FormField>
-              </div>
+              )}
+
+              {values.roleType === "Leading a Team" && values.hasIcTarget === "No" ? (
+                <>
+                  <p className="text-sm text-slate-600">
+                    Share your team&apos;s overall target attainment (%) for the last 4 quarters. Leave blank if not
+                    applicable.
+                  </p>
+                  <div className="grid grid-cols-4 gap-3">
+                    <FormField label="Q1 (oldest)">
+                      <Input
+                        type="number"
+                        value={values.teamQuotaQ1}
+                        onChange={(e) => update("teamQuotaQ1", e.target.value)}
+                      />
+                    </FormField>
+                    <FormField label="Q2">
+                      <Input
+                        type="number"
+                        value={values.teamQuotaQ2}
+                        onChange={(e) => update("teamQuotaQ2", e.target.value)}
+                      />
+                    </FormField>
+                    <FormField label="Q3">
+                      <Input
+                        type="number"
+                        value={values.teamQuotaQ3}
+                        onChange={(e) => update("teamQuotaQ3", e.target.value)}
+                      />
+                    </FormField>
+                    <FormField label="Q4 (latest)">
+                      <Input
+                        type="number"
+                        value={values.teamQuotaQ4}
+                        onChange={(e) => update("teamQuotaQ4", e.target.value)}
+                      />
+                    </FormField>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-600">
+                    Share your individual target attainment (%) for the last 4 quarters. Leave blank if not
+                    applicable.
+                  </p>
+                  <div className="grid grid-cols-4 gap-3">
+                    <FormField label="Q1 (oldest)">
+                      <Input type="number" value={values.quotaQ1} onChange={(e) => update("quotaQ1", e.target.value)} />
+                    </FormField>
+                    <FormField label="Q2">
+                      <Input type="number" value={values.quotaQ2} onChange={(e) => update("quotaQ2", e.target.value)} />
+                    </FormField>
+                    <FormField label="Q3">
+                      <Input type="number" value={values.quotaQ3} onChange={(e) => update("quotaQ3", e.target.value)} />
+                    </FormField>
+                    <FormField label="Q4 (latest)">
+                      <Input type="number" value={values.quotaQ4} onChange={(e) => update("quotaQ4", e.target.value)} />
+                    </FormField>
+                  </div>
+                </>
+              )}
               <FormField label="Tell us about your best win">
                 <textarea
                   className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
@@ -770,26 +1045,79 @@ export default function ApplyForm() {
                         ))}
                     </div>
                   )}
+                  <div className="relative">
+                    <div className="flex gap-2 pt-1">
+                      <Input
+                        placeholder="Type to search skills (e.g. 's' for Salesforce, SPIN...)"
+                        value={values.customSkill}
+                        onChange={(e) => update("customSkill", e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addCustomSkill();
+                          }
+                        }}
+                      />
+                      <Button type="button" variant="outline" onClick={() => addCustomSkill()}>
+                        Add
+                      </Button>
+                    </div>
+                    {skillSearchResults.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
+                        {skillSearchResults.map((skill) => (
+                          <button
+                            type="button"
+                            key={skill}
+                            onClick={() => addCustomSkill(skill)}
+                            className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                          >
+                            {skill}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </FormField>
+              <FormField label="Key Industries Worked In (multi-select, for searchability)">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {industryOptions.map((industry) => {
+                      const active = values.selectedIndustries.includes(industry);
+                      return (
+                        <button
+                          type="button"
+                          key={industry}
+                          onClick={() => toggleArrayValue("selectedIndustries", industry)}
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                            active
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                          }`}
+                        >
+                          {active ? "✓ " : "+ "}
+                          {industry}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <div className="flex gap-2 pt-1">
                     <Input
-                      placeholder="Add another skill or tool"
-                      value={values.customSkill}
-                      onChange={(e) => update("customSkill", e.target.value)}
+                      placeholder="Add another industry"
+                      value={values.customIndustry}
+                      onChange={(e) => update("customIndustry", e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          addCustomSkill();
+                          addCustomIndustry();
                         }
                       }}
                     />
-                    <Button type="button" variant="outline" onClick={addCustomSkill}>
+                    <Button type="button" variant="outline" onClick={addCustomIndustry}>
                       Add
                     </Button>
                   </div>
                 </div>
-              </FormField>
-              <FormField label="Industries Worked In (comma-separated)">
-                <Input value={values.industries} onChange={(e) => update("industries", e.target.value)} />
               </FormField>
               <FormField label="Work Mode Preference">
                 <Select value={values.workMode} onChange={(e) => update("workMode", e.target.value)}>
