@@ -27,8 +27,8 @@ const profileHighlights = [
 const journey = [
   {
     step: "01",
-    title: "Create your account",
-    description: "Register in minutes, verify your email, and choose the profile path that matches your goals.",
+    title: "Build your profile",
+    description: "No account or password needed — share your details in one guided flow, in about 10 minutes.",
   },
   {
     step: "02",
@@ -296,11 +296,6 @@ export default function Home() {
               <Link href="/register">
                 <Button className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-teal-800 hover:bg-teal-50">
                   Create Free Profile
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button variant="outline" className="h-11 rounded-full border-white/50 bg-transparent px-6 text-sm font-semibold text-white hover:bg-white/10 hover:text-white">
-                  Sign In
                 </Button>
               </Link>
             </div>

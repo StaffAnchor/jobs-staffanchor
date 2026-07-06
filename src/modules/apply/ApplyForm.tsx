@@ -12,10 +12,12 @@ import {
   b2bSubDomains,
   b2cSubDomains,
   categoryOptions,
+  ctcOptions,
   customerSegmentOptions,
   dealSizeOptions,
   defaultNoticePeriods,
   employmentStatusOptions,
+  experienceOptions,
   funnelStageOptions,
   highestQualificationOptions,
   nonSalesSubDomains,
@@ -24,6 +26,7 @@ import {
   salesCycleOptions,
   salesMotionOptions,
   sellingStyleOptions,
+  skillSuggestionsFor,
   subDomainsForCategory,
   ticketSizeOptions,
   workModeOptions,
@@ -51,6 +54,8 @@ type FormState = {
   currentFixedCtc: string;
   currentVariableCtc: string;
   esopsHeld: boolean;
+  selectedSkills: string[];
+  customSkill: string;
   noticePeriod: string;
   expectedFixedCtc: string;
   expectedVariableCtc: string;
@@ -75,7 +80,6 @@ type FormState = {
   quotaY3: string;
   bestWin: string;
   toughLoss: string;
-  skills: string;
   consent: boolean;
 };
 
@@ -92,6 +96,8 @@ const initialState: FormState = {
   currentFixedCtc: "",
   currentVariableCtc: "",
   esopsHeld: false,
+  selectedSkills: [],
+  customSkill: "",
   noticePeriod: "",
   expectedFixedCtc: "",
   expectedVariableCtc: "",
@@ -116,7 +122,6 @@ const initialState: FormState = {
   quotaY3: "",
   bestWin: "",
   toughLoss: "",
-  skills: "",
   consent: false,
 };
 
@@ -148,12 +153,23 @@ export default function ApplyForm() {
 
   const quote = useMemo(() => quotes[step % quotes.length], [quotes, step]);
   const subDomainOptions = subDomainsForCategory(values.category || null);
+  const suggestedSkills = useMemo(() => skillSuggestionsFor(values.subDomain || null), [values.subDomain]);
+
+  function addCustomSkill() {
+    const skill = values.customSkill.trim();
+    if (!skill) return;
+    setValues((prev) =>
+      prev.selectedSkills.includes(skill)
+        ? { ...prev, customSkill: "" }
+        : { ...prev, selectedSkills: [...prev.selectedSkills, skill], customSkill: "" }
+    );
+  }
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
   }
 
-  function toggleArrayValue(key: "secondarySubDomains" | "motion", value: string) {
+  function toggleArrayValue(key: "secondarySubDomains" | "motion" | "selectedSkills", value: string) {
     setValues((prev) => {
       const current = prev[key];
       const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
@@ -170,6 +186,7 @@ export default function ApplyForm() {
     if (step === 1) {
       if (!values.currentEmploymentStatus) return "Employment status is required.";
       if (!values.totalExperienceYears) return "Total experience is required.";
+      if (!values.currentFixedCtc) return "Current fixed CTC is required.";
     }
     if (step === 2) {
       if (!values.category) return "Please select a category.";
@@ -213,7 +230,10 @@ export default function ApplyForm() {
           contentType: resumeFile.type || undefined,
         });
         if (uploadError) throw new Error(`Resume upload failed: ${uploadError.message}`);
-        resumeFileUrl = `resumes/${path}`;
+        // Store the exact object path within the 'resumes' bucket (no bucket-name
+        // prefix) so it matches storage.objects.name and can be resolved later
+        // via supabase.storage.from('resumes').createSignedUrl(resumeFileUrl, ...).
+        resumeFileUrl = path;
       }
 
       const segmentData: Record<string, unknown> = { role_level: values.roleLevel };
@@ -248,13 +268,22 @@ export default function ApplyForm() {
         current_employer: values.currentEmployer || null,
         current_job_title: values.currentJobTitle || null,
         current_employment_status: values.currentEmploymentStatus || null,
-        total_experience_years: values.totalExperienceYears ? Number(values.totalExperienceYears) : null,
-        current_fixed_ctc: values.currentFixedCtc ? Number(values.currentFixedCtc) : null,
-        current_variable_ctc: values.currentVariableCtc ? Number(values.currentVariableCtc) : null,
+        // "120L+" and "40+ years" are stored using sentinel values (121, 41) in the
+        // dropdowns so they sort after real values; clamp them back to their real
+        // floor (120 / 40) for the numeric columns.
+        total_experience_years: values.totalExperienceYears
+          ? Math.min(Number(values.totalExperienceYears), 40)
+          : null,
+        current_fixed_ctc: values.currentFixedCtc ? Math.min(Number(values.currentFixedCtc), 120) : null,
+        current_variable_ctc: values.currentVariableCtc
+          ? Math.min(Number(values.currentVariableCtc), 120)
+          : null,
         esops_held: values.esopsHeld,
         notice_period: values.noticePeriod || null,
-        expected_fixed_ctc: values.expectedFixedCtc ? Number(values.expectedFixedCtc) : null,
-        expected_variable_ctc: values.expectedVariableCtc ? Number(values.expectedVariableCtc) : null,
+        expected_fixed_ctc: values.expectedFixedCtc ? Math.min(Number(values.expectedFixedCtc), 120) : null,
+        expected_variable_ctc: values.expectedVariableCtc
+          ? Math.min(Number(values.expectedVariableCtc), 120)
+          : null,
         category: values.category || null,
         sub_domain: values.subDomain || null,
         secondary_sub_domains: values.secondarySubDomains,
@@ -269,7 +298,7 @@ export default function ApplyForm() {
         industries: values.industries
           ? values.industries.split(",").map((s) => s.trim()).filter(Boolean)
           : [],
-        skills: values.skills || null,
+        skills: values.selectedSkills.length ? values.selectedSkills.join(", ") : null,
         consent: values.consent,
       };
 
@@ -289,41 +318,54 @@ export default function ApplyForm() {
 
   if (submitted) {
     return (
-      <main className="mx-auto flex w-full max-w-xl px-4 py-10 sm:px-6 lg:px-8">
-        <Card className="w-full">
-          <CardContent className="space-y-3 py-8 text-center">
-            <h2 className="text-xl font-semibold text-slate-900">You&apos;re on record.</h2>
-            <p className="text-sm text-slate-600">
-              Thanks, {values.fullName.split(" ")[0] || "there"}. A StaffAnchor recruiter will review your profile
-              and reach out if there&apos;s a mandate fit. No spam, no cold calls for irrelevant roles.
-            </p>
-          </CardContent>
-        </Card>
-      </main>
+      <div className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_38%),radial-gradient(circle_at_80%_15%,rgba(14,165,233,0.14),transparent_32%),linear-gradient(to_bottom,#f8fbff_0%,#ffffff_45%,#f4f7fb_100%)]">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-emerald-200/30 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-sky-200/30 blur-3xl" />
+        <main className="relative mx-auto flex w-full max-w-xl px-4 py-16 sm:px-6 lg:px-8">
+          <Card className="w-full border-slate-200 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.35)]">
+            <CardContent className="space-y-3 py-10 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                ✓
+              </div>
+              <h2 className="text-xl font-bold text-slate-950">You&apos;re on record.</h2>
+              <p className="text-sm leading-6 text-slate-600">
+                Thanks, {values.fullName.split(" ")[0] || "there"}. A StaffAnchor recruiter will review your profile
+                and reach out if there&apos;s a mandate fit. No spam, no cold calls for irrelevant roles.
+              </p>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-10 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between text-xs font-medium text-slate-500">
-        <span>
-          Step {step + 1} of {STEPS.length}: {STEPS[step]}
-        </span>
-        <span>{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
-      </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-        <div
-          className="h-full rounded-full bg-slate-900 transition-all"
-          style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-        />
-      </div>
+    <div className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_38%),radial-gradient(circle_at_80%_15%,rgba(14,165,233,0.14),transparent_32%),linear-gradient(to_bottom,#f8fbff_0%,#ffffff_45%,#f4f7fb_100%)]">
+      <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-emerald-200/30 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 -right-24 h-72 w-72 rounded-full bg-sky-200/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-slate-200/40 blur-3xl" />
+      <main className="relative mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-10 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+          <span>
+            Step {step + 1} of {STEPS.length}: {STEPS[step]}
+          </span>
+          <span>{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
+        </div>
+        <div className="flex gap-1.5">
+          {STEPS.map((label, i) => (
+            <div
+              key={label}
+              className={`h-1.5 flex-1 overflow-hidden rounded-full ${i <= step ? "bg-slate-900" : "bg-slate-200"}`}
+            />
+          ))}
+        </div>
 
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Build Your Profile</CardTitle>
-          <p className="mt-1 text-sm italic text-slate-500">&ldquo;{quote}&rdquo;</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <Card className="w-full border-slate-200 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.35)]">
+          <CardHeader className="rounded-t-xl bg-slate-950 text-white">
+            <CardTitle className="text-white">Build Your Profile</CardTitle>
+            <p className="mt-1 text-sm italic text-slate-300">&ldquo;{quote}&rdquo;</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
           {step === 0 && (
             <>
               <FormField label="Full Name" required>
@@ -378,29 +420,45 @@ export default function ApplyForm() {
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Total Experience (years)" required>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.5"
+              <FormField label="Total Experience" required>
+                <Select
                   value={values.totalExperienceYears}
                   onChange={(e) => update("totalExperienceYears", e.target.value)}
-                />
+                >
+                  <option value="">Select...</option>
+                  {experienceOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
               </FormField>
               <div className="grid grid-cols-2 gap-3">
-                <FormField label="Current Fixed CTC (LPA)">
-                  <Input
-                    type="number"
+                <FormField label="Current Fixed CTC" required>
+                  <Select
                     value={values.currentFixedCtc}
                     onChange={(e) => update("currentFixedCtc", e.target.value)}
-                  />
+                  >
+                    <option value="">Select...</option>
+                    {ctcOptions.map((o) => (
+                      <option key={o.label} value={o.value ?? ""}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
                 </FormField>
-                <FormField label="Current Variable CTC (LPA)">
-                  <Input
-                    type="number"
+                <FormField label="Current Variable CTC">
+                  <Select
                     value={values.currentVariableCtc}
                     onChange={(e) => update("currentVariableCtc", e.target.value)}
-                  />
+                  >
+                    <option value="">N/A</option>
+                    {ctcOptions.map((o) => (
+                      <option key={o.label} value={o.value ?? ""}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
                 </FormField>
               </div>
               <FormField label="ESOPs Held">
@@ -426,19 +484,31 @@ export default function ApplyForm() {
                 </FormField>
               ) : null}
               <div className="grid grid-cols-2 gap-3">
-                <FormField label="Expected Fixed CTC (LPA)">
-                  <Input
-                    type="number"
+                <FormField label="Expected Fixed CTC">
+                  <Select
                     value={values.expectedFixedCtc}
                     onChange={(e) => update("expectedFixedCtc", e.target.value)}
-                  />
+                  >
+                    <option value="">Select...</option>
+                    {ctcOptions.map((o) => (
+                      <option key={o.label} value={o.value ?? ""}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
                 </FormField>
-                <FormField label="Expected Variable CTC (LPA)">
-                  <Input
-                    type="number"
+                <FormField label="Expected Variable CTC">
+                  <Select
                     value={values.expectedVariableCtc}
                     onChange={(e) => update("expectedVariableCtc", e.target.value)}
-                  />
+                  >
+                    <option value="">N/A</option>
+                    {ctcOptions.map((o) => (
+                      <option key={o.label} value={o.value ?? ""}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
                 </FormField>
               </div>
               <FormField label="Highest Qualification">
@@ -649,8 +719,74 @@ export default function ApplyForm() {
 
           {step === 4 && (
             <>
-              <FormField label="Key Skills / Tools (comma-separated)">
-                <Input value={values.skills} onChange={(e) => update("skills", e.target.value)} />
+              <FormField label="Key Skills / Tools">
+                <div className="space-y-2">
+                  {suggestedSkills.length > 0 && (
+                    <p className="text-xs text-slate-500">
+                      Suggested for {values.subDomain || "your specialization"} — tap to add:
+                    </p>
+                  )}
+                  {suggestedSkills.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedSkills.map((skill) => {
+                        const active = values.selectedSkills.includes(skill);
+                        return (
+                          <button
+                            type="button"
+                            key={skill}
+                            onClick={() => toggleArrayValue("selectedSkills", skill)}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                              active
+                                ? "border-slate-900 bg-slate-900 text-white"
+                                : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                            }`}
+                          >
+                            {active ? "✓ " : "+ "}
+                            {skill}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {values.selectedSkills.filter((s) => !suggestedSkills.includes(s)).length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {values.selectedSkills
+                        .filter((s) => !suggestedSkills.includes(s))
+                        .map((skill) => (
+                          <span
+                            key={skill}
+                            className="inline-flex items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-xs font-medium text-white"
+                          >
+                            {skill}
+                            <button
+                              type="button"
+                              aria-label={`Remove ${skill}`}
+                              onClick={() => toggleArrayValue("selectedSkills", skill)}
+                              className="ml-1 text-white/80 hover:text-white"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <Input
+                      placeholder="Add another skill or tool"
+                      value={values.customSkill}
+                      onChange={(e) => update("customSkill", e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCustomSkill();
+                        }
+                      }}
+                    />
+                    <Button type="button" variant="outline" onClick={addCustomSkill}>
+                      Add
+                    </Button>
+                  </div>
+                </div>
               </FormField>
               <FormField label="Industries Worked In (comma-separated)">
                 <Input value={values.industries} onChange={(e) => update("industries", e.target.value)} />
@@ -707,7 +843,8 @@ export default function ApplyForm() {
             )}
           </div>
         </CardContent>
-      </Card>
-    </main>
+        </Card>
+      </main>
+    </div>
   );
 }

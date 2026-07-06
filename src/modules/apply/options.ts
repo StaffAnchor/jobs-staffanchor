@@ -93,3 +93,133 @@ export function subDomainsForCategory(category: CategoryValue | null): string[] 
   if (category === "non_sales") return nonSalesSubDomains;
   return [];
 }
+
+// ---- CTC dropdown (LPA, in whole-lakh increments 0-120, plus a 120L+ ceiling) ----
+export type CtcOption = { value: number | null; label: string };
+
+export const ctcOptions: CtcOption[] = [
+  ...Array.from({ length: 121 }, (_, i) => ({ value: i, label: i === 0 ? "0 LPA" : `${i} LPA` })),
+  { value: 121, label: "120L+" }, // sentinel: stored as 121 to distinguish from an exact 120
+];
+
+// ---- Experience dropdown (Fresher + 1-40 years, plus a 40+ ceiling) ----
+export type ExperienceOption = { value: number; label: string };
+
+export const experienceOptions: ExperienceOption[] = [
+  { value: 0, label: "Fresher" },
+  ...Array.from({ length: 40 }, (_, i) => {
+    const years = i + 1;
+    return { value: years, label: years === 1 ? "1 year" : `${years} years` };
+  }),
+  { value: 41, label: "40+ years" },
+];
+
+// ---- Skill suggestions, keyed by sub-domain, so the form feels tailored rather than generic ----
+export const skillSuggestionsBySubDomain: Record<string, string[]> = {
+  "SaaS Sales": [
+    "Salesforce",
+    "HubSpot",
+    "Cold Calling",
+    "Solution Selling",
+    "MEDDIC",
+    "Demoing",
+    "Negotiation",
+    "LinkedIn Sales Navigator",
+    "Outbound Prospecting",
+    "Pipeline Management",
+  ],
+  "Enterprise Sales (Non-SaaS)": [
+    "Account-Based Selling",
+    "Stakeholder Management",
+    "RFP Response",
+    "Contract Negotiation",
+    "Solution Selling",
+    "C-Suite Selling",
+    "Salesforce",
+    "Relationship Management",
+  ],
+  "Government / Institutional Sales": [
+    "Tendering",
+    "GeM Portal",
+    "RFP Response",
+    "Compliance",
+    "Relationship Management",
+    "Public Procurement",
+    "Contract Negotiation",
+  ],
+  "Inside Sales (B2B)": [
+    "Cold Calling",
+    "Lead Qualification",
+    "CRM (Salesforce/HubSpot)",
+    "Email Outreach",
+    "Objection Handling",
+    "Pipeline Management",
+    "Discovery Calls",
+  ],
+  "Channel / Partner / Distribution Sales": [
+    "Channel Management",
+    "Distributor Relationships",
+    "Partner Enablement",
+    "Negotiation",
+    "Territory Planning",
+    "Forecasting",
+  ],
+  "Healthcare / Pharma Sales": [
+    "Medical Detailing",
+    "Doctor Relationship Management",
+    "Product Knowledge",
+    "Territory Management",
+    "Compliance",
+    "Key Account Management",
+  ],
+  "Inside Sales (B2C)": [
+    "Cold Calling",
+    "Objection Handling",
+    "CRM",
+    "Upselling",
+    "Target Achievement",
+    "Customer Counselling",
+  ],
+  EdTech: [
+    "Consultative Selling",
+    "Counselling",
+    "Cold Calling",
+    "CRM (LeadSquared)",
+    "Objection Handling",
+    "Target Achievement",
+  ],
+  "BFSI (Fintech / Finance / Loan / Insurance)": [
+    "IRDAI Certification",
+    "Cross-Selling",
+    "Bancassurance",
+    "Loan Sourcing",
+    "Financial Advisory",
+    "Compliance",
+  ],
+  "Retail Sales": [
+    "Customer Service",
+    "Upselling",
+    "Visual Merchandising",
+    "Inventory Awareness",
+    "Target Achievement",
+    "POS Systems",
+  ],
+  "Real Estate": [
+    "Site Visits",
+    "CRM",
+    "Local Market Knowledge",
+    "Negotiation",
+    "Lead Conversion",
+    "Client Relationship Management",
+  ],
+  "Other Consumer Sales": ["Customer Service", "Negotiation", "Target Achievement", "CRM", "Upselling"],
+  Marketing: ["Content Strategy", "Campaign Management", "SEO/SEM", "Analytics", "Brand Management"],
+  Operations: ["Process Improvement", "Vendor Management", "SOPs", "Cross-functional Coordination"],
+  "Customer Success": ["Account Management", "Onboarding", "Retention Strategy", "Upselling", "CRM"],
+  Other: [],
+};
+
+export function skillSuggestionsFor(subDomain: string | null): string[] {
+  if (!subDomain) return [];
+  return skillSuggestionsBySubDomain[subDomain] ?? [];
+}

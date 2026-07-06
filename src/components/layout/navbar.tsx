@@ -23,14 +23,9 @@ export function Navbar() {
         </Link>
         <nav className="flex items-center gap-2">
           {!isAuthenticated && (
-            <>
-              <Link href="/login">
-                <Button variant="ghost">Login</Button>
-              </Link>
-              <Link href="/register">
-                <Button>Register</Button>
-              </Link>
-            </>
+            <Link href="/register">
+              <Button>Build My Profile</Button>
+            </Link>
           )}
           {isAuthenticated && (
             <>
