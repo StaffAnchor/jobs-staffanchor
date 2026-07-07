@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
 import ProfileEditor, { type CandidateProfile } from "@/modules/candidate-portal/ProfileEditor";
+import { listOpenJobs, type JobListing } from "@/modules/jobs/api";
 
 export default function CandidatePortalPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
+  const [openJobs, setOpenJobs] = useState<JobListing[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,6 +39,13 @@ export default function CandidatePortalPage() {
         return;
       }
       setProfile(data as CandidateProfile);
+
+      try {
+        const jobs = await listOpenJobs();
+        if (!cancelled) setOpenJobs(jobs);
+      } catch {
+        // Non-critical: the profile editor still works without the openings panel.
+      }
     }
 
     load();
@@ -61,5 +70,5 @@ export default function CandidatePortalPage() {
     );
   }
 
-  return <ProfileEditor profile={profile} />;
+  return <ProfileEditor profile={profile} openJobs={openJobs} />;
 }
