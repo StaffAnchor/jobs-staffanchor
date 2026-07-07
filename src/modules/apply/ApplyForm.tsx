@@ -1009,13 +1009,13 @@ export default function ApplyForm() {
                     <>
                       <p className="text-sm text-slate-600">
                         Share your <strong>team&apos;s</strong> overall target and achieved % for the last 4
-                        quarters.
+                        completed quarters, counting back from today — not calendar Q1-Q4 of any particular year.
                       </p>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        {quarterField("Q1 (oldest)", values.teamTargetQ1, (v) => update("teamTargetQ1", v), values.teamQuotaQ1, (v) => update("teamQuotaQ1", v))}
-                        {quarterField("Q2", values.teamTargetQ2, (v) => update("teamTargetQ2", v), values.teamQuotaQ2, (v) => update("teamQuotaQ2", v))}
-                        {quarterField("Q3", values.teamTargetQ3, (v) => update("teamTargetQ3", v), values.teamQuotaQ3, (v) => update("teamQuotaQ3", v))}
-                        {quarterField("Q4 (latest)", values.teamTargetQ4, (v) => update("teamTargetQ4", v), values.teamQuotaQ4, (v) => update("teamQuotaQ4", v))}
+                        {quarterField("4 quarters ago", values.teamTargetQ1, (v) => update("teamTargetQ1", v), values.teamQuotaQ1, (v) => update("teamQuotaQ1", v))}
+                        {quarterField("3 quarters ago", values.teamTargetQ2, (v) => update("teamTargetQ2", v), values.teamQuotaQ2, (v) => update("teamQuotaQ2", v))}
+                        {quarterField("2 quarters ago", values.teamTargetQ3, (v) => update("teamTargetQ3", v), values.teamQuotaQ3, (v) => update("teamQuotaQ3", v))}
+                        {quarterField("Most recent completed quarter", values.teamTargetQ4, (v) => update("teamTargetQ4", v), values.teamQuotaQ4, (v) => update("teamQuotaQ4", v))}
                       </div>
 
                       <FormField label="Do you also carry your own individual sales target, in addition to the team target?" required>
@@ -1031,13 +1031,14 @@ export default function ApplyForm() {
                   {(values.roleType !== "Leading a Team" || values.hasIcTarget === "Yes") && (
                     <>
                       <p className="text-sm text-slate-600">
-                        Share your <strong>individual</strong> target and achieved % for the last 4 quarters.
+                        Share your <strong>individual</strong> target and achieved % for the last 4 completed
+                        quarters, counting back from today — not calendar Q1-Q4 of any particular year.
                       </p>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        {quarterField("Q1 (oldest)", values.icTargetQ1, (v) => update("icTargetQ1", v), values.quotaQ1, (v) => update("quotaQ1", v))}
-                        {quarterField("Q2", values.icTargetQ2, (v) => update("icTargetQ2", v), values.quotaQ2, (v) => update("quotaQ2", v))}
-                        {quarterField("Q3", values.icTargetQ3, (v) => update("icTargetQ3", v), values.quotaQ3, (v) => update("quotaQ3", v))}
-                        {quarterField("Q4 (latest)", values.icTargetQ4, (v) => update("icTargetQ4", v), values.quotaQ4, (v) => update("quotaQ4", v))}
+                        {quarterField("4 quarters ago", values.icTargetQ1, (v) => update("icTargetQ1", v), values.quotaQ1, (v) => update("quotaQ1", v))}
+                        {quarterField("3 quarters ago", values.icTargetQ2, (v) => update("icTargetQ2", v), values.quotaQ2, (v) => update("quotaQ2", v))}
+                        {quarterField("2 quarters ago", values.icTargetQ3, (v) => update("icTargetQ3", v), values.quotaQ3, (v) => update("quotaQ3", v))}
+                        {quarterField("Most recent completed quarter", values.icTargetQ4, (v) => update("icTargetQ4", v), values.quotaQ4, (v) => update("quotaQ4", v))}
                       </div>
                     </>
                   )}
