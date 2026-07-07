@@ -224,12 +224,12 @@ export default function ProfileEditor({
       { label: "Current city", done: !!resolvedCity },
       { label: "LinkedIn profile", done: !!profile.linkedin_url?.trim() },
       { label: "Resume uploaded", done: !!(profile.resume_file_url || resumeFile) },
-      { label: "Current employer & title", done: !!profile.current_employer?.trim() && !!profile.current_job_title?.trim() },
+      { label: "Current / last employer & title", done: !!profile.current_employer?.trim() && !!profile.current_job_title?.trim() },
       { label: "Employment status", done: !!profile.current_employment_status },
       { label: "Total experience", done: profile.total_experience_years != null },
       { label: "Current fixed CTC", done: profile.current_fixed_ctc != null },
       { label: "Expected fixed CTC", done: profile.expected_fixed_ctc != null },
-      { label: "Notice period", done: !!profile.notice_period },
+      { label: "Days to join", done: !!profile.notice_period },
       { label: "Highest qualification", done: !!profile.highest_qualification },
       { label: "Category & sub-domain", done: !!profile.category && !!profile.sub_domain },
       { label: "Role level", done: !!roleLevel },
@@ -561,7 +561,7 @@ export default function ProfileEditor({
           <Card className="mb-5">
             <CardContent className="grid gap-4 p-5 sm:grid-cols-2">
               <h2 className="text-sm font-semibold text-slate-900 sm:col-span-2">Current role &amp; compensation</h2>
-              <FormField label="Current employer">
+              <FormField label="Current / last employer">
                 <Input value={profile.current_employer ?? ""} onChange={(e) => set("current_employer", e.target.value)} />
               </FormField>
               <FormField label="Current job title">
@@ -642,7 +642,7 @@ export default function ProfileEditor({
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Notice period">
+              <FormField label="In how many days can you join?">
                 <Select value={profile.notice_period ?? ""} onChange={(e) => set("notice_period", e.target.value)}>
                   <option value="">Select</option>
                   {defaultNoticePeriods.map((n) => (

@@ -510,6 +510,7 @@ export default function ApplyForm() {
       if (!values.totalExperienceYears) return "Total experience is required.";
       if (!values.currentFixedCtc) return "Current fixed CTC is required.";
       if (!values.currentVariableCtc) return "Current variable CTC is required (select 0 LPA if none).";
+      if (!values.currentEmployer.trim()) return "Current / last employer is required.";
       const isCurrentlyEmployed = [
         "Employed",
         "Serving Notice",
@@ -517,12 +518,9 @@ export default function ApplyForm() {
         "Entrepreneur / Founder",
       ].includes(values.currentEmploymentStatus);
       if (isCurrentlyEmployed) {
-        if (!values.currentEmployer.trim()) return "Current employer is required.";
         if (!values.currentJobTitle.trim()) return "Current job title is required.";
       }
-      if (values.currentEmploymentStatus === "Employed" || values.currentEmploymentStatus === "Serving Notice") {
-        if (!values.noticePeriod) return "Notice period is required.";
-      }
+      if (!values.noticePeriod) return "Please let us know how many days you'd need to join.";
       if (!values.expectedFixedCtc) return "Expected fixed CTC is required.";
       if (!values.expectedVariableCtc) return "Expected variable CTC is required (select 0 LPA if none).";
       if (!values.highestQualification) return "Highest qualification is required.";
@@ -1027,7 +1025,7 @@ export default function ApplyForm() {
 
           {step === 1 && (
             <>
-              <FormField label="Current Employer" required>
+              <FormField label="Current / Last Employer" required>
                 <Input value={values.currentEmployer} onChange={(e) => update("currentEmployer", e.target.value)} />
               </FormField>
               <FormField label="Current Job Title" required>
@@ -1097,18 +1095,16 @@ export default function ApplyForm() {
                   Yes, I currently hold ESOPs
                 </label>
               </FormField>
-              {values.currentEmploymentStatus === "Serving Notice" || values.currentEmploymentStatus === "Employed" ? (
-                <FormField label="Notice Period" required>
-                  <Select value={values.noticePeriod} onChange={(e) => update("noticePeriod", e.target.value)}>
-                    <option value="">Select...</option>
-                    {noticePeriods.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              ) : null}
+              <FormField label="In how many days can you join?" required>
+                <Select value={values.noticePeriod} onChange={(e) => update("noticePeriod", e.target.value)}>
+                  <option value="">Select...</option>
+                  {noticePeriods.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
               <div className="grid grid-cols-2 gap-3">
                 <FormField label="Expected Fixed CTC" required>
                   <Select
