@@ -178,6 +178,12 @@ export default function QuickApplyPage() {
               <IndianRupee className="h-3.5 w-3.5" /> {budgetLabel(job.budget_min, job.budget_max)}
             </span>
           </div>
+          {job.job_description && (
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-slate-500">Job description</p>
+              <p className="whitespace-pre-wrap text-[13px] leading-6 text-slate-600">{job.job_description}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

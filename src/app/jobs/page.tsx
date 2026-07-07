@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Briefcase, MapPin, IndianRupee, ArrowRight } from "lucide-react";
+import { Briefcase, MapPin, IndianRupee, ArrowRight, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -67,6 +67,16 @@ export default function JobsPage() {
                   <IndianRupee className="h-3.5 w-3.5" /> {budgetLabel(job.budget_min, job.budget_max)}
                 </span>
               </div>
+              {job.job_description && (
+                <details className="group/jd rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <summary className="flex cursor-pointer list-none items-center justify-between text-[12px] font-medium text-slate-600">
+                    Click here to read Job description
+                    <ChevronDown className="h-3.5 w-3.5 transition-transform group-open/jd:rotate-180" />
+                  </summary>
+                  <p className="mt-2 whitespace-pre-wrap text-[13px] leading-6 text-slate-600">{job.job_description}</p>
+                </details>
+              )}
+
               <div className="mt-auto pt-2">
                 <Link href={`/jobs/${job.id}`}>
                   <Button className="w-full">
