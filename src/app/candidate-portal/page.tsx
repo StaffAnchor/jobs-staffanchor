@@ -115,7 +115,7 @@ export default function CandidatePortalPage() {
           <p className="mb-5 text-sm text-slate-500">
             Help someone in your network find their next sales role — and earn a reward when they get placed.
           </p>
-          <ReferEarn />
+          <ReferEarn openJobs={openJobs} />
         </div>
       )}
     </div>
