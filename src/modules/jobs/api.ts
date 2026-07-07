@@ -8,6 +8,8 @@ export type JobListing = {
   city: string | null;
   budget_min: number | null;
   budget_max: number | null;
+  experience_min: number | null;
+  experience_max: number | null;
   client_display: string | null;
   job_description: string | null;
   created_at: string;
@@ -26,8 +28,24 @@ export function categoryLabel(category: string | null) {
 
 export function budgetLabel(min: number | null, max: number | null) {
   if (!min && !max) return "Compensation not disclosed";
-  if (min && max && min !== max) return `₹${min}L - ₹${max}L`;
+  if (min && max && min !== max) return `₹${min}-${max}L`;
   return `₹${min ?? max}L`;
+}
+
+export function experienceLabel(min: number | null, max: number | null) {
+  if (min == null && max == null) return null;
+  if (min != null && max != null && min !== max) return `${min}-${max} yrs`;
+  return `${min ?? max} yrs`;
+}
+
+export function timeAgo(iso: string) {
+  const ms = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  if (days <= 0) return "Posted today";
+  if (days === 1) return "Posted 1 day ago";
+  if (days < 30) return `Posted ${days} days ago`;
+  const months = Math.floor(days / 30);
+  return `Posted ${months} month${months === 1 ? "" : "s"} ago`;
 }
 
 export async function listOpenJobs(): Promise<JobListing[]> {

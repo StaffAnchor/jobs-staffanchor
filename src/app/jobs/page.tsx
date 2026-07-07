@@ -1,16 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Briefcase, MapPin, IndianRupee, ArrowRight, ChevronDown } from "lucide-react";
+import { Briefcase, MapPin, ChevronRight, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { listOpenJobs, categoryLabel, budgetLabel, type JobListing } from "@/modules/jobs/api";
+import {
+  listOpenJobs,
+  categoryLabel,
+  budgetLabel,
+  experienceLabel,
+  timeAgo,
+  type JobListing,
+} from "@/modules/jobs/api";
+
+const EXPERIENCE_BANDS: { label: string; min: number; max: number }[] = [
+  { label: "0-3 Yrs", min: 0, max: 3 },
+  { label: "3-6 Yrs", min: 3, max: 6 },
+  { label: "6-10 Yrs", min: 6, max: 10 },
+  { label: "10-15 Yrs", min: 10, max: 15 },
+  { label: "15-20 Yrs", min: 15, max: 20 },
+  { label: "20+ Yrs", min: 20, max: 999 },
+];
+
+function initialFor(job: JobListing) {
+  const source = job.client_display && job.client_display !== "A confidential client" ? job.client_display : job.role_title ?? "?";
+  return source.trim().charAt(0).toUpperCase() || "?";
+}
+
+const AVATAR_COLOR: Record<string, string> = {
+  b2b_sales: "bg-blue-600",
+  b2c_sales: "bg-fuchsia-600",
+  non_sales: "bg-slate-600",
+};
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState<JobListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [industry, setIndustry] = useState("");
+  const [location, setLocation] = useState("");
+  const [experienceBand, setExperienceBand] = useState("");
 
   useEffect(() => {
     listOpenJobs()
@@ -18,15 +49,97 @@ export default function JobsPage() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load jobs."));
   }, []);
 
+  const locations = useMemo(() => {
+    return Array.from(new Set((jobs ?? []).map((j) => j.city).filter(Boolean) as string[])).sort();
+  }, [jobs]);
+
+  const filtered = useMemo(() => {
+    if (!jobs) return [];
+    const band = EXPERIENCE_BANDS.find((b) => b.label === experienceBand);
+    return jobs.filter((job) => {
+      if (industry && job.category !== industry) return false;
+      if (location && job.city !== location) return false;
+      if (band) {
+        const jMin = job.experience_min ?? 0;
+        const jMax = job.experience_max ?? 99;
+        if (jMax < band.min || jMin > band.max) return false;
+      }
+      return true;
+    });
+  }, [jobs, industry, location, experienceBand]);
+
+  const hasFilters = industry || location || experienceBand;
+
+  function clearFilters() {
+    setIndustry("");
+    setLocation("");
+    setExperienceBand("");
+  }
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Open roles</p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Current openings</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Apply in under a minute — a StaffAnchor recruiter will follow up to complete the rest of your profile.
-        </p>
+    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Open roles</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Sales &amp; Non-Sales Jobs</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={industry} onChange={(e) => setIndustry(e.target.value)} className="w-40">
+            <option value="">Industry</option>
+            <option value="b2b_sales">B2B Sales</option>
+            <option value="b2c_sales">B2C Sales</option>
+            <option value="non_sales">Non-Sales / Other</option>
+          </Select>
+          <Select value={location} onChange={(e) => setLocation(e.target.value)} className="w-40">
+            <option value="">Locations</option>
+            {locations.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </Select>
+          <Select value={experienceBand} onChange={(e) => setExperienceBand(e.target.value)} className="w-36">
+            <option value="">Experience</option>
+            {EXPERIENCE_BANDS.map((b) => (
+              <option key={b.label} value={b.label}>
+                {b.label}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
+
+      {hasFilters && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {industry && (
+            <button
+              onClick={() => setIndustry("")}
+              className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200"
+            >
+              {categoryLabel(industry)} <X className="h-3 w-3" />
+            </button>
+          )}
+          {location && (
+            <button
+              onClick={() => setLocation("")}
+              className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200"
+            >
+              {location} <X className="h-3 w-3" />
+            </button>
+          )}
+          {experienceBand && (
+            <button
+              onClick={() => setExperienceBand("")}
+              className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200"
+            >
+              {experienceBand} <X className="h-3 w-3" />
+            </button>
+          )}
+          <button onClick={clearFilters} className="text-xs font-medium text-blue-600 hover:underline">
+            Clear all
+          </button>
+        </div>
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -36,58 +149,82 @@ export default function JobsPage() {
         </div>
       )}
 
-      {jobs && jobs.length === 0 && (
+      {jobs && filtered.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <Briefcase className="mx-auto mb-3 h-6 w-6 text-slate-300" />
-            <p className="text-sm text-slate-500">No open roles right now — check back soon.</p>
+            <p className="text-sm text-slate-500">
+              {jobs.length === 0 ? "No open roles right now — check back soon." : "No roles match these filters."}
+            </p>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {jobs?.map((job) => (
-          <Card key={job.id} className="flex flex-col justify-between transition hover:shadow-md">
-            <CardContent className="flex flex-1 flex-col gap-3 p-5">
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-blue-600">
-                  {categoryLabel(job.category)}
-                </p>
-                <h2 className="mt-1 text-lg font-semibold text-slate-900">{job.role_title ?? "Sales Role"}</h2>
-                {job.client_display && <p className="text-sm font-medium text-slate-600">{job.client_display}</p>}
-                {job.sub_domain && <p className="text-sm text-slate-500">{job.sub_domain}</p>}
+      <Card className="divide-y divide-slate-100 overflow-hidden">
+        {filtered.map((job) => {
+          const exp = experienceLabel(job.experience_min, job.experience_max);
+          return (
+            <Link
+              key={job.id}
+              href={`/jobs/${job.id}`}
+              className="group flex items-start gap-4 p-5 transition-colors hover:bg-slate-50"
+            >
+              <div
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-base font-bold text-white ${
+                  AVATAR_COLOR[job.category ?? ""] ?? "bg-slate-500"
+                }`}
+              >
+                {initialFor(job)}
               </div>
-              <div className="flex flex-wrap gap-3 text-[13px] text-slate-500">
-                {job.city && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" /> {job.city}
-                  </span>
-                )}
-                <span className="flex items-center gap-1">
-                  <IndianRupee className="h-3.5 w-3.5" /> {budgetLabel(job.budget_min, job.budget_max)}
-                </span>
-              </div>
-              {job.job_description && (
-                <details className="group/jd rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                  <summary className="flex cursor-pointer list-none items-center justify-between text-[12px] font-medium text-slate-600">
-                    Click here to read Job description
-                    <ChevronDown className="h-3.5 w-3.5 transition-transform group-open/jd:rotate-180" />
-                  </summary>
-                  <p className="mt-2 whitespace-pre-wrap text-[13px] leading-6 text-slate-600">{job.job_description}</p>
-                </details>
-              )}
 
-              <div className="mt-auto pt-2">
-                <Link href={`/jobs/${job.id}`}>
-                  <Button className="w-full">
-                    Quick Apply <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                  </Button>
-                </Link>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                  <h2 className="text-[15px] font-semibold text-slate-900 group-hover:text-blue-600">
+                    {job.role_title ?? "Sales Role"}
+                    {job.client_display && (
+                      <span className="ml-2 text-[13px] font-normal text-slate-500">— {job.client_display}</span>
+                    )}
+                  </h2>
+                  <span className="shrink-0 text-[12px] text-slate-400">{timeAgo(job.created_at)}</span>
+                </div>
+
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[13px] text-slate-500">
+                  {exp && <span>{exp}</span>}
+                  {exp && <span>·</span>}
+                  <span>{budgetLabel(job.budget_min, job.budget_max)}</span>
+                  {job.city && (
+                    <>
+                      <span>·</span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" /> {job.city}
+                      </span>
+                    </>
+                  )}
+                </p>
+
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                    {categoryLabel(job.category)}
+                  </span>
+                  {job.sub_domain && (
+                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                      {job.sub_domain}
+                    </span>
+                  )}
+                </div>
+
+                {job.job_description && (
+                  <p className="mt-2 text-[12px] font-medium text-blue-600 group-hover:underline">
+                    Click here to read Job description
+                  </p>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+
+              <ChevronRight className="mt-2 h-4 w-4 shrink-0 text-slate-300 group-hover:text-blue-500" />
+            </Link>
+          );
+        })}
+      </Card>
     </div>
   );
 }

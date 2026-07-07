@@ -16,6 +16,7 @@ import {
   submitQuickApply,
   categoryLabel,
   budgetLabel,
+  experienceLabel,
   type JobListing,
 } from "@/modules/jobs/api";
 import {
@@ -177,6 +178,9 @@ export default function QuickApplyPage() {
             <span className="flex items-center gap-1">
               <IndianRupee className="h-3.5 w-3.5" /> {budgetLabel(job.budget_min, job.budget_max)}
             </span>
+            {experienceLabel(job.experience_min, job.experience_max) && (
+              <span>{experienceLabel(job.experience_min, job.experience_max)} experience</span>
+            )}
           </div>
           {job.job_description && (
             <div className="mt-4 border-t border-slate-100 pt-4">
