@@ -15,22 +15,22 @@ const TABS = [
     key: "profile" as const,
     label: "My Profile",
     icon: UserCircle2,
-    activeClasses: "bg-white text-blue-600 shadow-sm ring-1 ring-blue-100",
-    dotClasses: "bg-blue-500",
+    activeClasses: "bg-teal-500 text-white shadow-md shadow-teal-900/30",
+    dotClasses: "bg-white/25 text-white",
   },
   {
     key: "pipeline" as const,
     label: "My Pipeline",
     icon: Briefcase,
-    activeClasses: "bg-white text-indigo-600 shadow-sm ring-1 ring-indigo-100",
-    dotClasses: "bg-indigo-500",
+    activeClasses: "bg-teal-500 text-white shadow-md shadow-teal-900/30",
+    dotClasses: "bg-white/25 text-white",
   },
   {
     key: "refer" as const,
     label: "Refer & Earn",
     icon: Gift,
-    activeClasses: "bg-white text-emerald-600 shadow-sm ring-1 ring-emerald-100",
-    dotClasses: "bg-emerald-500",
+    activeClasses: "bg-teal-500 text-white shadow-md shadow-teal-900/30",
+    dotClasses: "bg-white/25 text-white",
   },
 ];
 
@@ -120,15 +120,15 @@ export default function CandidatePortalPage() {
 
   return (
     <div>
-      <div className="border-b border-slate-200 bg-gradient-to-b from-blue-50/60 to-transparent">
-        <div className="mx-auto max-w-6xl px-4 pt-7 sm:px-6 lg:px-8">
+      <div className="bg-slate-900 pb-5">
+        <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8">
           <div className="mb-4 flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-blue-500" />
-            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+            <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-400">
               Welcome back{profile.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
             </p>
           </div>
-          <nav className="mb-0 inline-flex gap-1 rounded-full bg-slate-100/80 p-1">
+          <nav className="inline-flex gap-1 rounded-full bg-white/10 p-1">
             {TABS.map((t) => {
               const Icon = t.icon;
               const isActive = tab === t.key;
@@ -137,15 +137,15 @@ export default function CandidatePortalPage() {
                 <button
                   key={t.key}
                   onClick={() => setTab(t.key)}
-                  className={`group relative flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                    isActive ? t.activeClasses : "text-slate-500 hover:text-slate-800"
+                  className={`group relative flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                    isActive ? t.activeClasses : "text-slate-300 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? "" : "text-slate-400 group-hover:text-slate-600"}`} />
+                  <Icon className="h-4 w-4" />
                   {t.label}
                   {badge != null && (
                     <span
-                      className={`ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white ${t.dotClasses}`}
+                      className={`ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${t.dotClasses}`}
                     >
                       {badge}
                     </span>
