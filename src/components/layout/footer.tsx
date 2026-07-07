@@ -5,6 +5,9 @@ export function Footer() {
     <footer className="mt-auto border-t border-slate-200 bg-slate-50">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-5 text-sm text-slate-600 sm:px-6 lg:px-8">
         <p>© {new Date().getFullYear()} StaffAnchor</p>
+        <Link href="/client-login" className="text-xs text-slate-400 hover:text-slate-600">
+          Client Login
+        </Link>
         {/* <div className="flex items-center gap-4">
           <Link href="#" className="hover:text-slate-900">
             About
