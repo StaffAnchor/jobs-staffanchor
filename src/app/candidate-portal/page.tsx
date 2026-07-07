@@ -5,13 +5,24 @@ import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
 import ProfileEditor, { type CandidateProfile } from "@/modules/candidate-portal/ProfileEditor";
+import MyPipeline from "@/modules/candidate-portal/MyPipeline";
+import ReferEarn from "@/modules/candidate-portal/ReferEarn";
 import { listOpenJobs, type JobListing } from "@/modules/jobs/api";
+
+const TABS = [
+  { key: "profile", label: "My Profile" },
+  { key: "pipeline", label: "My Pipeline" },
+  { key: "refer", label: "Refer & Earn" },
+] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
 
 export default function CandidatePortalPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [openJobs, setOpenJobs] = useState<JobListing[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabKey>("profile");
 
   useEffect(() => {
     let cancelled = false;
@@ -70,5 +81,43 @@ export default function CandidatePortalPage() {
     );
   }
 
-  return <ProfileEditor profile={profile} openJobs={openJobs} />;
+  return (
+    <div>
+      <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8">
+        <nav className="mb-2 flex gap-1 border-b border-slate-200">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                tab === t.key
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {tab === "profile" && <ProfileEditor profile={profile} openJobs={openJobs} />}
+      {tab === "pipeline" && (
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+          <h1 className="mb-1 text-xl font-bold text-slate-900">My Pipeline</h1>
+          <p className="mb-5 text-sm text-slate-500">Where you stand on every role you've been matched to.</p>
+          <MyPipeline />
+        </div>
+      )}
+      {tab === "refer" && (
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+          <h1 className="mb-1 text-xl font-bold text-slate-900">Refer & Earn</h1>
+          <p className="mb-5 text-sm text-slate-500">
+            Help someone in your network find their next sales role — and earn a reward when they get placed.
+          </p>
+          <ReferEarn />
+        </div>
+      )}
+    </div>
+  );
 }
