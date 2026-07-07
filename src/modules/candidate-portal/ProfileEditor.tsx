@@ -173,6 +173,7 @@ export default function ProfileEditor({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRequiredBanner, setShowRequiredBanner] = useState(false);
 
   // ---- Specialization detail fields (mirrors the public Apply form) ----
   const sd = initialProfile.segment_data ?? null;
@@ -311,10 +312,17 @@ export default function ProfileEditor({
   }, [openJobs, profile.category]);
 
   async function handleSave() {
-    setSaving(true);
     setError(null);
     setSaved(false);
     const missingCore = strengthItems.filter((i) => CORE_REQUIRED_LABELS.has(i.label) && !i.done);
+    if (missingCore.length > 0) {
+      setShowRequiredBanner(true);
+      toast.error(`Please complete ${missingCore.length} required field${missingCore.length === 1 ? "" : "s"} before saving.`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    setShowRequiredBanner(false);
+    setSaving(true);
     try {
       let resumeFileUrl = profile.resume_file_url;
       if (resumeFile) {
@@ -419,7 +427,7 @@ export default function ProfileEditor({
           highest_qualification: profile.highest_qualification,
           skills: profile.skills,
           self_assessment: profile.self_assessment,
-          status: profile.status === "awaiting_input" ? (missingCore.length === 0 ? "registered" : "awaiting_input") : profile.status,
+          status: profile.status === "awaiting_input" ? "registered" : profile.status,
         })
         .eq("id", profile.id);
 
@@ -428,13 +436,7 @@ export default function ProfileEditor({
       setProfile((p) => ({ ...p, resume_file_url: resumeFileUrl, segment_data: segmentData, secondary_sub_domains: secondarySubDomains, industries }));
       setResumeFile(null);
       setSaved(true);
-      if (missingCore.length > 0) {
-        const message = `Progress saved. Complete these to finish registering: ${missingCore.map((i) => i.label).join(", ")}.`;
-        setError(message);
-        toast.warning(message);
-      } else {
-        toast.success("Profile saved.");
-      }
+      toast.success("Profile saved.");
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Something went wrong. Please try again.";
@@ -451,6 +453,7 @@ export default function ProfileEditor({
   }
 
   const dealBands = dealSizeBandsFor((profile.category as CategoryValue) || null, dealCurrency);
+  const missingCoreNow = strengthItems.filter((i) => CORE_REQUIRED_LABELS.has(i.label) && !i.done);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -464,6 +467,15 @@ export default function ProfileEditor({
           <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign out
         </Button>
       </div>
+
+      {showRequiredBanner && missingCoreNow.length > 0 && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-sm font-semibold text-red-800">
+            Please complete these required fields before your profile can be saved:
+          </p>
+          <p className="mt-1.5 text-xs text-red-700">{missingCoreNow.map((i) => i.label).join(", ")}</p>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         {/* ---- Sidebar: profile strength + current openings ---- */}
@@ -543,20 +555,20 @@ export default function ProfileEditor({
         <div>
           <Card className="mb-5">
             <CardContent className="grid gap-4 p-5 sm:grid-cols-2">
-              <FormField label="Full name" className="sm:col-span-2">
+              <FormField label="Full name" required className="sm:col-span-2">
                 <Input value={profile.full_name ?? ""} onChange={(e) => set("full_name", e.target.value)} />
               </FormField>
-              <FormField label="Phone">
+              <FormField label="Phone" required>
                 <Input
                   value={profile.phone ?? ""}
                   onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
                   inputMode="numeric"
                 />
               </FormField>
-              <FormField label="LinkedIn URL">
+              <FormField label="LinkedIn URL" required>
                 <Input value={profile.linkedin_url ?? ""} onChange={(e) => set("linkedin_url", e.target.value)} />
               </FormField>
-              <FormField label="Current city">
+              <FormField label="Current city" required>
                 <Select value={cityChoice} onChange={(e) => setCityChoice(e.target.value)}>
                   <option value="">Select city</option>
                   {cityOptions.map((c) => (
@@ -567,14 +579,14 @@ export default function ProfileEditor({
                 </Select>
               </FormField>
               {cityChoice === "Other" ? (
-                <FormField label="Enter your city">
+                <FormField label="Enter your city" required>
                   <Input value={customCity} onChange={(e) => setCustomCity(e.target.value)} />
                 </FormField>
               ) : (
                 cityChoice && <div className="self-end text-sm text-slate-400">State: {cityStateMap[cityChoice] ?? "—"}</div>
               )}
 
-              <FormField label="Resume">
+              <FormField label="Resume" required>
                 <div className="flex flex-wrap items-center gap-3">
                   {profile.resume_file_url && !resumeFile && resumeSignedUrl && (
                     <ResumePreview
@@ -601,13 +613,13 @@ export default function ProfileEditor({
           <Card className="mb-5">
             <CardContent className="grid gap-4 p-5 sm:grid-cols-2">
               <h2 className="text-sm font-semibold text-slate-900 sm:col-span-2">Current role &amp; compensation</h2>
-              <FormField label="Current / last employer">
+              <FormField label="Current / last employer" required>
                 <Input value={profile.current_employer ?? ""} onChange={(e) => set("current_employer", e.target.value)} />
               </FormField>
-              <FormField label="Current job title">
+              <FormField label="Current job title" required>
                 <Input value={profile.current_job_title ?? ""} onChange={(e) => set("current_job_title", e.target.value)} />
               </FormField>
-              <FormField label="Employment status">
+              <FormField label="Employment status" required>
                 <Select value={profile.current_employment_status ?? ""} onChange={(e) => set("current_employment_status", e.target.value)}>
                   <option value="">Select</option>
                   {employmentStatusOptions.map((o) => (
@@ -617,7 +629,7 @@ export default function ProfileEditor({
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Total experience">
+              <FormField label="Total experience" required>
                 <Select
                   value={profile.total_experience_years ?? ""}
                   onChange={(e) => set("total_experience_years", e.target.value ? Number(e.target.value) : null)}
@@ -630,7 +642,7 @@ export default function ProfileEditor({
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Current fixed CTC">
+              <FormField label="Current fixed CTC" required>
                 <Select
                   value={profile.current_fixed_ctc ?? ""}
                   onChange={(e) => set("current_fixed_ctc", e.target.value ? Number(e.target.value) : null)}
@@ -656,7 +668,7 @@ export default function ProfileEditor({
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Expected fixed CTC">
+              <FormField label="Expected fixed CTC" required>
                 <Select
                   value={profile.expected_fixed_ctc ?? ""}
                   onChange={(e) => set("expected_fixed_ctc", e.target.value ? Number(e.target.value) : null)}
@@ -682,7 +694,7 @@ export default function ProfileEditor({
                   ))}
                 </Select>
               </FormField>
-              <FormField label="In how many days can you join?">
+              <FormField label="In how many days can you join?" required>
                 <Select value={profile.notice_period ?? ""} onChange={(e) => set("notice_period", e.target.value)}>
                   <option value="">Select</option>
                   {defaultNoticePeriods.map((n) => (
@@ -702,7 +714,7 @@ export default function ProfileEditor({
           <Card className="mb-5">
             <CardContent className="grid gap-4 p-5 sm:grid-cols-2">
               <h2 className="text-sm font-semibold text-slate-900 sm:col-span-2">Specialization &amp; role details</h2>
-              <FormField label="Category">
+              <FormField label="Category" required>
                 <Select
                   value={profile.category ?? ""}
                   onChange={(e) => {
@@ -718,7 +730,7 @@ export default function ProfileEditor({
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Primary sub-domain">
+              <FormField label="Primary sub-domain" required>
                 <Select value={profile.sub_domain ?? ""} onChange={(e) => set("sub_domain", e.target.value)} disabled={!profile.category}>
                   <option value="">Select</option>
                   {subDomains.map((d) => (
@@ -771,7 +783,7 @@ export default function ProfileEditor({
                   </Select>
                 </FormField>
               )}
-              <FormField label="Work mode">
+              <FormField label="Work mode" required>
                 <Select value={profile.work_mode ?? ""} onChange={(e) => set("work_mode", e.target.value)}>
                   <option value="">Select</option>
                   {workModeOptions.map((w) => (
@@ -781,7 +793,7 @@ export default function ProfileEditor({
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Open to relocation">
+              <FormField label="Open to relocation" required>
                 <Select value={profile.open_to_relocation ?? ""} onChange={(e) => set("open_to_relocation", e.target.value)}>
                   <option value="">Select</option>
                   {relocationOptions.map((r) => (
@@ -818,7 +830,7 @@ export default function ProfileEditor({
                   placeholder="Comma-separated, e.g. Salesforce, Negotiation, Account Management"
                 />
               </FormField>
-              <FormField label="Industries worked in" className="sm:col-span-2">
+              <FormField label="Industries worked in" required className="sm:col-span-2">
                 <div className="flex flex-wrap gap-2">
                   {industryOptions.map((i) => (
                     <Pill key={i} active={industries.includes(i)} onClick={() => toggle(industries, setIndustries, i)}>
