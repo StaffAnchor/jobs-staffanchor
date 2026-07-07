@@ -25,6 +25,9 @@ export function Navbar() {
           <Link href="/jobs">
             <Button variant={pathname.startsWith("/jobs") ? "default" : "ghost"}>Jobs</Button>
           </Link>
+          <Link href="/candidate-portal">
+            <Button variant={pathname.startsWith("/candidate-portal") ? "default" : "ghost"}>My Profile</Button>
+          </Link>
           {!isAuthenticated && (
             <Link href="/register">
               <Button>Build My Profile</Button>

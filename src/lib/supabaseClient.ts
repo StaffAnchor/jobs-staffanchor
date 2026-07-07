@@ -6,6 +6,11 @@ const supabaseAnonKey =
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: false,
+    // Candidates now have a real logged-in session (magic-link candidate
+    // portal), so we persist and auto-refresh it. The quick-apply / public
+    // apply flows never relied on persistSession and are unaffected.
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
   },
 });
