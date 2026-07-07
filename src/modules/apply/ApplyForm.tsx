@@ -279,16 +279,39 @@ export default function ApplyForm() {
     });
   }
 
+  function allFilled(keys: (keyof FormState)[]) {
+    return keys.every((k) => {
+      const v = values[k];
+      return Array.isArray(v) ? v.length > 0 : String(v).trim() !== "";
+    });
+  }
+
   function validateStep(): string | null {
+    const isSales = values.category === "b2b_sales" || values.category === "b2c_sales";
+
     if (step === 0) {
       if (!values.fullName.trim()) return "Full name is required.";
       if (!/^\S+@\S+\.\S+$/.test(values.email)) return "A valid email is required.";
       if (!values.phone.trim()) return "Phone number is required.";
+      if (!values.currentLocation.trim()) return "Current location is required.";
+      if (!values.linkedinUrl.trim()) return "LinkedIn profile URL is required.";
+      if (!resumeFile) return "Please upload your resume.";
     }
     if (step === 1) {
       if (!values.currentEmploymentStatus) return "Employment status is required.";
       if (!values.totalExperienceYears) return "Total experience is required.";
       if (!values.currentFixedCtc) return "Current fixed CTC is required.";
+      if (!values.currentVariableCtc) return "Current variable CTC is required (select 0 LPA if none).";
+      const isCurrentlyEmployed =
+        values.currentEmploymentStatus === "Employed" || values.currentEmploymentStatus === "Serving Notice";
+      if (isCurrentlyEmployed) {
+        if (!values.currentEmployer.trim()) return "Current employer is required.";
+        if (!values.currentJobTitle.trim()) return "Current job title is required.";
+        if (!values.noticePeriod) return "Notice period is required.";
+      }
+      if (!values.expectedFixedCtc) return "Expected fixed CTC is required.";
+      if (!values.expectedVariableCtc) return "Expected variable CTC is required (select 0 LPA if none).";
+      if (!values.highestQualification) return "Highest qualification is required.";
     }
     if (step === 2) {
       if (!values.category) return "Please select a category.";
@@ -296,9 +319,33 @@ export default function ApplyForm() {
       if (!values.roleLevel) return "Please select your role level.";
       if (!values.roleType) return "Please select whether you are an IC or leading a team.";
       if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
+      if (isSales && !values.secondarySubDomains.length) {
+        return "Please select at least one option (choose 'None — single specialization only' if not applicable).";
+      }
+      if (isSales) {
+        if (!values.dealCurrency) return "Please select a currency.";
+        if (!values.dealSizeBand) return "Please select a typical deal/ticket size.";
+      }
+      if (values.category === "b2b_sales") {
+        if (!values.cycle) return "Please select your typical sales cycle.";
+        if (!values.style) return "Please select your selling style.";
+        if (!values.motion.length) return "Please select at least one sales motion.";
+        if (!values.segment) return "Please select your customer segment.";
+      }
+      if (values.category === "b2c_sales") {
+        if (!values.funnel) return "Please select a funnel stage.";
+        if (!values.scope.trim()) return "Please describe your geographic scope.";
+      }
+      if (isInsideSales) {
+        if (!values.aht) return "Please select an AHT range.";
+        if (!values.dailyCallTarget) return "Please select a daily call target.";
+        if (!values.dailyTalkTime) return "Please select a daily talk-time range.";
+        if (!values.leadSources.length) return "Please select at least one lead source / process.";
+      }
     }
-    if (step === 3 && (values.category === "b2b_sales" || values.category === "b2c_sales")) {
-      const allFilled = (keys: (keyof FormState)[]) => keys.every((k) => String(values[k]).trim() !== "");
+    if (step === 3 && isSales) {
+      if (!values.bestWin.trim()) return "Please tell us about your best win.";
+      if (!values.toughLoss.trim()) return "Please tell us about a target you missed and what you learned.";
 
       if (values.roleType === "Leading a Team") {
         if (
@@ -333,6 +380,10 @@ export default function ApplyForm() {
       }
     }
     if (step === 4) {
+      if (!values.selectedSkills.length) return "Please add at least one skill.";
+      if (!values.selectedIndustries.length) return "Please select at least one industry.";
+      if (!values.workMode) return "Please select a work mode preference.";
+      if (!values.openToRelocation) return "Please select your relocation preference.";
       if (!values.consent) return "Please confirm consent to continue.";
     }
     return null;
@@ -473,7 +524,7 @@ export default function ApplyForm() {
           : null,
         category: values.category || null,
         sub_domain: values.subDomain || null,
-        secondary_sub_domains: values.secondarySubDomains,
+        secondary_sub_domains: values.secondarySubDomains.filter((d) => d !== "None — single specialization only"),
         segment_data: segmentData,
         self_assessment: {
           best: values.bestWin || undefined,
@@ -567,13 +618,13 @@ export default function ApplyForm() {
                   onChange={(e) => update("phone", e.target.value)}
                 />
               </FormField>
-              <FormField label="Current Location">
+              <FormField label="Current Location" required>
                 <Input value={values.currentLocation} onChange={(e) => update("currentLocation", e.target.value)} />
               </FormField>
-              <FormField label="LinkedIn Profile URL">
+              <FormField label="LinkedIn Profile URL" required>
                 <Input value={values.linkedinUrl} onChange={(e) => update("linkedinUrl", e.target.value)} />
               </FormField>
-              <FormField label="Resume (PDF or DOCX)">
+              <FormField label="Resume (PDF or DOCX)" required>
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx"
@@ -586,10 +637,10 @@ export default function ApplyForm() {
 
           {step === 1 && (
             <>
-              <FormField label="Current Employer">
+              <FormField label="Current Employer" required>
                 <Input value={values.currentEmployer} onChange={(e) => update("currentEmployer", e.target.value)} />
               </FormField>
-              <FormField label="Current Job Title">
+              <FormField label="Current Job Title" required>
                 <Input value={values.currentJobTitle} onChange={(e) => update("currentJobTitle", e.target.value)} />
               </FormField>
               <FormField label="Employment Status" required>
@@ -632,12 +683,12 @@ export default function ApplyForm() {
                     ))}
                   </Select>
                 </FormField>
-                <FormField label="Current Variable CTC">
+                <FormField label="Current Variable CTC" required>
                   <Select
                     value={values.currentVariableCtc}
                     onChange={(e) => update("currentVariableCtc", e.target.value)}
                   >
-                    <option value="">N/A</option>
+                    <option value="">Select... (0 LPA if none)</option>
                     {ctcOptions.map((o) => (
                       <option key={o.label} value={o.value ?? ""}>
                         {o.label}
@@ -657,7 +708,7 @@ export default function ApplyForm() {
                 </label>
               </FormField>
               {values.currentEmploymentStatus === "Serving Notice" || values.currentEmploymentStatus === "Employed" ? (
-                <FormField label="Notice Period">
+                <FormField label="Notice Period" required>
                   <Select value={values.noticePeriod} onChange={(e) => update("noticePeriod", e.target.value)}>
                     <option value="">Select...</option>
                     {noticePeriods.map((o) => (
@@ -669,7 +720,7 @@ export default function ApplyForm() {
                 </FormField>
               ) : null}
               <div className="grid grid-cols-2 gap-3">
-                <FormField label="Expected Fixed CTC">
+                <FormField label="Expected Fixed CTC" required>
                   <Select
                     value={values.expectedFixedCtc}
                     onChange={(e) => update("expectedFixedCtc", e.target.value)}
@@ -682,12 +733,12 @@ export default function ApplyForm() {
                     ))}
                   </Select>
                 </FormField>
-                <FormField label="Expected Variable CTC">
+                <FormField label="Expected Variable CTC" required>
                   <Select
                     value={values.expectedVariableCtc}
                     onChange={(e) => update("expectedVariableCtc", e.target.value)}
                   >
-                    <option value="">N/A</option>
+                    <option value="">Select... (0 LPA if none)</option>
                     {ctcOptions.map((o) => (
                       <option key={o.label} value={o.value ?? ""}>
                         {o.label}
@@ -696,7 +747,7 @@ export default function ApplyForm() {
                   </Select>
                 </FormField>
               </div>
-              <FormField label="Highest Qualification">
+              <FormField label="Highest Qualification" required>
                 <Select
                   value={values.highestQualification}
                   onChange={(e) => update("highestQualification", e.target.value)}
@@ -746,11 +797,10 @@ export default function ApplyForm() {
                     </Select>
                   </FormField>
 
-                  <FormField label="Secondary Specializations (optional)">
+                  <FormField label="Secondary Specializations" required>
                     <div className="grid gap-1.5">
-                      {subDomainOptions
-                        .filter((o) => o !== values.subDomain)
-                        .map((o) => (
+                      {[...subDomainOptions.filter((o) => o !== values.subDomain), "None — single specialization only"].map(
+                        (o) => (
                           <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
                             <input
                               type="checkbox"
@@ -759,7 +809,8 @@ export default function ApplyForm() {
                             />
                             {o}
                           </label>
-                        ))}
+                        )
+                      )}
                     </div>
                   </FormField>
 
@@ -809,7 +860,7 @@ export default function ApplyForm() {
                       <p className="pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
                         Inside Sales Specifics
                       </p>
-                      <FormField label="Average Handling Time (AHT)">
+                      <FormField label="Average Handling Time (AHT)" required>
                         <Select value={values.aht} onChange={(e) => update("aht", e.target.value)}>
                           <option value="">Select...</option>
                           {ahtOptions.map((o) => (
@@ -819,7 +870,7 @@ export default function ApplyForm() {
                           ))}
                         </Select>
                       </FormField>
-                      <FormField label="Daily Call Target (per user)">
+                      <FormField label="Daily Call Target (per user)" required>
                         <Select
                           value={values.dailyCallTarget}
                           onChange={(e) => update("dailyCallTarget", e.target.value)}
@@ -832,7 +883,7 @@ export default function ApplyForm() {
                           ))}
                         </Select>
                       </FormField>
-                      <FormField label="Daily Talk-Time (hours, per user)">
+                      <FormField label="Daily Talk-Time (hours, per user)" required>
                         <Select
                           value={values.dailyTalkTime}
                           onChange={(e) => update("dailyTalkTime", e.target.value)}
@@ -845,7 +896,7 @@ export default function ApplyForm() {
                           ))}
                         </Select>
                       </FormField>
-                      <FormField label="Lead Source / Process (select all that apply)">
+                      <FormField label="Lead Source / Process (select all that apply)" required>
                         <div className="grid gap-1.5">
                           {leadSourceOptions.map((o) => (
                             <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
@@ -865,7 +916,7 @@ export default function ApplyForm() {
                   {values.category === "b2b_sales" && (
                     <>
                       <div className="grid grid-cols-2 gap-3">
-                        <FormField label="Deal Size Currency">
+                        <FormField label="Deal Size Currency" required>
                           <Select
                             value={values.dealCurrency}
                             onChange={(e) => {
@@ -881,7 +932,7 @@ export default function ApplyForm() {
                             ))}
                           </Select>
                         </FormField>
-                        <FormField label="Typical Deal Size">
+                        <FormField label="Typical Deal Size" required>
                           <Select
                             value={values.dealSizeBand}
                             onChange={(e) => update("dealSizeBand", e.target.value)}
@@ -896,7 +947,7 @@ export default function ApplyForm() {
                           </Select>
                         </FormField>
                       </div>
-                      <FormField label="Typical Sales Cycle">
+                      <FormField label="Typical Sales Cycle" required>
                         <Select value={values.cycle} onChange={(e) => update("cycle", e.target.value)}>
                           <option value="">Select...</option>
                           {salesCycleOptions.map((o) => (
@@ -906,7 +957,7 @@ export default function ApplyForm() {
                           ))}
                         </Select>
                       </FormField>
-                      <FormField label="Selling Style">
+                      <FormField label="Selling Style" required>
                         <Select value={values.style} onChange={(e) => update("style", e.target.value)}>
                           <option value="">Select...</option>
                           {sellingStyleOptions.map((o) => (
@@ -916,7 +967,7 @@ export default function ApplyForm() {
                           ))}
                         </Select>
                       </FormField>
-                      <FormField label="Sales Motion (select all that apply)">
+                      <FormField label="Sales Motion (select all that apply)" required>
                         <div className="grid gap-1.5">
                           {salesMotionOptions.map((o) => (
                             <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
@@ -930,7 +981,7 @@ export default function ApplyForm() {
                           ))}
                         </div>
                       </FormField>
-                      <FormField label="Customer Segment">
+                      <FormField label="Customer Segment" required>
                         <Select value={values.segment} onChange={(e) => update("segment", e.target.value)}>
                           <option value="">Select...</option>
                           {customerSegmentOptions.map((o) => (
@@ -946,7 +997,7 @@ export default function ApplyForm() {
                   {values.category === "b2c_sales" && (
                     <>
                       <div className="grid grid-cols-2 gap-3">
-                        <FormField label="Ticket Size Currency">
+                        <FormField label="Ticket Size Currency" required>
                           <Select
                             value={values.dealCurrency}
                             onChange={(e) => {
@@ -962,7 +1013,7 @@ export default function ApplyForm() {
                             ))}
                           </Select>
                         </FormField>
-                        <FormField label="Typical Ticket Size">
+                        <FormField label="Typical Ticket Size" required>
                           <Select
                             value={values.dealSizeBand}
                             onChange={(e) => update("dealSizeBand", e.target.value)}
@@ -977,7 +1028,7 @@ export default function ApplyForm() {
                           </Select>
                         </FormField>
                       </div>
-                      <FormField label="Funnel Stage">
+                      <FormField label="Funnel Stage" required>
                         <Select value={values.funnel} onChange={(e) => update("funnel", e.target.value)}>
                           <option value="">Select...</option>
                           {funnelStageOptions.map((o) => (
@@ -987,7 +1038,7 @@ export default function ApplyForm() {
                           ))}
                         </Select>
                       </FormField>
-                      <FormField label="Geographic Scope">
+                      <FormField label="Geographic Scope" required>
                         <Input
                           placeholder="e.g. single city, multi-city, pan-India"
                           value={values.scope}
@@ -1063,14 +1114,14 @@ export default function ApplyForm() {
                     )}
                 </>
               )}
-              <FormField label="Tell us about your best win">
+              <FormField label="Tell us about your best win" required>
                 <textarea
                   className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
                   value={values.bestWin}
                   onChange={(e) => update("bestWin", e.target.value)}
                 />
               </FormField>
-              <FormField label="Tell us about a target you missed, and what you learned">
+              <FormField label="Tell us about a target you missed, and what you learned" required>
                 <textarea
                   className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
                   value={values.toughLoss}
@@ -1082,7 +1133,7 @@ export default function ApplyForm() {
 
           {step === 4 && (
             <>
-              <FormField label="Key Skills / Tools">
+              <FormField label="Key Skills / Tools" required>
                 <div className="space-y-2">
                   {suggestedSkills.length > 0 && (
                     <p className="text-xs text-slate-500">
@@ -1167,7 +1218,7 @@ export default function ApplyForm() {
                   </div>
                 </div>
               </FormField>
-              <FormField label="Key Industries Worked In (multi-select, for searchability)">
+              <FormField label="Key Industries Worked In (multi-select, for searchability)" required>
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-2">
                     {industryOptions.map((industry) => {
@@ -1207,7 +1258,7 @@ export default function ApplyForm() {
                   </div>
                 </div>
               </FormField>
-              <FormField label="Work Mode Preference">
+              <FormField label="Work Mode Preference" required>
                 <Select value={values.workMode} onChange={(e) => update("workMode", e.target.value)}>
                   <option value="">Select...</option>
                   {workModeOptions.map((o) => (
@@ -1217,7 +1268,7 @@ export default function ApplyForm() {
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Open to Relocation">
+              <FormField label="Open to Relocation" required>
                 <Select value={values.openToRelocation} onChange={(e) => update("openToRelocation", e.target.value)}>
                   <option value="">Select...</option>
                   {relocationOptions.map((o) => (
