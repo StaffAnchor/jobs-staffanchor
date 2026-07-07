@@ -124,6 +124,30 @@ function Pill({
   );
 }
 
+// Fields a recruiter actually needs to work a candidate. A profile can be
+// saved incrementally at any point, but it only counts as "registered" (and
+// shows up to recruiters as a completed profile, not just Awaiting Input)
+// once these are filled in -- otherwise a bare name is enough to silently
+// join the candidate base with nothing else on record.
+const CORE_REQUIRED_LABELS = new Set([
+  "Full name",
+  "Phone number",
+  "Current city",
+  "LinkedIn profile",
+  "Resume uploaded",
+  "Current / last employer & title",
+  "Employment status",
+  "Total experience",
+  "Current fixed CTC",
+  "Expected fixed CTC",
+  "Days to join",
+  "Highest qualification",
+  "Category & sub-domain",
+  "Industries worked in",
+  "Work mode preference",
+  "Open to relocation",
+]);
+
 export default function ProfileEditor({
   profile: initialProfile,
   openJobs = [],
@@ -290,6 +314,7 @@ export default function ProfileEditor({
     setSaving(true);
     setError(null);
     setSaved(false);
+    const missingCore = strengthItems.filter((i) => CORE_REQUIRED_LABELS.has(i.label) && !i.done);
     try {
       let resumeFileUrl = profile.resume_file_url;
       if (resumeFile) {
@@ -394,7 +419,7 @@ export default function ProfileEditor({
           highest_qualification: profile.highest_qualification,
           skills: profile.skills,
           self_assessment: profile.self_assessment,
-          status: profile.status === "awaiting_input" ? "registered" : profile.status,
+          status: profile.status === "awaiting_input" ? (missingCore.length === 0 ? "registered" : "awaiting_input") : profile.status,
         })
         .eq("id", profile.id);
 
@@ -403,7 +428,13 @@ export default function ProfileEditor({
       setProfile((p) => ({ ...p, resume_file_url: resumeFileUrl, segment_data: segmentData, secondary_sub_domains: secondarySubDomains, industries }));
       setResumeFile(null);
       setSaved(true);
-      toast.success("Profile saved.");
+      if (missingCore.length > 0) {
+        const message = `Progress saved. Complete these to finish registering: ${missingCore.map((i) => i.label).join(", ")}.`;
+        setError(message);
+        toast.warning(message);
+      } else {
+        toast.success("Profile saved.");
+      }
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Something went wrong. Please try again.";
