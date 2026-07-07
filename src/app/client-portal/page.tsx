@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, MapPin, Users } from "lucide-react";
+import { LogOut, MapPin, Search, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -18,10 +18,14 @@ const STATUS_LABEL: Record<string, string> = {
   filled: "Filled",
 };
 
+const STATUS_TABS = ["all", "open", "on_hold", "closed", "filled"] as const;
+
 export default function ClientPortalPage() {
   const router = useRouter();
   const [mandates, setMandates] = useState<ClientMandate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_TABS)[number]>("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +55,20 @@ export default function ClientPortalPage() {
     };
   }, [router]);
 
+  const filtered = useMemo(() => {
+    if (!mandates) return [];
+    const q = search.trim().toLowerCase();
+    return mandates.filter((m) => {
+      const matchesStatus = statusFilter === "all" || m.status === statusFilter;
+      const matchesSearch =
+        !q ||
+        m.role_title.toLowerCase().includes(q) ||
+        (m.sub_domain ?? "").toLowerCase().includes(q) ||
+        (m.city ?? "").toLowerCase().includes(q);
+      return matchesStatus && matchesSearch;
+    });
+  }, [mandates, search, statusFilter]);
+
   async function handleSignOut() {
     await supabase.auth.signOut();
     window.location.assign("/client-login");
@@ -75,6 +93,9 @@ export default function ClientPortalPage() {
     );
   }
 
+  const totalShortlisted = mandates.reduce((sum, m) => sum + m.shortlisted_count, 0);
+  const openCount = mandates.filter((m) => m.status === "open").length;
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between">
@@ -88,6 +109,47 @@ export default function ClientPortalPage() {
         </Button>
       </div>
 
+      {mandates.length > 0 && (
+        <>
+          <div className="mb-5 flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600">
+              {mandates.length} role{mandates.length === 1 ? "" : "s"} total
+            </span>
+            <span className="rounded-full bg-emerald-100 px-3 py-1 font-medium text-emerald-700">
+              {openCount} open
+            </span>
+            <span className="rounded-full bg-blue-100 px-3 py-1 font-medium text-blue-700">
+              {totalShortlisted} candidate{totalShortlisted === 1 ? "" : "s"} shortlisted across all roles
+            </span>
+          </div>
+
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by role, sub-domain, city…"
+                className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-slate-500"
+              />
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto">
+              {STATUS_TABS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium ${
+                    statusFilter === s ? "bg-slate-900 text-white" : "bg-white border border-slate-300 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {s === "all" ? "All" : STATUS_LABEL[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
       {mandates.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-sm text-slate-500">
@@ -95,9 +157,15 @@ export default function ClientPortalPage() {
             is live.
           </CardContent>
         </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-slate-500">
+            No roles match your search or filter.
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {mandates.map((m) => (
+          {filtered.map((m) => (
             <Link key={m.id} href={`/client-portal/mandates/${m.id}`}>
               <Card className="h-full transition hover:border-blue-300 hover:shadow-sm">
                 <CardContent className="space-y-2 p-5">

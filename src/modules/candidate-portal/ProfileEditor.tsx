@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, FileText, LogOut, MapPin, Upload } from "lucide-react";
+import { CheckCircle2, Circle, LogOut, MapPin, Upload } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/forms/form-field";
 import { supabase } from "@/lib/supabaseClient";
+import { getResumeSignedUrl } from "@/lib/resume";
+import ResumePreview from "@/components/common/ResumePreview";
 import {
   achievementBandOptions,
   ahtOptions,
@@ -141,6 +143,7 @@ export default function ProfileEditor({
       : ""
   );
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeSignedUrl, setResumeSignedUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -183,6 +186,17 @@ export default function ProfileEditor({
     const v = segArr(sd, "team_quota");
     return v.length ? v : ["", "", "", ""];
   });
+
+  useEffect(() => {
+    if (!initialProfile.resume_file_url) return;
+    let cancelled = false;
+    getResumeSignedUrl(initialProfile.resume_file_url).then((url) => {
+      if (!cancelled) setResumeSignedUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialProfile.resume_file_url]);
 
   const subDomains = useMemo(() => subDomainsForCategory((profile.category as CategoryValue) || null), [profile.category]);
   const isB2B = profile.category === "b2b_sales";
@@ -521,11 +535,13 @@ export default function ProfileEditor({
               )}
 
               <FormField label="Resume">
-                <div className="flex items-center gap-3">
-                  {profile.resume_file_url && !resumeFile && (
-                    <span className="flex items-center gap-1 text-[13px] text-emerald-700">
-                      <FileText className="h-3.5 w-3.5" /> Resume on file
-                    </span>
+                <div className="flex flex-wrap items-center gap-3">
+                  {profile.resume_file_url && !resumeFile && resumeSignedUrl && (
+                    <ResumePreview
+                      signedUrl={resumeSignedUrl}
+                      fileName={profile.resume_file_url.replace(/^resumes\//, "")}
+                      label="Preview my resume"
+                    />
                   )}
                   <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-[13px] text-slate-600 hover:bg-slate-50">
                     <Upload className="h-3.5 w-3.5" />

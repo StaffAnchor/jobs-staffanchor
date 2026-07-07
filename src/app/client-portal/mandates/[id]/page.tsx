@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
 import { getMyShortlist, getResumeSignedUrl, type ShortlistCandidate } from "@/modules/client-portal/api";
 import ClientFeedbackButtons from "@/modules/client-portal/ClientFeedbackButtons";
+import ResumePreview from "@/components/common/ResumePreview";
+
+const FEEDBACK_LABEL: Record<string, string> = {
+  interested: "Interested",
+  interview_requested: "Interview requested",
+  not_interested: "Not interested",
+};
 
 export default function ClientMandateDetailPage() {
   const params = useParams<{ id: string }>();
@@ -16,6 +24,8 @@ export default function ClientMandateDetailPage() {
   const [rows, setRows] = useState<ShortlistCandidate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [resumeUrls, setResumeUrls] = useState<Record<string, string | null>>({});
+  const [search, setSearch] = useState("");
+  const [feedbackFilter, setFeedbackFilter] = useState("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +61,23 @@ export default function ClientMandateDetailPage() {
     };
   }, [params.id, router]);
 
+  const filtered = useMemo(() => {
+    if (!rows) return [];
+    const q = search.trim().toLowerCase();
+    return rows.filter((c) => {
+      const matchesSearch =
+        !q ||
+        c.full_name.toLowerCase().includes(q) ||
+        (c.current_job_title ?? "").toLowerCase().includes(q) ||
+        (c.current_employer ?? "").toLowerCase().includes(q) ||
+        (c.sub_domain ?? "").toLowerCase().includes(q);
+      const matchesFeedback =
+        feedbackFilter === "all" ||
+        (feedbackFilter === "pending" ? !c.client_feedback : c.client_feedback === feedbackFilter);
+      return matchesSearch && matchesFeedback;
+    });
+  }, [rows, search, feedbackFilter]);
+
   if (error) {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center sm:px-6">
@@ -67,9 +94,14 @@ export default function ClientMandateDetailPage() {
     );
   }
 
-  const recommended = rows.filter((r) => r.overall_recommendation === "Strong Fit");
-  const others = rows.filter((r) => r.overall_recommendation !== "Strong Fit");
+  const recommended = filtered.filter((r) => r.overall_recommendation === "Strong Fit");
+  const others = filtered.filter((r) => r.overall_recommendation !== "Strong Fit");
   const ordered = [...recommended, ...others];
+
+  const interestedCount = rows.filter((r) => r.client_feedback === "interested").length;
+  const interviewCount = rows.filter((r) => r.client_feedback === "interview_requested").length;
+  const notInterestedCount = rows.filter((r) => r.client_feedback === "not_interested").length;
+  const pendingCount = rows.filter((r) => !r.client_feedback).length;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
@@ -77,17 +109,61 @@ export default function ClientMandateDetailPage() {
         <ArrowLeft className="h-3.5 w-3.5" /> All your roles
       </Link>
 
-      <div className="mt-3 mb-6">
+      <div className="mt-3 mb-4">
         <h1 className="text-xl font-bold text-slate-900">{rows[0]?.role_title ?? "Shortlist"}</h1>
         <p className="mt-1 text-sm text-slate-500">
           {rows.length} candidate{rows.length === 1 ? "" : "s"} shortlisted for your review.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600">
+            {recommended.length} recommended
+          </span>
+          <span className="rounded-full bg-emerald-100 px-3 py-1 font-medium text-emerald-700">
+            {interestedCount} interested
+          </span>
+          <span className="rounded-full bg-cyan-100 px-3 py-1 font-medium text-cyan-700">
+            {interviewCount} interview requested
+          </span>
+          <span className="rounded-full bg-red-100 px-3 py-1 font-medium text-red-700">
+            {notInterestedCount} not interested
+          </span>
+          <span className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-700">
+            {pendingCount} awaiting your response
+          </span>
+        </div>
       </div>
+
+      {rows.length > 0 && (
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, title, employer, sub-domain…"
+              className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-slate-500"
+            />
+          </div>
+          <Select value={feedbackFilter} onChange={(e) => setFeedbackFilter(e.target.value)} className="sm:w-56">
+            <option value="all">All candidates</option>
+            <option value="pending">Awaiting my response</option>
+            <option value="interested">Interested</option>
+            <option value="interview_requested">Interview requested</option>
+            <option value="not_interested">Not interested</option>
+          </Select>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-sm text-slate-500">
             No candidates in this shortlist yet — your recruiter will add them here as they're screened.
+          </CardContent>
+        </Card>
+      ) : ordered.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-slate-500">
+            No candidates match your search or filter.
           </CardContent>
         </Card>
       ) : (
@@ -97,11 +173,16 @@ export default function ClientMandateDetailPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-base font-semibold text-slate-900">{c.full_name}</h2>
                       {c.overall_recommendation === "Strong Fit" && (
                         <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800">
                           Recommended
+                        </span>
+                      )}
+                      {c.client_feedback && (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                          {FEEDBACK_LABEL[c.client_feedback] ?? c.client_feedback}
                         </span>
                       )}
                     </div>
@@ -114,14 +195,13 @@ export default function ClientMandateDetailPage() {
                     </p>
                   </div>
                   {c.resume_file_url && resumeUrls[c.candidate_id] && (
-                    <a
-                      href={resumeUrls[c.candidate_id]!}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex shrink-0 items-center gap-1 text-sm text-blue-600 hover:underline"
-                    >
-                      <FileText className="h-3.5 w-3.5" /> Resume
-                    </a>
+                    <div className="shrink-0">
+                      <ResumePreview
+                        signedUrl={resumeUrls[c.candidate_id]!}
+                        fileName={c.resume_file_url.replace(/^resumes\//, "")}
+                        label="Preview resume"
+                      />
+                    </div>
                   )}
                 </div>
 
@@ -145,6 +225,19 @@ export default function ClientMandateDetailPage() {
                     <p className="text-slate-700">{c.verified_notice ?? "—"}</p>
                   </div>
                 </div>
+
+                {c.industries && c.industries.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs text-slate-400">Industries</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {c.industries.map((i) => (
+                        <span key={i} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                          {i}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <ClientFeedbackButtons linkId={c.link_id} current={c.client_feedback} />
               </CardContent>
