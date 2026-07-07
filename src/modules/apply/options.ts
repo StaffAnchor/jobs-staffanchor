@@ -223,24 +223,69 @@ export const customerSegmentOptions = ["SMB", "Mid-Market", "Enterprise", "MNC",
 
 export const funnelStageOptions = ["Acquisition", "Full-funnel", "Retention / Upsell"];
 
-export const workModeOptions = ["Onsite", "Hybrid", "Remote"];
+export const workModeOptions = ["Onsite", "Hybrid", "Remote", "Open to Any (as per company requirement)"];
 export const relocationOptions = ["Yes", "No", "Maybe"];
+export const travelPreferenceOptions = ["No Travel", "Some Travel (occasional)", "Extensive Travel"];
 
 export const highestQualificationOptions = [
   "High School",
   "Diploma",
   "Bachelor's Degree",
   "Master's Degree / MBA",
+  "Doctorate (PhD)",
+  "Professional Certification (e.g. CA, CFA)",
   "Other",
 ];
 
 export const employmentStatusOptions = [
   "Employed",
   "Serving Notice",
-  "Freelancing",
+  "Self-Employed",
+  "Entrepreneur / Founder",
+  "Freelancing / Consulting",
+  "Career Break / Sabbatical",
   "Between Jobs",
   "First Job Seeker",
 ];
+
+// ---- Current city (major Indian cities, with state auto-filled) ----
+// NCR cities are kept distinct (not lumped as "Delhi NCR") since which one a
+// candidate is actually based in matters for accurate location labelling.
+export const cityStateMap: Record<string, string> = {
+  Delhi: "Delhi",
+  Noida: "Uttar Pradesh",
+  "Greater Noida": "Uttar Pradesh",
+  Gurgaon: "Haryana",
+  Faridabad: "Haryana",
+  Ghaziabad: "Uttar Pradesh",
+  Mumbai: "Maharashtra",
+  Pune: "Maharashtra",
+  Nagpur: "Maharashtra",
+  Bangalore: "Karnataka",
+  Hyderabad: "Telangana",
+  Chennai: "Tamil Nadu",
+  Coimbatore: "Tamil Nadu",
+  Kolkata: "West Bengal",
+  Ahmedabad: "Gujarat",
+  Surat: "Gujarat",
+  Vadodara: "Gujarat",
+  Chandigarh: "Chandigarh",
+  Mohali: "Punjab",
+  Jaipur: "Rajasthan",
+  Lucknow: "Uttar Pradesh",
+  Kanpur: "Uttar Pradesh",
+  Indore: "Madhya Pradesh",
+  Bhopal: "Madhya Pradesh",
+  Kochi: "Kerala",
+  Thiruvananthapuram: "Kerala",
+  Visakhapatnam: "Andhra Pradesh",
+  Patna: "Bihar",
+  Guwahati: "Assam",
+  Bhubaneswar: "Odisha",
+  Dehradun: "Uttarakhand",
+};
+
+export const cityOptions = [...Object.keys(cityStateMap), "Other"];
 
 export function subDomainsForCategory(category: CategoryValue | null): string[] {
   if (category === "b2b_sales") return b2bSubDomains;

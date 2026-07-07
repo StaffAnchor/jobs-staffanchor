@@ -28,6 +28,8 @@ import {
   b2bSubDomains,
   b2cSubDomains,
   categoryOptions,
+  cityOptions,
+  cityStateMap,
   ctcOptions,
   currencyOptions,
   customerSegmentOptions,
@@ -53,6 +55,7 @@ import {
   skillSuggestionsFor,
   subDomainsForCategory,
   teamSizeOptions,
+  travelPreferenceOptions,
   workModeOptions,
   type CategoryValue,
   type CurrencyValue,
@@ -71,6 +74,9 @@ type FormState = {
   email: string;
   phone: string;
   currentLocation: string;
+  cityChoice: string;
+  customCity: string;
+  customState: string;
   linkedinUrl: string;
   currentEmployer: string;
   currentJobTitle: string;
@@ -85,8 +91,10 @@ type FormState = {
   expectedFixedCtc: string;
   expectedVariableCtc: string;
   highestQualification: string;
+  customQualification: string;
   workMode: string;
   openToRelocation: string;
+  travelPreference: string;
   category: CategoryValue | "";
   subDomain: string;
   secondarySubDomains: string[];
@@ -106,6 +114,8 @@ type FormState = {
   dailyTalkTime: string;
   leadSources: string[];
   hasIcTarget: string;
+  icTargetCurrency: CurrencyValue | "";
+  teamTargetCurrency: CurrencyValue | "";
   icTargetQ1: string;
   icTargetQ2: string;
   icTargetQ3: string;
@@ -134,6 +144,9 @@ const initialState: FormState = {
   email: "",
   phone: "",
   currentLocation: "",
+  cityChoice: "",
+  customCity: "",
+  customState: "",
   linkedinUrl: "",
   currentEmployer: "",
   currentJobTitle: "",
@@ -148,8 +161,10 @@ const initialState: FormState = {
   expectedFixedCtc: "",
   expectedVariableCtc: "",
   highestQualification: "",
+  customQualification: "",
   workMode: "",
   openToRelocation: "",
+  travelPreference: "",
   category: "",
   subDomain: "",
   secondarySubDomains: [],
@@ -169,6 +184,8 @@ const initialState: FormState = {
   dailyTalkTime: "",
   leadSources: [],
   hasIcTarget: "",
+  icTargetCurrency: "",
+  teamTargetCurrency: "",
   icTargetQ1: "",
   icTargetQ2: "",
   icTargetQ3: "",
@@ -402,12 +419,13 @@ export default function ApplyForm() {
     targetValue: string,
     onTarget: (v: string) => void,
     achievementValue: string,
-    onAchievement: (v: string) => void
+    onAchievement: (v: string) => void,
+    currencyLabel?: string
   ) {
     return (
       <div key={label} className="space-y-2 rounded-md border border-slate-200 p-3">
         <p className="text-xs font-semibold text-slate-500">{label}</p>
-        <FormField label="Target" required>
+        <FormField label={currencyLabel ? `Target (${currencyLabel})` : "Target"} required>
           <Input type="number" value={targetValue} onChange={(e) => onTarget(e.target.value)} />
         </FormField>
         <FormField label="Achieved %" required>
@@ -473,8 +491,11 @@ export default function ApplyForm() {
     if (step === 0) {
       if (!values.fullName.trim()) return "Full name is required.";
       if (!/^\S+@\S+\.\S+$/.test(values.email)) return "A valid email is required.";
-      if (!values.phone.trim()) return "Phone number is required.";
-      if (!values.currentLocation.trim()) return "Current location is required.";
+      if (values.phone.length !== 10) return "Please enter a valid 10-digit phone number.";
+      if (!values.cityChoice) return "Please select your current city.";
+      if (values.cityChoice === "Other" && (!values.customCity.trim() || !values.customState.trim())) {
+        return "Please enter both city and state.";
+      }
       if (!values.linkedinUrl.trim()) return "LinkedIn profile URL is required.";
       if (!resumeFile) return "Please upload your resume.";
     }
@@ -483,16 +504,25 @@ export default function ApplyForm() {
       if (!values.totalExperienceYears) return "Total experience is required.";
       if (!values.currentFixedCtc) return "Current fixed CTC is required.";
       if (!values.currentVariableCtc) return "Current variable CTC is required (select 0 LPA if none).";
-      const isCurrentlyEmployed =
-        values.currentEmploymentStatus === "Employed" || values.currentEmploymentStatus === "Serving Notice";
+      const isCurrentlyEmployed = [
+        "Employed",
+        "Serving Notice",
+        "Self-Employed",
+        "Entrepreneur / Founder",
+      ].includes(values.currentEmploymentStatus);
       if (isCurrentlyEmployed) {
         if (!values.currentEmployer.trim()) return "Current employer is required.";
         if (!values.currentJobTitle.trim()) return "Current job title is required.";
+      }
+      if (values.currentEmploymentStatus === "Employed" || values.currentEmploymentStatus === "Serving Notice") {
         if (!values.noticePeriod) return "Notice period is required.";
       }
       if (!values.expectedFixedCtc) return "Expected fixed CTC is required.";
       if (!values.expectedVariableCtc) return "Expected variable CTC is required (select 0 LPA if none).";
       if (!values.highestQualification) return "Highest qualification is required.";
+      if (values.highestQualification === "Other" && !values.customQualification.trim()) {
+        return "Please specify your qualification.";
+      }
     }
     if (step === 2) {
       if (!values.category) return "Please select a category.";
@@ -525,10 +555,15 @@ export default function ApplyForm() {
       }
     }
     if (step === 3 && isSales) {
-      if (!values.bestWin.trim()) return "Please tell us about your best win.";
-      if (!values.toughLoss.trim()) return "Please tell us about a target you missed and what you learned.";
+      if (values.bestWin.trim().length < 100) {
+        return "Your best win needs at least 100 characters — specific numbers help recruiters most.";
+      }
+      if (values.toughLoss.trim().length < 100) {
+        return "Your missed-target reflection needs at least 100 characters.";
+      }
 
       if (values.roleType === "Leading a Team") {
+        if (!values.teamTargetCurrency) return "Please select a currency for your team target.";
         if (
           !allFilled([
             "teamTargetQ1",
@@ -546,13 +581,16 @@ export default function ApplyForm() {
         if (!values.hasIcTarget) {
           return "Please tell us whether you also carry an individual sales target.";
         }
-        if (
-          values.hasIcTarget === "Yes" &&
-          !allFilled(["icTargetQ1", "icTargetQ2", "icTargetQ3", "icTargetQ4", "quotaQ1", "quotaQ2", "quotaQ3", "quotaQ4"])
-        ) {
-          return "Please fill in your individual target and achievement % for all 4 quarters.";
+        if (values.hasIcTarget === "Yes") {
+          if (!values.icTargetCurrency) return "Please select a currency for your individual target.";
+          if (
+            !allFilled(["icTargetQ1", "icTargetQ2", "icTargetQ3", "icTargetQ4", "quotaQ1", "quotaQ2", "quotaQ3", "quotaQ4"])
+          ) {
+            return "Please fill in your individual target and achievement % for all 4 quarters.";
+          }
         }
       } else {
+        if (!values.icTargetCurrency) return "Please select a currency for your sales target.";
         if (
           !allFilled(["icTargetQ1", "icTargetQ2", "icTargetQ3", "icTargetQ4", "quotaQ1", "quotaQ2", "quotaQ3", "quotaQ4"])
         ) {
@@ -565,6 +603,7 @@ export default function ApplyForm() {
       if (!values.selectedIndustries.length) return "Please select at least one industry.";
       if (!values.workMode) return "Please select a work mode preference.";
       if (!values.openToRelocation) return "Please select your relocation preference.";
+      if (!values.travelPreference) return "Please select your travel preference.";
       if (!values.consent) return "Please confirm consent to continue.";
     }
     return null;
@@ -614,6 +653,7 @@ export default function ApplyForm() {
       const segmentData: Record<string, unknown> = {
         role_level: values.roleLevel,
         role_type: values.roleType === "Leading a Team" ? "Team Lead" : "IC",
+        travel_preference: values.travelPreference || undefined,
       };
 
       if (values.roleType === "Leading a Team" && values.teamSize) {
@@ -642,16 +682,24 @@ export default function ApplyForm() {
       if (values.roleType === "Leading a Team") {
         if (teamTargets.length) segmentData.team_targets = teamTargets;
         if (teamAchievement.length) segmentData.team_quota = teamAchievement;
+        if (values.teamTargetCurrency) segmentData.team_target_currency = values.teamTargetCurrency;
         if (values.hasIcTarget === "Yes") {
           if (icTargets.length) segmentData.ic_targets = icTargets;
           if (icAchievement.length) segmentData.quota = icAchievement;
-          if (icTargets.length === 4 && teamTargets.length === 4) {
+          if (values.icTargetCurrency) segmentData.ic_target_currency = values.icTargetCurrency;
+          if (
+            icTargets.length === 4 &&
+            teamTargets.length === 4 &&
+            values.icTargetCurrency &&
+            values.icTargetCurrency === values.teamTargetCurrency
+          ) {
             segmentData.total_targets = teamTargets.map((t, i) => t + icTargets[i]);
           }
         }
       } else {
         if (icTargets.length) segmentData.ic_targets = icTargets;
         if (icAchievement.length) segmentData.quota = icAchievement;
+        if (values.icTargetCurrency) segmentData.ic_target_currency = values.icTargetCurrency;
       }
 
       if (values.category === "b2b_sales") {
@@ -717,7 +765,10 @@ export default function ApplyForm() {
         },
         open_to_relocation: values.openToRelocation || null,
         work_mode: values.workMode || null,
-        highest_qualification: values.highestQualification || null,
+        highest_qualification:
+          values.highestQualification === "Other"
+            ? values.customQualification || null
+            : values.highestQualification || null,
         industries: values.selectedIndustries,
         skills: values.selectedSkills.length ? values.selectedSkills.join(", ") : null,
         consent: values.consent,
@@ -882,27 +933,88 @@ export default function ApplyForm() {
               <FormField label="Email" required>
                 <Input type="email" value={values.email} onChange={(e) => update("email", e.target.value)} />
               </FormField>
-              <FormField label="Phone" required>
+              <FormField label="Phone (10-digit mobile number)" required>
                 <Input
                   inputMode="numeric"
-                  maxLength={15}
+                  maxLength={10}
                   value={values.phone}
-                  onChange={(e) => update("phone", e.target.value)}
+                  onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
                 />
               </FormField>
-              <FormField label="Current Location" required>
-                <Input value={values.currentLocation} onChange={(e) => update("currentLocation", e.target.value)} />
+              <FormField label="Current City" required>
+                <Select
+                  value={values.cityChoice}
+                  onChange={(e) => {
+                    const city = e.target.value;
+                    update("cityChoice", city);
+                    if (city && city !== "Other") {
+                      update("currentLocation", `${city}, ${cityStateMap[city]}`);
+                      update("customCity", "");
+                      update("customState", "");
+                    } else {
+                      update("currentLocation", "");
+                    }
+                  }}
+                >
+                  <option value="">Select...</option>
+                  {cityOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
               </FormField>
+              {values.cityChoice === "Other" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField label="City" required>
+                    <Input
+                      value={values.customCity}
+                      onChange={(e) => {
+                        update("customCity", e.target.value);
+                        update("currentLocation", `${e.target.value}, ${values.customState}`);
+                      }}
+                    />
+                  </FormField>
+                  <FormField label="State" required>
+                    <Input
+                      value={values.customState}
+                      onChange={(e) => {
+                        update("customState", e.target.value);
+                        update("currentLocation", `${values.customCity}, ${e.target.value}`);
+                      }}
+                    />
+                  </FormField>
+                </div>
+              )}
               <FormField label="LinkedIn Profile URL" required>
                 <Input value={values.linkedinUrl} onChange={(e) => update("linkedinUrl", e.target.value)} />
               </FormField>
-              <FormField label="Resume (PDF or DOCX)" required>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
-                  className="text-sm"
-                />
+              <FormField label="Resume" required>
+                <label
+                  htmlFor="resume-upload"
+                  className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition ${
+                    resumeFile
+                      ? "border-emerald-300 bg-emerald-50"
+                      : "border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50"
+                  }`}
+                >
+                  <span className="text-2xl">{resumeFile ? "✓" : "📄"}</span>
+                  {resumeFile ? (
+                    <span className="text-sm font-medium text-emerald-700">{resumeFile.name}</span>
+                  ) : (
+                    <>
+                      <span className="text-sm font-medium text-slate-700">Click to upload your resume</span>
+                      <span className="text-xs text-slate-400">PDF or DOCX, up to 10MB</span>
+                    </>
+                  )}
+                  <input
+                    id="resume-upload"
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
+                    className="hidden"
+                  />
+                </label>
               </FormField>
             </>
           )}
@@ -1032,6 +1144,14 @@ export default function ApplyForm() {
                   ))}
                 </Select>
               </FormField>
+              {values.highestQualification === "Other" && (
+                <FormField label="Please specify" required>
+                  <Input
+                    value={values.customQualification}
+                    onChange={(e) => update("customQualification", e.target.value)}
+                  />
+                </FormField>
+              )}
             </>
           )}
 
@@ -1334,11 +1454,24 @@ export default function ApplyForm() {
                         Share your <strong>team&apos;s</strong> overall target and achieved % for the last 4
                         completed quarters, counting back from today — not calendar Q1-Q4 of any particular year.
                       </p>
+                      <FormField label="Team Target Currency" required>
+                        <Select
+                          value={values.teamTargetCurrency}
+                          onChange={(e) => update("teamTargetCurrency", e.target.value as CurrencyValue | "")}
+                        >
+                          <option value="">Select...</option>
+                          {currencyOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        {quarterField("4 quarters ago", values.teamTargetQ1, (v) => update("teamTargetQ1", v), values.teamQuotaQ1, (v) => update("teamQuotaQ1", v))}
-                        {quarterField("3 quarters ago", values.teamTargetQ2, (v) => update("teamTargetQ2", v), values.teamQuotaQ2, (v) => update("teamQuotaQ2", v))}
-                        {quarterField("2 quarters ago", values.teamTargetQ3, (v) => update("teamTargetQ3", v), values.teamQuotaQ3, (v) => update("teamQuotaQ3", v))}
-                        {quarterField("Most recent completed quarter", values.teamTargetQ4, (v) => update("teamTargetQ4", v), values.teamQuotaQ4, (v) => update("teamQuotaQ4", v))}
+                        {quarterField("4 quarters ago", values.teamTargetQ1, (v) => update("teamTargetQ1", v), values.teamQuotaQ1, (v) => update("teamQuotaQ1", v), values.teamTargetCurrency)}
+                        {quarterField("3 quarters ago", values.teamTargetQ2, (v) => update("teamTargetQ2", v), values.teamQuotaQ2, (v) => update("teamQuotaQ2", v), values.teamTargetCurrency)}
+                        {quarterField("2 quarters ago", values.teamTargetQ3, (v) => update("teamTargetQ3", v), values.teamQuotaQ3, (v) => update("teamQuotaQ3", v), values.teamTargetCurrency)}
+                        {quarterField("Most recent completed quarter", values.teamTargetQ4, (v) => update("teamTargetQ4", v), values.teamQuotaQ4, (v) => update("teamQuotaQ4", v), values.teamTargetCurrency)}
                       </div>
 
                       <FormField label="Do you also carry your own individual sales target, in addition to the team target?" required>
@@ -1357,11 +1490,24 @@ export default function ApplyForm() {
                         Share your <strong>individual</strong> target and achieved % for the last 4 completed
                         quarters, counting back from today — not calendar Q1-Q4 of any particular year.
                       </p>
+                      <FormField label="Individual Target Currency" required>
+                        <Select
+                          value={values.icTargetCurrency}
+                          onChange={(e) => update("icTargetCurrency", e.target.value as CurrencyValue | "")}
+                        >
+                          <option value="">Select...</option>
+                          {currencyOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        {quarterField("4 quarters ago", values.icTargetQ1, (v) => update("icTargetQ1", v), values.quotaQ1, (v) => update("quotaQ1", v))}
-                        {quarterField("3 quarters ago", values.icTargetQ2, (v) => update("icTargetQ2", v), values.quotaQ2, (v) => update("quotaQ2", v))}
-                        {quarterField("2 quarters ago", values.icTargetQ3, (v) => update("icTargetQ3", v), values.quotaQ3, (v) => update("quotaQ3", v))}
-                        {quarterField("Most recent completed quarter", values.icTargetQ4, (v) => update("icTargetQ4", v), values.quotaQ4, (v) => update("quotaQ4", v))}
+                        {quarterField("4 quarters ago", values.icTargetQ1, (v) => update("icTargetQ1", v), values.quotaQ1, (v) => update("quotaQ1", v), values.icTargetCurrency)}
+                        {quarterField("3 quarters ago", values.icTargetQ2, (v) => update("icTargetQ2", v), values.quotaQ2, (v) => update("quotaQ2", v), values.icTargetCurrency)}
+                        {quarterField("2 quarters ago", values.icTargetQ3, (v) => update("icTargetQ3", v), values.quotaQ3, (v) => update("quotaQ3", v), values.icTargetCurrency)}
+                        {quarterField("Most recent completed quarter", values.icTargetQ4, (v) => update("icTargetQ4", v), values.quotaQ4, (v) => update("quotaQ4", v), values.icTargetCurrency)}
                       </div>
                     </>
                   )}
@@ -1388,6 +1534,9 @@ export default function ApplyForm() {
               )}
               <FormField label="Tell us about your best win" required>
                 <div className="space-y-1">
+                  <p className="text-xs text-slate-500">
+                    Min. 100 characters — e.g. deal size, client, timeline, and why it mattered.
+                  </p>
                   <textarea
                     maxLength={500}
                     placeholder="Describe a deal or achievement you are most proud of."
@@ -1395,11 +1544,16 @@ export default function ApplyForm() {
                     value={values.bestWin}
                     onChange={(e) => update("bestWin", e.target.value)}
                   />
-                  <p className="text-right text-xs text-slate-400">{values.bestWin.length} / 500</p>
+                  <p className={`text-right text-xs ${values.bestWin.length < 100 ? "text-amber-600" : "text-slate-400"}`}>
+                    {values.bestWin.length} / 500 {values.bestWin.length < 100 ? `(min 100)` : ""}
+                  </p>
                 </div>
               </FormField>
               <FormField label="Tell us about a target you missed, and what you learned" required>
                 <div className="space-y-1">
+                  <p className="text-xs text-slate-500">
+                    Min. 100 characters — what happened, and what you changed afterward.
+                  </p>
                   <textarea
                     maxLength={500}
                     placeholder="What happened, and what did you learn from it?"
@@ -1407,7 +1561,9 @@ export default function ApplyForm() {
                     value={values.toughLoss}
                     onChange={(e) => update("toughLoss", e.target.value)}
                   />
-                  <p className="text-right text-xs text-slate-400">{values.toughLoss.length} / 500</p>
+                  <p className={`text-right text-xs ${values.toughLoss.length < 100 ? "text-amber-600" : "text-slate-400"}`}>
+                    {values.toughLoss.length} / 500 {values.toughLoss.length < 100 ? `(min 100)` : ""}
+                  </p>
                 </div>
               </FormField>
             </>
@@ -1554,6 +1710,19 @@ export default function ApplyForm() {
                 <Select value={values.openToRelocation} onChange={(e) => update("openToRelocation", e.target.value)}>
                   <option value="">Select...</option>
                   {relocationOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField label="Travel Preference" required>
+                <Select
+                  value={values.travelPreference}
+                  onChange={(e) => update("travelPreference", e.target.value)}
+                >
+                  <option value="">Select...</option>
+                  {travelPreferenceOptions.map((o) => (
                     <option key={o} value={o}>
                       {o}
                     </option>
