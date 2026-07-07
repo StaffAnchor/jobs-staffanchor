@@ -425,8 +425,14 @@ export default function ApplyForm() {
     return (
       <div key={label} className="space-y-2 rounded-md border border-slate-200 p-3">
         <p className="text-xs font-semibold text-slate-500">{label}</p>
-        <FormField label={currencyLabel ? `Target (${currencyLabel})` : "Target"} required>
-          <Input type="number" value={targetValue} onChange={(e) => onTarget(e.target.value)} />
+        <FormField label={currencyLabel ? `Quarterly Target (${currencyLabel})` : "Quarterly Target"} required>
+          <Input
+            type="number"
+            placeholder="Full quarter, not monthly"
+            value={targetValue}
+            onChange={(e) => onTarget(e.target.value)}
+          />
+          <p className="text-xs text-slate-400">Enter the target for the full quarter (3 months), not a monthly number.</p>
         </FormField>
         <FormField label="Achieved %" required>
           <div className="flex flex-wrap gap-1.5">
@@ -1451,7 +1457,8 @@ export default function ApplyForm() {
                   {values.roleType === "Leading a Team" && (
                     <>
                       <p className="text-sm text-slate-600">
-                        Share your <strong>team&apos;s</strong> overall target and achieved % for the last 4
+                        Share your <strong>team&apos;s</strong> overall <strong>quarterly</strong> target (the
+                        number for the full 3-month quarter, not a monthly figure) and achieved % for the last 4
                         completed quarters, counting back from today — not calendar Q1-Q4 of any particular year.
                       </p>
                       <FormField label="Team Target Currency" required>
@@ -1487,8 +1494,9 @@ export default function ApplyForm() {
                   {(values.roleType !== "Leading a Team" || values.hasIcTarget === "Yes") && (
                     <>
                       <p className="text-sm text-slate-600">
-                        Share your <strong>individual</strong> target and achieved % for the last 4 completed
-                        quarters, counting back from today — not calendar Q1-Q4 of any particular year.
+                        Share your <strong>individual quarterly</strong> target (the number for the full
+                        3-month quarter, not a monthly figure) and achieved % for the last 4 completed quarters,
+                        counting back from today — not calendar Q1-Q4 of any particular year.
                       </p>
                       <FormField label="Individual Target Currency" required>
                         <Select
