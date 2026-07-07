@@ -316,7 +316,17 @@ export default function ApplyForm() {
         const draft = JSON.parse(raw) as { values: FormState; step: number };
         if (draft?.values) {
           setValues((prev) => ({ ...prev, ...draft.values }));
-          setStep(draft.step ?? 0);
+          const restoredStep = draft.step ?? 0;
+          if (restoredStep > 0) {
+            // The resume file itself can never survive a localStorage round-trip,
+            // so a candidate resuming past step 0 is always missing it again.
+            // Send them back to step 0 so they're forced to re-attach it instead
+            // of being able to click straight through to a resume-less submission.
+            setStep(0);
+            setErrorMsg("Welcome back! Your other answers were saved — please re-attach your resume to continue.");
+          } else {
+            setStep(restoredStep);
+          }
         }
       }
     } catch {
@@ -654,6 +664,14 @@ export default function ApplyForm() {
     const err = validateStep();
     if (err) {
       setErrorMsg(err);
+      return;
+    }
+    // Belt-and-suspenders: resume is only checked by validateStep() on step 0,
+    // but a restored draft (or any future step-reordering) could otherwise reach
+    // this point on a later step with no resume attached. Never let that submit.
+    if (!resumeFile) {
+      setErrorMsg("Please upload your resume before submitting.");
+      setStep(0);
       return;
     }
     setSubmitting(true);
