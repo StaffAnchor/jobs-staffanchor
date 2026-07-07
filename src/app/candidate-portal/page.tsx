@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { UserCircle2, Briefcase, Gift, Sparkles } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
-import ProfileEditor, { type CandidateProfile } from "@/modules/candidate-portal/ProfileEditor";
+import { type CandidateProfile } from "@/modules/candidate-portal/ProfileEditor";
+import ApplyForm from "@/modules/apply/ApplyForm";
 import MyPipeline from "@/modules/candidate-portal/MyPipeline";
 import ReferEarn from "@/modules/candidate-portal/ReferEarn";
 import { listOpenJobs, type JobListing } from "@/modules/jobs/api";
@@ -45,55 +46,55 @@ export default function CandidatePortalPage() {
   const [pipelineCount, setPipelineCount] = useState<number | null>(null);
   const [activeReferralCount, setActiveReferralCount] = useState<number | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  async function loadProfile(cancelledRef?: { current: boolean }) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.replace("/candidate-login");
-        return;
-      }
-
-      const { data: candidateId, error: rpcError } = await supabase.rpc("get_or_create_my_candidate_profile");
-      if (rpcError) {
-        if (!cancelled) setError(rpcError.message);
-        return;
-      }
-
-      const { data, error: fetchError } = await supabase.from("candidates").select("*").eq("id", candidateId).single();
-      if (cancelled) return;
-      if (fetchError || !data) {
-        setError(fetchError?.message ?? "Could not load your profile.");
-        return;
-      }
-      setProfile(data as CandidateProfile);
-
-      try {
-        const jobs = await listOpenJobs();
-        if (!cancelled) setOpenJobs(jobs);
-      } catch {
-        // Non-critical: the profile editor still works without the openings panel.
-      }
-
-      // Lightweight counts just to give the nav some life — actual detail
-      // fetching/rendering still happens inside each tab's own component.
-      const [{ data: pipeline }, { data: referrals }] = await Promise.all([
-        supabase.rpc("get_my_pipeline"),
-        supabase.rpc("get_my_referrals"),
-      ]);
-      if (cancelled) return;
-      setPipelineCount((pipeline ?? []).length);
-      setActiveReferralCount((referrals ?? []).filter((r: { status: string }) => r.status !== "not_selected").length);
+    if (!user) {
+      router.replace("/candidate-login");
+      return;
     }
 
-    load();
+    const { data: candidateId, error: rpcError } = await supabase.rpc("get_or_create_my_candidate_profile");
+    if (rpcError) {
+      if (!cancelledRef?.current) setError(rpcError.message);
+      return;
+    }
+
+    const { data, error: fetchError } = await supabase.from("candidates").select("*").eq("id", candidateId).single();
+    if (cancelledRef?.current) return;
+    if (fetchError || !data) {
+      setError(fetchError?.message ?? "Could not load your profile.");
+      return;
+    }
+    setProfile(data as CandidateProfile);
+
+    try {
+      const jobs = await listOpenJobs();
+      if (!cancelledRef?.current) setOpenJobs(jobs);
+    } catch {
+      // Non-critical.
+    }
+
+    // Lightweight counts just to give the nav some life — actual detail
+    // fetching/rendering still happens inside each tab's own component.
+    const [{ data: pipeline }, { data: referrals }] = await Promise.all([
+      supabase.rpc("get_my_pipeline"),
+      supabase.rpc("get_my_referrals"),
+    ]);
+    if (cancelledRef?.current) return;
+    setPipelineCount((pipeline ?? []).length);
+    setActiveReferralCount((referrals ?? []).filter((r: { status: string }) => r.status !== "not_selected").length);
+  }
+
+  useEffect(() => {
+    const cancelledRef = { current: false };
+    loadProfile(cancelledRef);
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   if (error) {
@@ -157,7 +158,9 @@ export default function CandidatePortalPage() {
         </div>
       </div>
 
-      {tab === "profile" && <ProfileEditor profile={profile} openJobs={openJobs} />}
+      {tab === "profile" && (
+        <ApplyForm existingProfile={profile} onSaved={() => loadProfile()} />
+      )}
       {tab === "pipeline" && (
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           <h1 className="mb-1 flex items-center gap-2 text-xl font-bold text-slate-900">

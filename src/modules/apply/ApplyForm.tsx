@@ -293,10 +293,151 @@ const STRENGTH_FIELDS: (keyof FormState)[] = [
   "openToRelocation",
 ];
 
-export default function ApplyForm() {
+type ExistingProfile = {
+  id: string;
+  full_name: string | null;
+  email: string;
+  phone: string | null;
+  current_location: string | null;
+  linkedin_url: string | null;
+  resume_file_url: string | null;
+  current_employer: string | null;
+  current_job_title: string | null;
+  current_employment_status: string | null;
+  total_experience_years: number | null;
+  current_fixed_ctc: number | null;
+  current_variable_ctc: number | null;
+  esops_held: boolean | null;
+  notice_period: string | null;
+  expected_fixed_ctc: number | null;
+  expected_variable_ctc: number | null;
+  category: string | null;
+  sub_domain: string | null;
+  secondary_sub_domains: string[] | null;
+  industries: string[] | null;
+  segment_data: Record<string, unknown> | null;
+  open_to_relocation: string | null;
+  work_mode: string | null;
+  highest_qualification: string | null;
+  skills: string | null;
+  self_assessment: { best?: string; lost?: string } | null;
+  status: string;
+};
+
+function seg(data: Record<string, unknown> | null | undefined, key: string): string {
+  const v = data?.[key];
+  return v === undefined || v === null ? "" : String(v);
+}
+function segArr(data: Record<string, unknown> | null | undefined, key: string): string[] {
+  const v = data?.[key];
+  return Array.isArray(v) ? v.map(String) : [];
+}
+function segNumArr(data: Record<string, unknown> | null | undefined, key: string): string[] {
+  const v = data?.[key];
+  return Array.isArray(v) ? v.map((n) => String(n)) : ["", "", "", ""];
+}
+
+// Best-effort reverse-map of an existing candidates row (+ its segment_data)
+// back into the wizard's flat FormState, so the same "Build your profile"
+// form can also be used to EDIT an existing profile from the candidate
+// portal instead of maintaining a second, separately-validated form.
+function buildFormStateFromProfile(p: ExistingProfile): FormState {
+  const sd = p.segment_data ?? null;
+  const knownCity = p.current_location && cityOptions.includes(p.current_location);
+  const roleTypeRaw = seg(sd, "role_type");
+  const icTargets = segNumArr(sd, "ic_targets");
+  const quota = segNumArr(sd, "quota");
+  const teamTargets = segNumArr(sd, "team_targets");
+  const teamQuota = segNumArr(sd, "team_quota");
+  const knownQualification =
+    p.highest_qualification && highestQualificationOptions.includes(p.highest_qualification);
+
+  return {
+    ...initialState,
+    fullName: p.full_name ?? "",
+    email: p.email ?? "",
+    phone: p.phone ?? "",
+    currentLocation: p.current_location ?? "",
+    cityChoice: knownCity ? (p.current_location as string) : p.current_location ? "Other" : "",
+    customCity: !knownCity && p.current_location ? p.current_location.split(",")[0].trim() : "",
+    customState: !knownCity && p.current_location ? (p.current_location.split(",")[1] ?? "").trim() : "",
+    linkedinUrl: p.linkedin_url ?? "",
+    currentEmployer: p.current_employer ?? "",
+    currentJobTitle: p.current_job_title ?? "",
+    currentEmploymentStatus: p.current_employment_status ?? "",
+    totalExperienceYears: p.total_experience_years != null ? String(p.total_experience_years) : "",
+    currentFixedCtc: p.current_fixed_ctc != null ? String(p.current_fixed_ctc) : "",
+    currentVariableCtc: p.current_variable_ctc != null ? String(p.current_variable_ctc) : "",
+    esopsHeld: p.esops_held ?? false,
+    selectedSkills: p.skills ? p.skills.split(",").map((s) => s.trim()).filter(Boolean) : [],
+    noticePeriod: p.notice_period ?? "",
+    expectedFixedCtc: p.expected_fixed_ctc != null ? String(p.expected_fixed_ctc) : "",
+    expectedVariableCtc: p.expected_variable_ctc != null ? String(p.expected_variable_ctc) : "",
+    highestQualification: knownQualification ? (p.highest_qualification as string) : p.highest_qualification ? "Other" : "",
+    customQualification: !knownQualification ? (p.highest_qualification ?? "") : "",
+    workMode: p.work_mode ?? "",
+    openToRelocation: p.open_to_relocation ?? "",
+    travelPreference: seg(sd, "travel_preference"),
+    category: (p.category ?? "") as CategoryValue | "",
+    subDomain: p.sub_domain ?? "",
+    secondarySubDomains: p.secondary_sub_domains ?? [],
+    roleLevel: seg(sd, "role_level"),
+    roleType: roleTypeRaw === "Team Lead" ? "Leading a Team" : roleTypeRaw === "IC" ? "Individual Contributor (IC)" : "",
+    teamSize: seg(sd, "team_size"),
+    dealCurrency: (seg(sd, "deal_size_currency") || seg(sd, "ticket_currency")) as CurrencyValue | "",
+    dealSizeBand: seg(sd, "deal_size") || seg(sd, "ticket"),
+    cycle: seg(sd, "cycle"),
+    motion: segArr(sd, "motion"),
+    style: seg(sd, "style"),
+    segment: seg(sd, "segment"),
+    funnel: seg(sd, "funnel"),
+    scope: seg(sd, "scope"),
+    scopeDetail: seg(sd, "scope_detail"),
+    scopeRegions: segArr(sd, "scope_regions"),
+    aht: seg(sd, "aht"),
+    dailyCallTarget: seg(sd, "daily_call_target"),
+    dailyTalkTime: seg(sd, "daily_talk_time"),
+    leadSources: segArr(sd, "lead_sources"),
+    hasIcTarget: icTargets.some((v) => v !== "") ? "Yes" : "No",
+    icTargetCurrency: seg(sd, "ic_target_currency") as CurrencyValue | "",
+    teamTargetCurrency: seg(sd, "team_target_currency") as CurrencyValue | "",
+    icTargetQ1: icTargets[0] ?? "",
+    icTargetQ2: icTargets[1] ?? "",
+    icTargetQ3: icTargets[2] ?? "",
+    icTargetQ4: icTargets[3] ?? "",
+    quotaQ1: quota[0] ?? "",
+    quotaQ2: quota[1] ?? "",
+    quotaQ3: quota[2] ?? "",
+    quotaQ4: quota[3] ?? "",
+    teamTargetQ1: teamTargets[0] ?? "",
+    teamTargetQ2: teamTargets[1] ?? "",
+    teamTargetQ3: teamTargets[2] ?? "",
+    teamTargetQ4: teamTargets[3] ?? "",
+    teamQuotaQ1: teamQuota[0] ?? "",
+    teamQuotaQ2: teamQuota[1] ?? "",
+    teamQuotaQ3: teamQuota[2] ?? "",
+    teamQuotaQ4: teamQuota[3] ?? "",
+    bestWin: p.self_assessment?.best ?? "",
+    toughLoss: p.self_assessment?.lost ?? "",
+    selectedIndustries: p.industries ?? [],
+    consent: true,
+  };
+}
+
+export default function ApplyForm({
+  existingProfile,
+  onSaved,
+}: {
+  existingProfile?: ExistingProfile;
+  onSaved?: () => void;
+} = {}) {
+  const isEditMode = !!existingProfile;
   const [step, setStep] = useState(0);
-  const [values, setValues] = useState<FormState>(initialState);
+  const [values, setValues] = useState<FormState>(() =>
+    existingProfile ? buildFormStateFromProfile(existingProfile) : initialState
+  );
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const hasExistingResume = !!existingProfile?.resume_file_url;
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -309,7 +450,11 @@ export default function ApplyForm() {
   // Restore a draft from localStorage on first load (resume upload can't be
   // restored — the browser doesn't let us persist raw File objects — so the
   // candidate is asked to re-attach it if they left mid-way).
+  // Skipped entirely in edit mode: the form is already hydrated from the
+  // candidate's real saved profile, and we don't want a stray anonymous
+  // localStorage draft from this browser bleeding into their account.
   useEffect(() => {
+    if (isEditMode) return;
     try {
       const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
       if (raw) {
@@ -335,8 +480,11 @@ export default function ApplyForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Autosave draft (debounced) whenever values or step change.
+  // Autosave draft (debounced) whenever values or step change. Skipped in
+  // edit mode -- saving happens for real against the candidate's row, there
+  // is no anonymous draft to protect.
   useEffect(() => {
+    if (isEditMode) return;
     const handle = setTimeout(() => {
       try {
         window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ values, step }));
@@ -519,7 +667,7 @@ export default function ApplyForm() {
         return "Please enter both city and state.";
       }
       if (!values.linkedinUrl.trim()) return "LinkedIn profile URL is required.";
-      if (!resumeFile) return "Please upload your resume.";
+      if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
     }
     if (step === 1) {
       if (!values.currentEmploymentStatus) return "Employment status is required.";
@@ -669,7 +817,7 @@ export default function ApplyForm() {
     // Belt-and-suspenders: resume is only checked by validateStep() on step 0,
     // but a restored draft (or any future step-reordering) could otherwise reach
     // this point on a later step with no resume attached. Never let that submit.
-    if (!resumeFile) {
+    if (!resumeFile && !hasExistingResume) {
       setErrorMsg("Please upload your resume before submitting.");
       setStep(0);
       return;
@@ -822,8 +970,13 @@ export default function ApplyForm() {
       const { error } = await supabase.rpc("submit_candidate", { payload });
       if (error) throw new Error(error.message);
 
-      setSubmitted(true);
-      toast.success("Your profile is on record. Thank you.");
+      if (isEditMode) {
+        toast.success("Profile saved.");
+        onSaved?.();
+      } else {
+        setSubmitted(true);
+        toast.success("Your profile is on record. Thank you.");
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Something went wrong. Please try again.";
       setErrorMsg(message);
@@ -833,7 +986,7 @@ export default function ApplyForm() {
     }
   }
 
-  if (submitted) {
+  if (submitted && !isEditMode) {
     return (
       <div className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_38%),radial-gradient(circle_at_80%_15%,rgba(14,165,233,0.14),transparent_32%),linear-gradient(to_bottom,#f8fbff_0%,#ffffff_45%,#f4f7fb_100%)]">
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-emerald-200/30 blur-3xl" />
@@ -976,7 +1129,18 @@ export default function ApplyForm() {
                 <Input value={values.fullName} onChange={(e) => update("fullName", e.target.value)} />
               </FormField>
               <FormField label="Email" required>
-                <Input type="email" value={values.email} onChange={(e) => update("email", e.target.value)} />
+                <Input
+                  type="email"
+                  value={values.email}
+                  disabled={isEditMode}
+                  onChange={(e) => update("email", e.target.value)}
+                  className={isEditMode ? "bg-slate-50 text-slate-500" : undefined}
+                />
+                {isEditMode && (
+                  <p className="text-xs text-slate-400">
+                    This is your sign-in email and can&apos;t be changed here.
+                  </p>
+                )}
               </FormField>
               <FormField label="Phone (10-digit mobile number)" required>
                 <Input
@@ -1038,14 +1202,19 @@ export default function ApplyForm() {
                 <label
                   htmlFor="resume-upload"
                   className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition ${
-                    resumeFile
+                    resumeFile || hasExistingResume
                       ? "border-emerald-300 bg-emerald-50"
                       : "border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50"
                   }`}
                 >
-                  <span className="text-2xl">{resumeFile ? "✓" : "📄"}</span>
+                  <span className="text-2xl">{resumeFile || hasExistingResume ? "✓" : "📄"}</span>
                   {resumeFile ? (
                     <span className="text-sm font-medium text-emerald-700">{resumeFile.name}</span>
+                  ) : hasExistingResume ? (
+                    <>
+                      <span className="text-sm font-medium text-emerald-700">Resume on file</span>
+                      <span className="text-xs text-slate-400">Click to replace it</span>
+                    </>
                   ) : (
                     <>
                       <span className="text-sm font-medium text-slate-700">Click to upload your resume</span>
