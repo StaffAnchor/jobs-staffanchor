@@ -8,6 +8,7 @@ export type JobListing = {
   city: string | null;
   budget_min: number | null;
   budget_max: number | null;
+  client_display: string | null;
   created_at: string;
 };
 

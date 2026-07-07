@@ -166,6 +166,7 @@ export default function QuickApplyPage() {
         <CardContent className="p-5">
           <p className="text-[11px] font-medium uppercase tracking-wide text-blue-600">{categoryLabel(job.category)}</p>
           <h1 className="mt-1 text-xl font-semibold text-slate-900">{job.role_title ?? "Sales Role"}</h1>
+          {job.client_display && <p className="text-sm font-medium text-slate-600">{job.client_display}</p>}
           {job.sub_domain && <p className="text-sm text-slate-500">{job.sub_domain}</p>}
           <div className="mt-3 flex flex-wrap gap-3 text-[13px] text-slate-500">
             {job.city && (

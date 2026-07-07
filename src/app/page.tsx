@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, ChartColumn, MapPin, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { CurrentJobsTeaser } from "@/components/common/current-jobs-teaser";
 
 const profileHighlights = [
   {
@@ -160,6 +161,8 @@ export default function Home() {
           </Card>
         </div>
       </section>
+
+      <CurrentJobsTeaser />
 
       <section className="border-b border-slate-200 bg-white/70">
         <div className="container-page grid gap-4 py-8 md:grid-cols-4 md:py-10">

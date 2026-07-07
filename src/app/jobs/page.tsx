@@ -54,6 +54,7 @@ export default function JobsPage() {
                   {categoryLabel(job.category)}
                 </p>
                 <h2 className="mt-1 text-lg font-semibold text-slate-900">{job.role_title ?? "Sales Role"}</h2>
+                {job.client_display && <p className="text-sm font-medium text-slate-600">{job.client_display}</p>}
                 {job.sub_domain && <p className="text-sm text-slate-500">{job.sub_domain}</p>}
               </div>
               <div className="flex flex-wrap gap-3 text-[13px] text-slate-500">
