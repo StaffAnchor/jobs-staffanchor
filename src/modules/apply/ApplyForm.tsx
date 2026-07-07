@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/forms/form-field";
 import {
+  achievementBandOptions,
   ahtOptions,
   b2bSubDomains,
   b2cSubDomains,
@@ -91,10 +92,18 @@ type FormState = {
   dailyTalkTime: string;
   leadSources: string[];
   hasIcTarget: string;
+  icTargetQ1: string;
+  icTargetQ2: string;
+  icTargetQ3: string;
+  icTargetQ4: string;
   quotaQ1: string;
   quotaQ2: string;
   quotaQ3: string;
   quotaQ4: string;
+  teamTargetQ1: string;
+  teamTargetQ2: string;
+  teamTargetQ3: string;
+  teamTargetQ4: string;
   teamQuotaQ1: string;
   teamQuotaQ2: string;
   teamQuotaQ3: string;
@@ -146,10 +155,18 @@ const initialState: FormState = {
   dailyTalkTime: "",
   leadSources: [],
   hasIcTarget: "",
+  icTargetQ1: "",
+  icTargetQ2: "",
+  icTargetQ3: "",
+  icTargetQ4: "",
   quotaQ1: "",
   quotaQ2: "",
   quotaQ3: "",
   quotaQ4: "",
+  teamTargetQ1: "",
+  teamTargetQ2: "",
+  teamTargetQ3: "",
+  teamTargetQ4: "",
   teamQuotaQ1: "",
   teamQuotaQ2: "",
   teamQuotaQ3: "",
@@ -210,6 +227,33 @@ export default function ApplyForm() {
     );
   }
 
+  function quarterField(
+    label: string,
+    targetValue: string,
+    onTarget: (v: string) => void,
+    achievementValue: string,
+    onAchievement: (v: string) => void
+  ) {
+    return (
+      <div key={label} className="space-y-2 rounded-md border border-slate-200 p-3">
+        <p className="text-xs font-semibold text-slate-500">{label}</p>
+        <FormField label="Target" required>
+          <Input type="number" value={targetValue} onChange={(e) => onTarget(e.target.value)} />
+        </FormField>
+        <FormField label="Achieved %" required>
+          <Select value={achievementValue} onChange={(e) => onAchievement(e.target.value)}>
+            <option value="">Select...</option>
+            {achievementBandOptions.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      </div>
+    );
+  }
+
   function addCustomIndustry() {
     const industry = values.customIndustry.trim();
     if (!industry) return;
@@ -252,6 +296,41 @@ export default function ApplyForm() {
       if (!values.roleLevel) return "Please select your role level.";
       if (!values.roleType) return "Please select whether you are an IC or leading a team.";
       if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
+    }
+    if (step === 3 && (values.category === "b2b_sales" || values.category === "b2c_sales")) {
+      const allFilled = (keys: (keyof FormState)[]) => keys.every((k) => String(values[k]).trim() !== "");
+
+      if (values.roleType === "Leading a Team") {
+        if (
+          !allFilled([
+            "teamTargetQ1",
+            "teamTargetQ2",
+            "teamTargetQ3",
+            "teamTargetQ4",
+            "teamQuotaQ1",
+            "teamQuotaQ2",
+            "teamQuotaQ3",
+            "teamQuotaQ4",
+          ])
+        ) {
+          return "Please fill in your team's target and achievement % for all 4 quarters.";
+        }
+        if (!values.hasIcTarget) {
+          return "Please tell us whether you also carry an individual sales target.";
+        }
+        if (
+          values.hasIcTarget === "Yes" &&
+          !allFilled(["icTargetQ1", "icTargetQ2", "icTargetQ3", "icTargetQ4", "quotaQ1", "quotaQ2", "quotaQ3", "quotaQ4"])
+        ) {
+          return "Please fill in your individual target and achievement % for all 4 quarters.";
+        }
+      } else {
+        if (
+          !allFilled(["icTargetQ1", "icTargetQ2", "icTargetQ3", "icTargetQ4", "quotaQ1", "quotaQ2", "quotaQ3", "quotaQ4"])
+        ) {
+          return "Please fill in your sales target and achievement % for all 4 quarters.";
+        }
+      }
     }
     if (step === 4) {
       if (!values.consent) return "Please confirm consent to continue.";
@@ -305,20 +384,38 @@ export default function ApplyForm() {
         segmentData.team_size = values.teamSize;
       }
 
-      // Quarterly attainment: an IC (or a team lead who also carries an individual
-      // number) reports their own last-4-quarters target attainment under "quota";
-      // a team lead with no individual number reports the team's under "team_quota".
-      const icQuota = [values.quotaQ1, values.quotaQ2, values.quotaQ3, values.quotaQ4]
+      // Quarterly targets & achievement (last 4 quarters). A team lead always reports
+      // the team's own target + achievement; if they also carry an individual number,
+      // that's reported separately and summed into a computed total per quarter.
+      const icTargets = [values.icTargetQ1, values.icTargetQ2, values.icTargetQ3, values.icTargetQ4]
         .filter((v) => v.trim() !== "")
         .map((v) => Number(v));
-      const teamQuota = [values.teamQuotaQ1, values.teamQuotaQ2, values.teamQuotaQ3, values.teamQuotaQ4]
+      const icAchievement = [values.quotaQ1, values.quotaQ2, values.quotaQ3, values.quotaQ4].filter(
+        (v) => v.trim() !== ""
+      );
+      const teamTargets = [values.teamTargetQ1, values.teamTargetQ2, values.teamTargetQ3, values.teamTargetQ4]
         .filter((v) => v.trim() !== "")
         .map((v) => Number(v));
+      const teamAchievement = [
+        values.teamQuotaQ1,
+        values.teamQuotaQ2,
+        values.teamQuotaQ3,
+        values.teamQuotaQ4,
+      ].filter((v) => v.trim() !== "");
 
-      if (values.roleType === "Leading a Team" && values.hasIcTarget === "No") {
-        if (teamQuota.length) segmentData.team_quota = teamQuota;
-      } else if (icQuota.length) {
-        segmentData.quota = icQuota;
+      if (values.roleType === "Leading a Team") {
+        if (teamTargets.length) segmentData.team_targets = teamTargets;
+        if (teamAchievement.length) segmentData.team_quota = teamAchievement;
+        if (values.hasIcTarget === "Yes") {
+          if (icTargets.length) segmentData.ic_targets = icTargets;
+          if (icAchievement.length) segmentData.quota = icAchievement;
+          if (icTargets.length === 4 && teamTargets.length === 4) {
+            segmentData.total_targets = teamTargets.map((t, i) => t + icTargets[i]);
+          }
+        }
+      } else {
+        if (icTargets.length) segmentData.ic_targets = icTargets;
+        if (icAchievement.length) segmentData.quota = icAchievement;
       }
 
       if (values.category === "b2b_sales") {
@@ -906,73 +1003,63 @@ export default function ApplyForm() {
 
           {step === 3 && (
             <>
-              {values.roleType === "Leading a Team" && (
-                <FormField label="Do you also carry an individual (IC) quota, on top of the team target?">
-                  <Select value={values.hasIcTarget} onChange={(e) => update("hasIcTarget", e.target.value)}>
-                    <option value="">Select...</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No — only a team target</option>
-                  </Select>
-                </FormField>
-              )}
+              {(values.category === "b2b_sales" || values.category === "b2c_sales") && (
+                <>
+                  {values.roleType === "Leading a Team" && (
+                    <>
+                      <p className="text-sm text-slate-600">
+                        Share your <strong>team&apos;s</strong> overall target and achieved % for the last 4
+                        quarters.
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {quarterField("Q1 (oldest)", values.teamTargetQ1, (v) => update("teamTargetQ1", v), values.teamQuotaQ1, (v) => update("teamQuotaQ1", v))}
+                        {quarterField("Q2", values.teamTargetQ2, (v) => update("teamTargetQ2", v), values.teamQuotaQ2, (v) => update("teamQuotaQ2", v))}
+                        {quarterField("Q3", values.teamTargetQ3, (v) => update("teamTargetQ3", v), values.teamQuotaQ3, (v) => update("teamQuotaQ3", v))}
+                        {quarterField("Q4 (latest)", values.teamTargetQ4, (v) => update("teamTargetQ4", v), values.teamQuotaQ4, (v) => update("teamQuotaQ4", v))}
+                      </div>
 
-              {values.roleType === "Leading a Team" && values.hasIcTarget === "No" ? (
-                <>
-                  <p className="text-sm text-slate-600">
-                    Share your team&apos;s overall target attainment (%) for the last 4 quarters. Leave blank if not
-                    applicable.
-                  </p>
-                  <div className="grid grid-cols-4 gap-3">
-                    <FormField label="Q1 (oldest)">
-                      <Input
-                        type="number"
-                        value={values.teamQuotaQ1}
-                        onChange={(e) => update("teamQuotaQ1", e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="Q2">
-                      <Input
-                        type="number"
-                        value={values.teamQuotaQ2}
-                        onChange={(e) => update("teamQuotaQ2", e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="Q3">
-                      <Input
-                        type="number"
-                        value={values.teamQuotaQ3}
-                        onChange={(e) => update("teamQuotaQ3", e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="Q4 (latest)">
-                      <Input
-                        type="number"
-                        value={values.teamQuotaQ4}
-                        onChange={(e) => update("teamQuotaQ4", e.target.value)}
-                      />
-                    </FormField>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-slate-600">
-                    Share your individual target attainment (%) for the last 4 quarters. Leave blank if not
-                    applicable.
-                  </p>
-                  <div className="grid grid-cols-4 gap-3">
-                    <FormField label="Q1 (oldest)">
-                      <Input type="number" value={values.quotaQ1} onChange={(e) => update("quotaQ1", e.target.value)} />
-                    </FormField>
-                    <FormField label="Q2">
-                      <Input type="number" value={values.quotaQ2} onChange={(e) => update("quotaQ2", e.target.value)} />
-                    </FormField>
-                    <FormField label="Q3">
-                      <Input type="number" value={values.quotaQ3} onChange={(e) => update("quotaQ3", e.target.value)} />
-                    </FormField>
-                    <FormField label="Q4 (latest)">
-                      <Input type="number" value={values.quotaQ4} onChange={(e) => update("quotaQ4", e.target.value)} />
-                    </FormField>
-                  </div>
+                      <FormField label="Do you also carry your own individual sales target, in addition to the team target?" required>
+                        <Select value={values.hasIcTarget} onChange={(e) => update("hasIcTarget", e.target.value)}>
+                          <option value="">Select...</option>
+                          <option value="Yes">Yes</option>
+                          <option value="No">No — only a team target</option>
+                        </Select>
+                      </FormField>
+                    </>
+                  )}
+
+                  {(values.roleType !== "Leading a Team" || values.hasIcTarget === "Yes") && (
+                    <>
+                      <p className="text-sm text-slate-600">
+                        Share your <strong>individual</strong> target and achieved % for the last 4 quarters.
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {quarterField("Q1 (oldest)", values.icTargetQ1, (v) => update("icTargetQ1", v), values.quotaQ1, (v) => update("quotaQ1", v))}
+                        {quarterField("Q2", values.icTargetQ2, (v) => update("icTargetQ2", v), values.quotaQ2, (v) => update("quotaQ2", v))}
+                        {quarterField("Q3", values.icTargetQ3, (v) => update("icTargetQ3", v), values.quotaQ3, (v) => update("quotaQ3", v))}
+                        {quarterField("Q4 (latest)", values.icTargetQ4, (v) => update("icTargetQ4", v), values.quotaQ4, (v) => update("quotaQ4", v))}
+                      </div>
+                    </>
+                  )}
+
+                  {values.roleType === "Leading a Team" &&
+                    values.hasIcTarget === "Yes" &&
+                    [values.teamTargetQ1, values.teamTargetQ2, values.teamTargetQ3, values.teamTargetQ4].every(
+                      (v) => v.trim() !== ""
+                    ) &&
+                    [values.icTargetQ1, values.icTargetQ2, values.icTargetQ3, values.icTargetQ4].every(
+                      (v) => v.trim() !== ""
+                    ) && (
+                      <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                        Total target (team + individual), by quarter:{" "}
+                        {[
+                          Number(values.teamTargetQ1) + Number(values.icTargetQ1),
+                          Number(values.teamTargetQ2) + Number(values.icTargetQ2),
+                          Number(values.teamTargetQ3) + Number(values.icTargetQ3),
+                          Number(values.teamTargetQ4) + Number(values.icTargetQ4),
+                        ].join(" / ")}
+                      </div>
+                    )}
                 </>
               )}
               <FormField label="Tell us about your best win">
