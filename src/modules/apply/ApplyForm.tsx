@@ -40,6 +40,7 @@ import {
   employmentStatusOptions,
   experienceOptions,
   funnelStageOptions,
+  geographicScopeOptions,
   highestQualificationOptions,
   industryOptions,
   insideSalesSubDomains,
@@ -49,6 +50,7 @@ import {
   roleLevelOptions,
   roleTypeOptions,
   salesCycleOptions,
+  internationalRegionOptions,
   salesMotionOptions,
   searchSkills,
   sellingStyleOptions,
@@ -109,6 +111,8 @@ type FormState = {
   segment: string;
   funnel: string;
   scope: string;
+  scopeDetail: string;
+  scopeRegions: string[];
   aht: string;
   dailyCallTarget: string;
   dailyTalkTime: string;
@@ -179,6 +183,8 @@ const initialState: FormState = {
   segment: "",
   funnel: "",
   scope: "",
+  scopeDetail: "",
+  scopeRegions: [],
   aht: "",
   dailyCallTarget: "",
   dailyTalkTime: "",
@@ -474,7 +480,7 @@ export default function ApplyForm() {
   }
 
   function toggleArrayValue(
-    key: "secondarySubDomains" | "motion" | "selectedSkills" | "leadSources" | "selectedIndustries",
+    key: "secondarySubDomains" | "motion" | "selectedSkills" | "leadSources" | "selectedIndustries" | "scopeRegions",
     value: string
   ) {
     setValues((prev) => {
@@ -549,7 +555,19 @@ export default function ApplyForm() {
       }
       if (values.category === "b2c_sales") {
         if (!values.funnel) return "Please select a funnel stage.";
-        if (!values.scope.trim()) return "Please describe your geographic scope.";
+        if (!values.scope) return "Please select your geographic scope.";
+        if (values.scope === "Single City" && !values.scopeDetail.trim()) {
+          return "Please tell us which city.";
+        }
+        if (values.scope === "Multi-City" && !values.scopeDetail.trim()) {
+          return "Please tell us which cities.";
+        }
+        if (values.scope === "Regional (Multiple States)" && !values.scopeDetail.trim()) {
+          return "Please tell us which states.";
+        }
+        if (values.scope === "International / Global" && !values.scopeRegions.length) {
+          return "Please select at least one region.";
+        }
       }
       if (isInsideSales) {
         if (!values.aht) return "Please select an AHT range.";
@@ -721,6 +739,11 @@ export default function ApplyForm() {
           ticket_currency: values.dealCurrency || undefined,
           funnel: values.funnel || undefined,
           scope: values.scope || undefined,
+          scope_detail:
+            values.scope === "Single City" || values.scope === "Multi-City" || values.scope === "Regional (Multiple States)"
+              ? values.scopeDetail || undefined
+              : undefined,
+          scope_regions: values.scope === "International / Global" ? values.scopeRegions : undefined,
         });
       }
 
@@ -1433,12 +1456,65 @@ export default function ApplyForm() {
                         </Select>
                       </FormField>
                       <FormField label="Geographic Scope" required>
-                        <Input
-                          placeholder="e.g. single city, multi-city, pan-India"
+                        <Select
                           value={values.scope}
-                          onChange={(e) => update("scope", e.target.value)}
-                        />
+                          onChange={(e) => {
+                            update("scope", e.target.value);
+                            update("scopeDetail", "");
+                            update("scopeRegions", []);
+                          }}
+                        >
+                          <option value="">Select...</option>
+                          {geographicScopeOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
                       </FormField>
+                      {values.scope === "Single City" && (
+                        <FormField label="Which city?" required>
+                          <Input
+                            placeholder="e.g. Mumbai"
+                            value={values.scopeDetail}
+                            onChange={(e) => update("scopeDetail", e.target.value)}
+                          />
+                        </FormField>
+                      )}
+                      {values.scope === "Multi-City" && (
+                        <FormField label="Which cities?" required>
+                          <Input
+                            placeholder="e.g. Mumbai, Pune, Nashik"
+                            value={values.scopeDetail}
+                            onChange={(e) => update("scopeDetail", e.target.value)}
+                          />
+                        </FormField>
+                      )}
+                      {values.scope === "Regional (Multiple States)" && (
+                        <FormField label="Which states?" required>
+                          <Input
+                            placeholder="e.g. Maharashtra, Gujarat, Goa"
+                            value={values.scopeDetail}
+                            onChange={(e) => update("scopeDetail", e.target.value)}
+                          />
+                        </FormField>
+                      )}
+                      {values.scope === "International / Global" && (
+                        <FormField label="Which regions?" required>
+                          <div className="grid grid-cols-2 gap-2">
+                            {internationalRegionOptions.map((r) => (
+                              <label key={r} className="flex items-center gap-2 text-sm text-slate-700">
+                                <input
+                                  type="checkbox"
+                                  checked={values.scopeRegions.includes(r)}
+                                  onChange={() => toggleArrayValue("scopeRegions", r)}
+                                />
+                                {r}
+                              </label>
+                            ))}
+                          </div>
+                        </FormField>
+                      )}
                     </>
                   )}
                 </>

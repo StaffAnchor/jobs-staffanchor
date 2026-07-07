@@ -223,6 +223,25 @@ export const customerSegmentOptions = ["SMB", "Mid-Market", "Enterprise", "MNC",
 
 export const funnelStageOptions = ["Acquisition", "Full-funnel", "Retention / Upsell"];
 
+export const geographicScopeOptions = [
+  "Single City",
+  "Multi-City",
+  "Regional (Multiple States)",
+  "Pan-India",
+  "International / Global",
+];
+
+export const internationalRegionOptions = [
+  "North America (US/Canada)",
+  "Europe",
+  "MENA",
+  "Gulf (GCC)",
+  "APAC / Asia",
+  "South Asia",
+  "LATAM",
+  "Global / Worldwide",
+];
+
 export const workModeOptions = ["Onsite", "Hybrid", "Remote", "Open to Any (as per company requirement)"];
 export const relocationOptions = ["Yes", "No", "Maybe"];
 export const travelPreferenceOptions = ["No Travel", "Some Travel (occasional)", "Extensive Travel"];

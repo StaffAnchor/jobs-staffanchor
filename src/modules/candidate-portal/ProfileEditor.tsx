@@ -29,9 +29,11 @@ import {
   employmentStatusOptions,
   experienceOptions,
   funnelStageOptions,
+  geographicScopeOptions,
   highestQualificationOptions,
   industryOptions,
   insideSalesSubDomains,
+  internationalRegionOptions,
   leadSourceOptions,
   relocationOptions,
   roleLevelOptions,
@@ -167,6 +169,8 @@ export default function ProfileEditor({
   const [segmentVal, setSegmentVal] = useState(seg(sd, "segment"));
   const [funnel, setFunnel] = useState(seg(sd, "funnel"));
   const [scope, setScope] = useState(seg(sd, "scope"));
+  const [scopeDetail, setScopeDetail] = useState(seg(sd, "scope_detail"));
+  const [scopeRegions, setScopeRegions] = useState<string[]>(segArr(sd, "scope_regions"));
 
   const [aht, setAht] = useState(seg(sd, "aht"));
   const [dailyCallTarget, setDailyCallTarget] = useState(seg(sd, "daily_call_target"));
@@ -345,6 +349,11 @@ export default function ProfileEditor({
           ticket_currency: dealCurrency || undefined,
           funnel: funnel || undefined,
           scope: scope || undefined,
+          scope_detail:
+            scope === "Single City" || scope === "Multi-City" || scope === "Regional (Multiple States)"
+              ? scopeDetail || undefined
+              : undefined,
+          scope_regions: scope === "International / Global" ? scopeRegions : undefined,
         });
       }
 
@@ -872,8 +881,48 @@ export default function ProfileEditor({
                       </Select>
                     </FormField>
                     <FormField label="Geographic scope">
-                      <Input value={scope} onChange={(e) => setScope(e.target.value)} placeholder="e.g. Pan-India, North India, Mumbai only" />
+                      <Select
+                        value={scope}
+                        onChange={(e) => {
+                          setScope(e.target.value);
+                          setScopeDetail("");
+                          setScopeRegions([]);
+                        }}
+                      >
+                        <option value="">Select</option>
+                        {geographicScopeOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
                     </FormField>
+                    {scope === "Single City" && (
+                      <FormField label="Which city?">
+                        <Input value={scopeDetail} onChange={(e) => setScopeDetail(e.target.value)} placeholder="e.g. Mumbai" />
+                      </FormField>
+                    )}
+                    {scope === "Multi-City" && (
+                      <FormField label="Which cities?">
+                        <Input value={scopeDetail} onChange={(e) => setScopeDetail(e.target.value)} placeholder="e.g. Mumbai, Pune, Nashik" />
+                      </FormField>
+                    )}
+                    {scope === "Regional (Multiple States)" && (
+                      <FormField label="Which states?">
+                        <Input value={scopeDetail} onChange={(e) => setScopeDetail(e.target.value)} placeholder="e.g. Maharashtra, Gujarat, Goa" />
+                      </FormField>
+                    )}
+                    {scope === "International / Global" && (
+                      <FormField label="Which regions?" className="sm:col-span-2">
+                        <div className="flex flex-wrap gap-2">
+                          {internationalRegionOptions.map((r) => (
+                            <Pill key={r} active={scopeRegions.includes(r)} onClick={() => toggle(scopeRegions, setScopeRegions, r)}>
+                              {r}
+                            </Pill>
+                          ))}
+                        </div>
+                      </FormField>
+                    )}
                   </>
                 )}
               </CardContent>
