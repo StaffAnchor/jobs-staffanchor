@@ -178,7 +178,48 @@ const initialState: FormState = {
   consent: false,
 };
 
-const STEPS = ["Identity", "Career & Comp", "Specialization", "Track Record", "Logistics & Submit"] as const;
+const STEPS = ["Basic Information", "Career & Compensation", "Sales Specialization", "Performance", "Preferences & Submit"] as const;
+
+const STEP_TIME_MINUTES = [1, 1.5, 2, 1.5, 1];
+
+const STEP_TIPS: Record<number, string> = {
+  0: "Recruiters reach out fastest when your contact details and resume are on record.",
+  1: "Comp and experience are what let a recruiter tell whether a mandate is even a fit — before wasting your time on a call.",
+  2: "Specialization is what makes you findable. Generalist profiles get buried; specific ones get shortlisted.",
+  3: "Real target vs. achievement is the single most-checked detail on a sales profile. Specific numbers get 3x more recruiter attention than vague claims.",
+  4: "Almost done — skills and industries are how recruiters filter and find you for the right mandate.",
+};
+
+const DRAFT_STORAGE_KEY = "sa_candidate_draft_v1";
+
+// Curated set of fields used to compute "profile strength" — weighted evenly, just
+// enough signal to feel meaningful without trying to be a perfectly precise score.
+const STRENGTH_FIELDS: (keyof FormState)[] = [
+  "fullName",
+  "email",
+  "phone",
+  "currentLocation",
+  "linkedinUrl",
+  "currentEmploymentStatus",
+  "totalExperienceYears",
+  "currentFixedCtc",
+  "expectedFixedCtc",
+  "highestQualification",
+  "category",
+  "subDomain",
+  "roleLevel",
+  "roleType",
+  "dealCurrency",
+  "dealSizeBand",
+  "icTargetQ4",
+  "quotaQ4",
+  "bestWin",
+  "toughLoss",
+  "selectedSkills",
+  "selectedIndustries",
+  "workMode",
+  "openToRelocation",
+];
 
 export default function ApplyForm() {
   const [step, setStep] = useState(0);
@@ -189,6 +230,56 @@ export default function ApplyForm() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<string[]>(FALLBACK_QUOTES);
   const [noticePeriods, setNoticePeriods] = useState<string[]>(defaultNoticePeriods);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [savedLabel, setSavedLabel] = useState<string>("");
+  const [stepJustCompleted, setStepJustCompleted] = useState(false);
+
+  // Restore a draft from localStorage on first load (resume upload can't be
+  // restored — the browser doesn't let us persist raw File objects — so the
+  // candidate is asked to re-attach it if they left mid-way).
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw) as { values: FormState; step: number };
+        if (draft?.values) {
+          setValues((prev) => ({ ...prev, ...draft.values }));
+          setStep(draft.step ?? 0);
+        }
+      }
+    } catch {
+      // ignore malformed drafts
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Autosave draft (debounced) whenever values or step change.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      try {
+        window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ values, step }));
+        setLastSavedAt(Date.now());
+      } catch {
+        // ignore storage errors (e.g. private browsing quota)
+      }
+    }, 600);
+    return () => clearTimeout(handle);
+  }, [values, step]);
+
+  // Tick the "Saved Xs ago" label.
+  useEffect(() => {
+    const tick = () => {
+      if (!lastSavedAt) {
+        setSavedLabel("");
+        return;
+      }
+      const seconds = Math.max(1, Math.round((Date.now() - lastSavedAt) / 1000));
+      setSavedLabel(seconds < 60 ? `Saved ${seconds}s ago` : "Saved");
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [lastSavedAt]);
 
   useEffect(() => {
     supabase
@@ -217,6 +308,19 @@ export default function ApplyForm() {
     [values.customSkill, values.selectedSkills]
   );
 
+  const profileStrength = useMemo(() => {
+    const filled = STRENGTH_FIELDS.filter((k) => {
+      const v = values[k];
+      return Array.isArray(v) ? v.length > 0 : String(v).trim() !== "";
+    }).length;
+    return Math.round((filled / STRENGTH_FIELDS.length) * 100);
+  }, [values]);
+
+  const minutesLeft = useMemo(
+    () => STEP_TIME_MINUTES.slice(step).reduce((a, b) => a + b, 0),
+    [step]
+  );
+
   function addCustomSkill(skillOverride?: string) {
     const skill = (skillOverride ?? values.customSkill).trim();
     if (!skill) return;
@@ -241,14 +345,25 @@ export default function ApplyForm() {
           <Input type="number" value={targetValue} onChange={(e) => onTarget(e.target.value)} />
         </FormField>
         <FormField label="Achieved %" required>
-          <Select value={achievementValue} onChange={(e) => onAchievement(e.target.value)}>
-            <option value="">Select...</option>
-            {achievementBandOptions.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </Select>
+          <div className="flex flex-wrap gap-1.5">
+            {achievementBandOptions.map((o) => {
+              const active = achievementValue === o;
+              return (
+                <button
+                  type="button"
+                  key={o}
+                  onClick={() => onAchievement(o)}
+                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                    active
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                  }`}
+                >
+                  {o}
+                </button>
+              );
+            })}
+          </div>
         </FormField>
       </div>
     );
@@ -396,6 +511,10 @@ export default function ApplyForm() {
       return;
     }
     setErrorMsg(null);
+    const completedLabel = STEPS[step];
+    toast.success(`${completedLabel} completed — profile strength ${profileStrength}%`);
+    setStepJustCompleted(true);
+    setTimeout(() => setStepJustCompleted(false), 1200);
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
 
@@ -580,22 +699,29 @@ export default function ApplyForm() {
       <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-emerald-200/30 blur-3xl" />
       <div className="pointer-events-none absolute top-1/3 -right-24 h-72 w-72 rounded-full bg-sky-200/30 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-slate-200/40 blur-3xl" />
-      <main className="relative mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+      <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-10 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-500">
           <span>
             Step {step + 1} of {STEPS.length}: {STEPS[step]}
           </span>
-          <span>{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
+          <div className="flex items-center gap-3">
+            {savedLabel && <span className="font-normal text-emerald-600">✓ {savedLabel}</span>}
+            <span className="font-normal text-slate-400">~{minutesLeft} min left</span>
+            <span>{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
+          </div>
         </div>
         <div className="flex gap-1.5">
           {STEPS.map((label, i) => (
             <div
               key={label}
-              className={`h-1.5 flex-1 overflow-hidden rounded-full ${i <= step ? "bg-slate-900" : "bg-slate-200"}`}
+              className={`h-1.5 flex-1 overflow-hidden rounded-full transition-colors ${
+                i <= step ? "bg-slate-900" : "bg-slate-200"
+              }`}
             />
           ))}
         </div>
 
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
         <Card className="w-full border-slate-200 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.35)]">
           <CardHeader className="rounded-t-xl bg-slate-950 text-white">
             <CardTitle className="text-white">Build Your Profile</CardTitle>
@@ -1297,11 +1423,11 @@ export default function ApplyForm() {
 
           <div className="flex items-center justify-between pt-2">
             <Button type="button" variant="outline" onClick={goBack} disabled={step === 0 || submitting}>
-              Back
+              ← Previous
             </Button>
             {step < STEPS.length - 1 ? (
               <Button type="button" onClick={goNext}>
-                Continue
+                Continue →
               </Button>
             ) : (
               <Button type="button" onClick={handleSubmit} disabled={submitting}>
@@ -1311,6 +1437,59 @@ export default function ApplyForm() {
           </div>
         </CardContent>
         </Card>
+
+        <aside className="space-y-4 lg:sticky lg:top-6">
+          <Card>
+            <CardContent className="space-y-2 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Profile Strength</p>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className={`h-full rounded-full bg-emerald-500 transition-all duration-500 ${
+                    stepJustCompleted ? "animate-pulse" : ""
+                  }`}
+                  style={{ width: `${profileStrength}%` }}
+                />
+              </div>
+              <p className="text-2xl font-black text-slate-950">{profileStrength}%</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-2 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Your Progress</p>
+              <ul className="space-y-1.5 text-sm">
+                {STEPS.map((label, i) => (
+                  <li
+                    key={label}
+                    className={`flex items-center gap-2 ${
+                      i === step
+                        ? "font-semibold text-slate-950"
+                        : i < step
+                          ? "text-slate-500"
+                          : "text-slate-400"
+                    }`}
+                  >
+                    <span className={i < step ? "text-emerald-600" : ""}>{i < step ? "✓" : i === step ? "•" : "○"}</span>
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-2 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Why we ask this</p>
+              <p className="text-sm leading-6 text-slate-600">{STEP_TIPS[step]}</p>
+            </CardContent>
+          </Card>
+
+          <p className="px-1 text-center text-xs leading-5 text-slate-400">
+            Built for specialist sales recruiters — used to match your profile against real hiring mandates, not
+            posted as a public job listing.
+          </p>
+        </aside>
+        </div>
       </main>
     </div>
   );
