@@ -2,6 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+  BarChart3,
+  Briefcase,
+  CheckCircle2,
+  Clock,
+  Eye,
+  HelpCircle,
+  Info,
+  Pencil,
+  Settings2,
+  ShieldCheck,
+  Target,
+  User,
+} from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -182,6 +196,41 @@ const STEPS = ["Basic Information", "Career & Compensation", "Sales Specializati
 
 const STEP_TIME_MINUTES = [1, 1.5, 2, 1.5, 1];
 
+const STEP_WEIGHTS = [20, 20, 25, 20, 15];
+
+const STEP_META = [
+  {
+    icon: User,
+    eyebrow: "Basic Information",
+    heading: "Let's start with the basics",
+    subtext: "Your contact details and resume — how a recruiter actually reaches you.",
+  },
+  {
+    icon: Briefcase,
+    eyebrow: "Career & Compensation",
+    heading: "Tell us where you stand today",
+    subtext: "Current role, experience, and compensation — the context every mandate is filtered by.",
+  },
+  {
+    icon: Target,
+    eyebrow: "Sales Specialization",
+    heading: "What do you specialize in?",
+    subtext: "Specific specializations get found. Generalist profiles get buried.",
+  },
+  {
+    icon: BarChart3,
+    eyebrow: "Sales Performance",
+    heading: "Tell us about your performance",
+    subtext: "Help us understand how you've delivered results over the last few quarters.",
+  },
+  {
+    icon: Settings2,
+    eyebrow: "Preferences & Submit",
+    heading: "Almost there",
+    subtext: "Skills, industries, and preferences — the last details before you're on record.",
+  },
+] as const;
+
 const STEP_TIPS: Record<number, string> = {
   0: "Recruiters reach out fastest when your contact details and resume are on record.",
   1: "Comp and experience are what let a recruiter tell whether a mandate is even a fit — before wasting your time on a call.",
@@ -320,6 +369,23 @@ export default function ApplyForm() {
     () => STEP_TIME_MINUTES.slice(step).reduce((a, b) => a + b, 0),
     [step]
   );
+
+  const initials = useMemo(() => {
+    const parts = values.fullName.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "—";
+    return parts
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join("");
+  }, [values.fullName]);
+
+  const previewRoleLabel = useMemo(() => {
+    const categoryLabel = categoryOptions.find((c) => c.value === values.category)?.label;
+    if (values.roleLevel && categoryLabel) return `${values.roleLevel} — ${categoryLabel}`;
+    return values.roleLevel || categoryLabel || "Role not set yet";
+  }, [values.roleLevel, values.category]);
+
+  const strengthLabel = profileStrength >= 80 ? "Great" : profileStrength >= 45 ? "Good" : "Getting started";
 
   function addCustomSkill(skillOverride?: string) {
     const skill = (skillOverride ?? values.customSkill).trim();
@@ -694,40 +760,120 @@ export default function ApplyForm() {
     );
   }
 
+  const StepIcon = STEP_META[step].icon;
+
   return (
-    <div className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_38%),radial-gradient(circle_at_80%_15%,rgba(14,165,233,0.14),transparent_32%),linear-gradient(to_bottom,#f8fbff_0%,#ffffff_45%,#f4f7fb_100%)]">
-      <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-emerald-200/30 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/3 -right-24 h-72 w-72 rounded-full bg-sky-200/30 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-slate-200/40 blur-3xl" />
-      <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-500">
-          <span>
-            Step {step + 1} of {STEPS.length}: {STEPS[step]}
+    <div className="min-h-[calc(100vh-4rem)] bg-[#f7f9fc]">
+      <main className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-4 text-xs font-medium text-slate-500">
+          <span className="flex items-center gap-1.5">
+            {savedLabel ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-700">All changes {savedLabel.toLowerCase()}</span>
+              </>
+            ) : (
+              <span>Not saved yet</span>
+            )}
           </span>
-          <div className="flex items-center gap-3">
-            {savedLabel && <span className="font-normal text-emerald-600">✓ {savedLabel}</span>}
-            <span className="font-normal text-slate-400">~{minutesLeft} min left</span>
-            <span>{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
-          </div>
-        </div>
-        <div className="flex gap-1.5">
-          {STEPS.map((label, i) => (
-            <div
-              key={label}
-              className={`h-1.5 flex-1 overflow-hidden rounded-full transition-colors ${
-                i <= step ? "bg-slate-900" : "bg-slate-200"
-              }`}
-            />
-          ))}
+          <span className="flex items-center gap-1.5 text-slate-500">
+            <Clock className="h-3.5 w-3.5" />
+            Estimated time {minutesLeft}-{minutesLeft + 2} min
+          </span>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
-        <Card className="w-full border-slate-200 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.35)]">
-          <CardHeader className="rounded-t-xl bg-slate-950 text-white">
-            <CardTitle className="text-white">Build Your Profile</CardTitle>
-            <p className="mt-1 text-sm italic text-slate-300">&ldquo;{quote}&rdquo;</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="grid gap-6 lg:grid-cols-[260px_1fr_320px] lg:items-start">
+          <aside className="space-y-4 lg:sticky lg:top-6">
+            <Card className="border-slate-200 shadow-sm">
+              <CardContent className="space-y-4 py-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-slate-900">Profile Progress</p>
+                  <span className="text-sm font-bold text-blue-600">{profileStrength}%</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                    style={{ width: `${profileStrength}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-500">
+                  Step {step + 1} of {STEPS.length}
+                </p>
+                <ul className="space-y-0">
+                  {STEPS.map((label, i) => (
+                    <li key={label} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                            i < step
+                              ? "bg-emerald-500 text-white"
+                              : i === step
+                                ? "bg-blue-600 text-white"
+                                : "bg-slate-200 text-slate-500"
+                          }`}
+                        >
+                          {i < step ? "✓" : i + 1}
+                        </div>
+                        {i < STEPS.length - 1 && (
+                          <div className={`w-px flex-1 ${i < step ? "bg-emerald-300" : "bg-slate-200"}`} style={{ minHeight: 24 }} />
+                        )}
+                      </div>
+                      <div className="pb-4">
+                        <p
+                          className={`text-sm ${
+                            i === step ? "font-semibold text-blue-600" : i < step ? "text-slate-700" : "text-slate-400"
+                          }`}
+                        >
+                          {label}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {i < step ? "Completed" : i === step ? "In Progress" : "Pending"}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 shadow-sm">
+              <CardContent className="space-y-3 py-5 text-center">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                  <HelpCircle className="h-5 w-5" />
+                </div>
+                <p className="text-sm font-semibold text-slate-900">Need Help?</p>
+                <p className="text-xs leading-5 text-slate-500">
+                  Our team is here to help you build the perfect profile.
+                </p>
+                <a href="https://www.staffanchor.com/contact" target="_blank" rel="noreferrer">
+                  <Button variant="outline" className="w-full">
+                    Chat with Us
+                  </Button>
+                </a>
+              </CardContent>
+            </Card>
+          </aside>
+
+        <Card className="w-full border-slate-200 shadow-sm">
+          <CardContent className="space-y-5 p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <StepIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                  {STEP_META[step].eyebrow}
+                </p>
+                <h2 className="text-2xl font-bold text-slate-950">{STEP_META[step].heading}</h2>
+                <p className="mt-1 text-sm text-slate-600">{STEP_META[step].subtext}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-sm text-blue-900">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{STEP_TIPS[step]}</span>
+            </div>
+            <p className="text-xs italic text-slate-400">&ldquo;{quote}&rdquo;</p>
           {step === 0 && (
             <>
               <FormField label="Full Name" required>
@@ -1241,18 +1387,28 @@ export default function ApplyForm() {
                 </>
               )}
               <FormField label="Tell us about your best win" required>
-                <textarea
-                  className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
-                  value={values.bestWin}
-                  onChange={(e) => update("bestWin", e.target.value)}
-                />
+                <div className="space-y-1">
+                  <textarea
+                    maxLength={500}
+                    placeholder="Describe a deal or achievement you are most proud of."
+                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100"
+                    value={values.bestWin}
+                    onChange={(e) => update("bestWin", e.target.value)}
+                  />
+                  <p className="text-right text-xs text-slate-400">{values.bestWin.length} / 500</p>
+                </div>
               </FormField>
               <FormField label="Tell us about a target you missed, and what you learned" required>
-                <textarea
-                  className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
-                  value={values.toughLoss}
-                  onChange={(e) => update("toughLoss", e.target.value)}
-                />
+                <div className="space-y-1">
+                  <textarea
+                    maxLength={500}
+                    placeholder="What happened, and what did you learn from it?"
+                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100"
+                    value={values.toughLoss}
+                    onChange={(e) => update("toughLoss", e.target.value)}
+                  />
+                  <p className="text-right text-xs text-slate-400">{values.toughLoss.length} / 500</p>
+                </div>
               </FormField>
             </>
           )}
@@ -1426,11 +1582,16 @@ export default function ApplyForm() {
               ← Previous
             </Button>
             {step < STEPS.length - 1 ? (
-              <Button type="button" onClick={goNext}>
+              <Button type="button" onClick={goNext} className="bg-blue-600 hover:bg-blue-700">
                 Continue →
               </Button>
             ) : (
-              <Button type="button" onClick={handleSubmit} disabled={submitting}>
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
                 {submitting ? "Submitting..." : "Submit My Profile"}
               </Button>
             )}
@@ -1439,55 +1600,91 @@ export default function ApplyForm() {
         </Card>
 
         <aside className="space-y-4 lg:sticky lg:top-6">
-          <Card>
-            <CardContent className="space-y-2 py-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Profile Strength</p>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className={`h-full rounded-full bg-emerald-500 transition-all duration-500 ${
-                    stepJustCompleted ? "animate-pulse" : ""
-                  }`}
-                  style={{ width: `${profileStrength}%` }}
-                />
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="space-y-3 py-5">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-900">Your Profile Preview</p>
+                <Eye className="h-4 w-4 text-slate-400" />
               </div>
-              <p className="text-2xl font-black text-slate-950">{profileStrength}%</p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">
+                  {initials}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-900">
+                    {values.fullName.trim() || "Your name"}
+                  </p>
+                  <p className="truncate text-xs text-slate-500">{previewRoleLabel}</p>
+                  {values.currentLocation && <p className="truncate text-xs text-slate-400">{values.currentLocation}</p>}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep(0)}
+                className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+              >
+                <Pencil className="h-3 w-3" />
+                Edit basic info
+              </button>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="space-y-2 py-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Your Progress</p>
-              <ul className="space-y-1.5 text-sm">
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="space-y-4 py-5">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-900">Profile Strength</p>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                  {strengthLabel}
+                </span>
+              </div>
+              <div className="flex items-center gap-4">
+                <div
+                  className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full"
+                  style={{
+                    background: `conic-gradient(#2563eb ${profileStrength * 3.6}deg, #e2e8f0 0deg)`,
+                  }}
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-sm font-bold text-slate-900">
+                    {profileStrength}%
+                  </div>
+                </div>
+                <p className="text-xs leading-5 text-slate-500">
+                  Complete more sections to increase your visibility to recruiters.
+                </p>
+              </div>
+              <ul className="space-y-2 border-t border-slate-100 pt-3">
                 {STEPS.map((label, i) => (
-                  <li
-                    key={label}
-                    className={`flex items-center gap-2 ${
-                      i === step
-                        ? "font-semibold text-slate-950"
-                        : i < step
-                          ? "text-slate-500"
-                          : "text-slate-400"
-                    }`}
-                  >
-                    <span className={i < step ? "text-emerald-600" : ""}>{i < step ? "✓" : i === step ? "•" : "○"}</span>
-                    {label}
+                  <li key={label} className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          i < step ? "bg-emerald-500" : i === step ? "bg-blue-600" : "bg-slate-300"
+                        }`}
+                      />
+                      <span
+                        className={
+                          i === step ? "font-medium text-slate-900" : i < step ? "text-slate-600" : "text-slate-400"
+                        }
+                      >
+                        {label}
+                      </span>
+                    </span>
+                    <span className="font-medium text-slate-400">+{STEP_WEIGHTS[i]}%</span>
                   </li>
                 ))}
               </ul>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="space-y-2 py-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Why we ask this</p>
+          <Card className="border-slate-200 shadow-sm">
+            <CardContent className="space-y-2 py-5">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-blue-600" />
+                <p className="text-sm font-semibold text-slate-900">Why we ask this</p>
+              </div>
               <p className="text-sm leading-6 text-slate-600">{STEP_TIPS[step]}</p>
             </CardContent>
           </Card>
-
-          <p className="px-1 text-center text-xs leading-5 text-slate-400">
-            Built for specialist sales recruiters — used to match your profile against real hiring mandates, not
-            posted as a public job listing.
-          </p>
         </aside>
         </div>
       </main>
