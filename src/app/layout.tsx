@@ -16,8 +16,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "StaffAnchor | Candidate Onboarding",
-  description: "Sales and non-sales candidate onboarding platform",
+  title: "StaffAnchor | Sales Recruitment Specialists",
+  description: "StaffAnchor is a specialist recruitment firm for B2B and B2C sales talent — BDRs, AEs, sales managers, and sales leadership.",
 };
 
 export default function RootLayout({

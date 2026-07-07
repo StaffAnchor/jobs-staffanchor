@@ -1,26 +1,26 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, ChartColumn, MapPin, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ArrowRight, BadgeCheck, Briefcase, ChartColumn, MapPin, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CurrentJobsTeaser } from "@/components/common/current-jobs-teaser";
 
 const profileHighlights = [
   {
-    title: "Job history with role context",
+    title: "Sales role history, decoded",
     description:
-      "Capture each role with dates, industry context, and sales motion so hiring teams can understand the story behind the resume.",
+      "IC or team lead, B2B or B2C, inside sales or field — capture the role type, sub-domain, and sales motion so hiring teams understand the story behind the resume, not just the job titles.",
     icon: ChartColumn,
   },
   {
-    title: "Performance and quota snapshots",
+    title: "Quota, deal size, and attainment",
     description:
-      "Share target achievement, average deal size, and outcomes to move beyond generic claims and vague summaries.",
+      "Report your last four quarters of target vs. achievement, typical deal or ticket size, and sales cycle — the specifics generic job boards never ask for.",
     icon: BadgeCheck,
   },
   {
     title: "Skills, location, and salary intent",
     description:
-      "Show what you are good at, where you want to work, and expected compensation for better role matching.",
+      "Show the sales skills and CRMs you know, industries you've sold into, where you want to work, and expected compensation for better role matching.",
     icon: MapPin,
   },
 ];
@@ -90,14 +90,14 @@ export default function Home() {
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">
               <Sparkles className="h-3.5 w-3.5" />
-              For jobseekers
+              Sales recruitment specialists
             </div>
             <div className="space-y-4">
               <h1 className="max-w-2xl font-(family-name:--font-space-grotesk) text-4xl font-black leading-tight tracking-tight text-slate-950 md:text-5xl lg:text-6xl">
-                Let the right hiring teams discover you, not your inbox spam.
+                We only recruit for sales. That&apos;s why hiring teams trust us to find you.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
-                Build one structured profile and get in front of verified hiring teams. No cold outreach, no blind applications, and no noise.
+                StaffAnchor is a specialist recruitment firm for B2B and B2C sales talent — not a generic job board. Build one structured sales profile, with quota history and deal context hiring teams actually evaluate, and get discovered directly. No cold outreach, no blind applications, no noise.
               </p>
             </div>
 
@@ -107,8 +107,14 @@ export default function Home() {
                   Create Free Profile
                 </Button>
               </Link>
-              <a href="#workflow">
+              <Link href="/jobs">
                 <Button variant="outline" className="h-11 rounded-full border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <Briefcase className="mr-1.5 h-4 w-4" />
+                  Current Jobs
+                </Button>
+              </Link>
+              <a href="#workflow">
+                <Button variant="ghost" className="h-11 rounded-full px-6 text-sm font-semibold text-slate-600 hover:bg-slate-100">
                   See How It Works
                 </Button>
               </a>
@@ -135,8 +141,8 @@ export default function Home() {
             <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-sky-100/70 blur-3xl" />
             <div className="relative space-y-5">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Candidate snapshot preview</p>
-                <p className="mt-2 text-sm text-slate-600">Strong profile with performance metrics and role clarity</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Sales profile snapshot preview</p>
+                <p className="mt-2 text-sm text-slate-600">Strong sales profile with quota history, deal size, and role clarity</p>
               </div>
               <div className="grid gap-4">
                 {profileHighlights.map((item) => {
@@ -183,9 +189,9 @@ export default function Home() {
       <section id="profile" className="container-page space-y-6 py-14 md:py-16">
         <div className="max-w-2xl space-y-2">
           <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
-            More than a resume. A profile hiring teams can act on.
+            More than a resume. A sales profile hiring teams can act on.
           </h2>
-          <p className="text-slate-600">CVs tell your story. Structured data helps hiring teams shortlist with confidence.</p>
+          <p className="text-slate-600">Generic CVs don&apos;t capture quota attainment or deal size. Structured sales data helps hiring teams shortlist with confidence.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {profileHighlights.map((item) => {

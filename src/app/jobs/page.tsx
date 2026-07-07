@@ -80,8 +80,8 @@ export default function JobsPage() {
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Open roles</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Sales &amp; Non-Sales Jobs</h1>
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">StaffAnchor Sales Careers</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Open Sales Roles</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={industry} onChange={(e) => setIndustry(e.target.value)} className="w-40">
