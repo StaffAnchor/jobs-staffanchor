@@ -22,6 +22,9 @@ export function Navbar() {
           StaffAnchor
         </Link>
         <nav className="flex items-center gap-2">
+          <Link href="/jobs">
+            <Button variant={pathname.startsWith("/jobs") ? "default" : "ghost"}>Jobs</Button>
+          </Link>
           {!isAuthenticated && (
             <Link href="/register">
               <Button>Build My Profile</Button>
