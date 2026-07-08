@@ -12,6 +12,10 @@ export type JobListing = {
   experience_max: number | null;
   client_display: string | null;
   job_description: string | null;
+  jd_overview: string | null;
+  jd_responsibilities: string | null;
+  jd_candidate_profile: string | null;
+  jd_compensation_benefits: string | null;
   created_at: string;
 };
 

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Briefcase, CheckCircle2, IndianRupee, MapPin } from "lucide-react";
+import { ArrowLeft, Briefcase, CheckCircle2, IndianRupee, MapPin, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,13 @@ import {
   type CategoryValue,
 } from "@/modules/apply/options";
 import { supabase } from "@/lib/supabaseClient";
+
+function bulletList(value: string) {
+  return value
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
 
 type FormState = {
   fullName: string;
@@ -226,42 +233,132 @@ export default function QuickApplyPage() {
     );
   }
 
+  const hasStructuredJD = !!(
+    job.jd_overview || job.jd_responsibilities || job.jd_candidate_profile || job.jd_compensation_benefits
+  );
+
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
-      <Link href="/jobs" className="mb-6 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <Link href="/jobs" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to open roles
       </Link>
 
-      <Card className="mb-6">
-        <CardContent className="p-5">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-blue-600">{categoryLabel(job.category)}</p>
-          <h1 className="mt-1 text-xl font-semibold text-slate-900">{job.role_title ?? "Sales Role"}</h1>
-          {job.client_display && <p className="text-sm font-medium text-slate-600">{job.client_display}</p>}
-          {job.sub_domain && <p className="text-sm text-slate-500">{job.sub_domain}</p>}
-          <div className="mt-3 flex flex-wrap gap-3 text-[13px] text-slate-500">
-            {job.city && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" /> {job.city}
-              </span>
-            )}
-            <span className="flex items-center gap-1">
-              <IndianRupee className="h-3.5 w-3.5" /> {budgetLabel(job.budget_min, job.budget_max)}
+      <div className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-sky-500 p-6 text-white shadow-lg shadow-blue-900/20 sm:p-8">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-white/80">
+          {categoryLabel(job.category)}
+          {job.sub_domain ? ` · ${job.sub_domain}` : ""}
+        </p>
+        <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{job.role_title ?? "Sales Role"}</h1>
+        {job.client_display && <p className="mt-1 text-sm font-medium text-white/90">{job.client_display}</p>}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {job.city && (
+            <span className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-[12px] font-medium backdrop-blur-sm">
+              <MapPin className="h-3.5 w-3.5" /> {job.city}
             </span>
-            {experienceLabel(job.experience_min, job.experience_max) && (
-              <span>{experienceLabel(job.experience_min, job.experience_max)} experience</span>
-            )}
-          </div>
-          {job.job_description && (
-            <div className="mt-4 border-t border-slate-100 pt-4">
-              <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-slate-500">Job description</p>
-              <p className="whitespace-pre-wrap text-[13px] leading-6 text-slate-600">{job.job_description}</p>
-            </div>
           )}
-        </CardContent>
-      </Card>
+          <span className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-[12px] font-medium backdrop-blur-sm">
+            <IndianRupee className="h-3.5 w-3.5" /> {budgetLabel(job.budget_min, job.budget_max)}
+          </span>
+          {experienceLabel(job.experience_min, job.experience_max) && (
+            <span className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-medium backdrop-blur-sm">
+              {experienceLabel(job.experience_min, job.experience_max)} experience
+            </span>
+          )}
+        </div>
+        <a
+          href="#apply-form"
+          className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-blue-700 shadow-md transition hover:bg-blue-50"
+        >
+          <Zap className="h-4 w-4" /> Quick Apply
+        </a>
+      </div>
 
-      <Card>
-        <CardContent className="p-5">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardContent className="p-5 sm:p-6">
+              {hasStructuredJD ? (
+                <div className="space-y-5">
+                  {job.jd_overview && <p className="text-[14px] leading-6 text-slate-600">{job.jd_overview}</p>}
+                  {job.jd_responsibilities && (
+                    <div>
+                      <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-blue-700">
+                        Key Responsibilities
+                      </h2>
+                      <ul className="list-disc space-y-1.5 pl-4 text-[13.5px] leading-6 text-slate-700">
+                        {bulletList(job.jd_responsibilities).map((line, i) => (
+                          <li key={i}>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {job.jd_candidate_profile && (
+                    <div>
+                      <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-indigo-700">
+                        Candidate Profile
+                      </h2>
+                      <ul className="list-disc space-y-1.5 pl-4 text-[13.5px] leading-6 text-slate-700">
+                        {bulletList(job.jd_candidate_profile).map((line, i) => (
+                          <li key={i}>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {job.jd_compensation_benefits && (
+                    <div>
+                      <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-emerald-700">
+                        Compensation &amp; Benefits
+                      </h2>
+                      <ul className="list-disc space-y-1.5 pl-4 text-[13.5px] leading-6 text-slate-700">
+                        {bulletList(job.jd_compensation_benefits).map((line, i) => (
+                          <li key={i}>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : job.job_description ? (
+                <p className="whitespace-pre-wrap text-[13.5px] leading-6 text-slate-600">{job.job_description}</p>
+              ) : (
+                <p className="text-sm text-slate-400">No job description yet — a recruiter will share full details.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-1">
+          <div className="sticky top-20 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">At a glance</p>
+            <dl className="space-y-2.5 text-[13px]">
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-500">Experience</dt>
+                <dd className="font-medium text-slate-800">{experienceLabel(job.experience_min, job.experience_max) ?? "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-500">Compensation</dt>
+                <dd className="font-medium text-slate-800">{budgetLabel(job.budget_min, job.budget_max)}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-500">Location</dt>
+                <dd className="font-medium text-slate-800">{job.city ?? "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-500">Function</dt>
+                <dd className="font-medium text-slate-800">{categoryLabel(job.category)}</dd>
+              </div>
+            </dl>
+            <a
+              href="#apply-form"
+              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
+            >
+              <Zap className="h-4 w-4" /> Quick Apply
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <Card id="apply-form" className="mt-6 scroll-mt-24">
+        <CardContent className="p-5 sm:p-6">
           <h2 className="mb-1 text-base font-semibold text-slate-900">Quick Apply</h2>
           <p className="mb-5 text-sm text-slate-500">
             Just the basics for now — under a minute. A recruiter will follow up for the rest of your profile.
@@ -470,7 +567,11 @@ export default function QuickApplyPage() {
 
           {errorMsg && <p className="mt-3 text-sm text-red-600">{errorMsg}</p>}
 
-          <Button className="mt-5 w-full" onClick={handleSubmit} disabled={submitting}>
+          <Button
+            className="mt-5 w-full bg-gradient-to-r from-indigo-600 to-blue-500 hover:opacity-90"
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
             {submitting ? <Spinner className="h-4 w-4" /> : "Submit application"}
           </Button>
         </CardContent>
