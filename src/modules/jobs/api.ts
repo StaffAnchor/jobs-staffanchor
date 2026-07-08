@@ -73,6 +73,9 @@ export type QuickApplyPayload = {
   current_employer: string;
   current_employment_status: string;
   current_industry: string;
+  category: string;
+  sub_domain: string;
+  resume_file_url: string | null;
   segment_data: Record<string, unknown>;
   consent: boolean;
 };

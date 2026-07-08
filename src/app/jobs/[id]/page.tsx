@@ -29,7 +29,11 @@ import {
   industryOptions,
   roleTypeOptions,
   teamSizeOptions,
+  categoryOptions,
+  subDomainsForCategory,
+  type CategoryValue,
 } from "@/modules/apply/options";
+import { supabase } from "@/lib/supabaseClient";
 
 type FormState = {
   fullName: string;
@@ -44,6 +48,9 @@ type FormState = {
   currentEmployer: string;
   employmentStatus: string;
   currentIndustry: string;
+  category: CategoryValue | "";
+  subDomain: string;
+  subDomainOther: string;
   roleType: string;
   teamSize: string;
   consent: boolean;
@@ -62,6 +69,9 @@ const initialState: FormState = {
   currentEmployer: "",
   employmentStatus: "",
   currentIndustry: "",
+  category: "",
+  subDomain: "",
+  subDomainOther: "",
   roleType: "",
   teamSize: "",
   consent: false,
@@ -73,6 +83,7 @@ export default function QuickApplyPage() {
 
   const [job, setJob] = useState<JobListing | null | undefined>(undefined);
   const [values, setValues] = useState<FormState>(initialState);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -87,6 +98,11 @@ export default function QuickApplyPage() {
     if (values.cityChoice === "Other") return values.customCity.trim();
     return values.cityChoice;
   }, [values.cityChoice, values.customCity]);
+
+  const subDomainOptions = useMemo(
+    () => subDomainsForCategory(values.category || null),
+    [values.category]
+  );
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -106,6 +122,10 @@ export default function QuickApplyPage() {
     if (!values.currentIndustry) return "Current industry is required.";
     if (!values.roleType) return "Please select whether you are an IC or leading a team.";
     if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
+    if (!values.category) return "Please select your category.";
+    if (!values.subDomain) return "Please select your sub-domain.";
+    if (values.subDomain === "Other" && !values.subDomainOther.trim()) return "Please specify your sub-domain.";
+    if (!resumeFile) return "Please upload your resume.";
     if (!values.consent) return "Please confirm you're okay with StaffAnchor contacting you.";
     return null;
   }
@@ -125,6 +145,19 @@ export default function QuickApplyPage() {
       if (values.roleType === "Leading a Team" && values.teamSize) {
         segmentData.team_size = values.teamSize;
       }
+
+      let resumeFileUrl: string | null = null;
+      if (resumeFile) {
+        const path = `${crypto.randomUUID()}-${resumeFile.name}`;
+        const { error: uploadError } = await supabase.storage.from("resumes").upload(path, resumeFile, {
+          contentType: resumeFile.type || undefined,
+        });
+        if (uploadError) throw new Error(`Resume upload failed: ${uploadError.message}`);
+        resumeFileUrl = path;
+      }
+
+      const resolvedSubDomain = values.subDomain === "Other" ? values.subDomainOther.trim() : values.subDomain;
+
       await submitQuickApply(mandateId, {
         full_name: values.fullName.trim(),
         email: values.email.trim(),
@@ -137,6 +170,9 @@ export default function QuickApplyPage() {
         current_employer: values.currentEmployer.trim(),
         current_employment_status: values.employmentStatus,
         current_industry: values.currentIndustry,
+        category: values.category,
+        sub_domain: resolvedSubDomain,
+        resume_file_url: resumeFileUrl,
         segment_data: segmentData,
         consent: values.consent,
       });
@@ -292,9 +328,9 @@ export default function QuickApplyPage() {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Notice period" required>
+            <FormField label="Days to join" required>
               <Select value={values.noticePeriod} onChange={(e) => set("noticePeriod", e.target.value)}>
-                <option value="">Select notice period</option>
+                <option value="">Select...</option>
                 {defaultNoticePeriods.map((n) => (
                   <option key={n} value={n}>
                     {n}
@@ -328,6 +364,43 @@ export default function QuickApplyPage() {
                 ))}
               </Select>
             </FormField>
+            <FormField label="Category" required>
+              <Select
+                value={values.category}
+                onChange={(e) => {
+                  const next = e.target.value as CategoryValue | "";
+                  set("category", next);
+                  set("subDomain", "");
+                  set("subDomainOther", "");
+                }}
+              >
+                <option value="">Select category</option>
+                {categoryOptions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Sub-domain" required>
+              <Select value={values.subDomain} onChange={(e) => set("subDomain", e.target.value)}>
+                <option value="">Select sub-domain</option>
+                {subDomainOptions.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+                <option value="Other">Other</option>
+              </Select>
+              {values.subDomain === "Other" && (
+                <input
+                  value={values.subDomainOther}
+                  onChange={(e) => set("subDomainOther", e.target.value)}
+                  placeholder="e.g. SaaS Sales"
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                />
+              )}
+            </FormField>
             <FormField label="IC or leading a team?" required>
               <Select
                 value={values.roleType}
@@ -356,6 +429,33 @@ export default function QuickApplyPage() {
                 </Select>
               </FormField>
             )}
+            <FormField label="Resume" required className="sm:col-span-2">
+              <label
+                htmlFor="resume-upload"
+                className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition ${
+                  resumeFile
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50"
+                }`}
+              >
+                <span className="text-2xl">{resumeFile ? "✓" : "📄"}</span>
+                {resumeFile ? (
+                  <span className="text-sm font-medium text-emerald-700">{resumeFile.name}</span>
+                ) : (
+                  <>
+                    <span className="text-sm font-medium text-slate-700">Click to upload your resume</span>
+                    <span className="text-xs text-slate-400">PDF or DOCX, up to 10MB</span>
+                  </>
+                )}
+                <input
+                  id="resume-upload"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
+                  className="hidden"
+                />
+              </label>
+            </FormField>
           </div>
 
           <label className="mt-5 flex items-start gap-2 text-[13px] text-slate-600">
