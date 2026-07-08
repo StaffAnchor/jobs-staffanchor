@@ -44,7 +44,7 @@ export type ShortlistCandidate = {
   overall_recommendation: string | null;
   verified_relocation: string | null;
   verified_notice: string | null;
-  notice_period: number | null;
+  notice_period: string | null;
   resume_file_url: string | null;
   stage: string;
   client_feedback: string | null;

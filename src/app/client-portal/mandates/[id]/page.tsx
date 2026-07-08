@@ -120,7 +120,11 @@ export default function ClientMandateDetailPage() {
 
   const ctcValues = rows.map((r) => r.expected_fixed_ctc).filter((v): v is number => v != null);
   const medianCtc = median(ctcValues);
-  const availableSoonCount = rows.filter((r) => r.notice_period != null && r.notice_period <= 15).length;
+  // notice_period is a categorical field ("Immediate", "15 days", "30 days", "90+ days"),
+  // not a raw day count -- only the first two buckets count as "soon".
+  const availableSoonCount = rows.filter(
+    (r) => r.notice_period === "Immediate" || r.notice_period === "15 days"
+  ).length;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
