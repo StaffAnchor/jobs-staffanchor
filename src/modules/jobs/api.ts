@@ -5,7 +5,9 @@ export type JobListing = {
   role_title: string | null;
   category: string | null;
   sub_domain: string | null;
+  sub_domains: string[] | null;
   city: string | null;
+  cities: string[] | null;
   budget_min: number | null;
   budget_max: number | null;
   experience_min: number | null;

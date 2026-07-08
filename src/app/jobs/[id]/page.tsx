@@ -237,6 +237,9 @@ export default function QuickApplyPage() {
     job.jd_overview || job.jd_responsibilities || job.jd_candidate_profile || job.jd_compensation_benefits
   );
 
+  const jobCities = job.cities?.length ? job.cities : job.city ? [job.city] : [];
+  const jobSubDomains = job.sub_domains?.length ? job.sub_domains : job.sub_domain ? [job.sub_domain] : [];
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <Link href="/jobs" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
@@ -246,14 +249,14 @@ export default function QuickApplyPage() {
       <div className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-sky-500 p-6 text-white shadow-lg shadow-blue-900/20 sm:p-8">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-white/80">
           {categoryLabel(job.category)}
-          {job.sub_domain ? ` · ${job.sub_domain}` : ""}
+          {jobSubDomains.length ? ` · ${jobSubDomains.join(", ")}` : ""}
         </p>
         <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{job.role_title ?? "Sales Role"}</h1>
         {job.client_display && <p className="mt-1 text-sm font-medium text-white/90">{job.client_display}</p>}
         <div className="mt-4 flex flex-wrap gap-2">
-          {job.city && (
+          {jobCities.length > 0 && (
             <span className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-[12px] font-medium backdrop-blur-sm">
-              <MapPin className="h-3.5 w-3.5" /> {job.city}
+              <MapPin className="h-3.5 w-3.5" /> {jobCities.join(", ")}
             </span>
           )}
           <span className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-[12px] font-medium backdrop-blur-sm">
@@ -340,7 +343,7 @@ export default function QuickApplyPage() {
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-slate-500">Location</dt>
-                <dd className="font-medium text-slate-800">{job.city ?? "—"}</dd>
+                <dd className="font-medium text-slate-800">{jobCities.length ? jobCities.join(", ") : "—"}</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-slate-500">Function</dt>

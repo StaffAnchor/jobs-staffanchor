@@ -50,7 +50,8 @@ export default function JobsPage() {
   }, []);
 
   const locations = useMemo(() => {
-    return Array.from(new Set((jobs ?? []).map((j) => j.city).filter(Boolean) as string[])).sort();
+    const all = (jobs ?? []).flatMap((j) => (j.cities && j.cities.length ? j.cities : j.city ? [j.city] : []));
+    return Array.from(new Set(all)).sort();
   }, [jobs]);
 
   const filtered = useMemo(() => {
@@ -58,7 +59,8 @@ export default function JobsPage() {
     const band = EXPERIENCE_BANDS.find((b) => b.label === experienceBand);
     return jobs.filter((job) => {
       if (industry && job.category !== industry) return false;
-      if (location && job.city !== location) return false;
+      const jobCities = job.cities && job.cities.length ? job.cities : job.city ? [job.city] : [];
+      if (location && !jobCities.includes(location)) return false;
       if (band) {
         const jMin = job.experience_min ?? 0;
         const jMax = job.experience_max ?? 99;
@@ -192,25 +194,29 @@ export default function JobsPage() {
                   {exp && <span>{exp}</span>}
                   {exp && <span>·</span>}
                   <span>{budgetLabel(job.budget_min, job.budget_max)}</span>
-                  {job.city && (
+                  {(job.cities?.length ? job.cities : job.city ? [job.city] : []).length > 0 && (
                     <>
                       <span>·</span>
                       <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {job.city}
+                        <MapPin className="h-3 w-3" />
+                        {(job.cities?.length ? job.cities : job.city ? [job.city] : []).join(", ")}
                       </span>
                     </>
                   )}
                 </p>
 
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
                     {categoryLabel(job.category)}
                   </span>
-                  {job.sub_domain && (
-                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
-                      {job.sub_domain}
+                  {(job.sub_domains?.length ? job.sub_domains : job.sub_domain ? [job.sub_domain] : []).map((sd) => (
+                    <span
+                      key={sd}
+                      className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600"
+                    >
+                      {sd}
                     </span>
-                  )}
+                  ))}
                 </div>
 
                 {job.job_description && (
