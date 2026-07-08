@@ -302,7 +302,7 @@ const STRENGTH_FIELDS: (keyof FormState)[] = [
   "openToRelocation",
 ];
 
-type ExistingProfile = {
+export type ExistingProfile = {
   id: string;
   full_name: string | null;
   email: string;
