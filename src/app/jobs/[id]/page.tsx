@@ -364,7 +364,7 @@ export default function QuickApplyPage() {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Category" required>
+            <FormField label="Function / Domain" required>
               <Select
                 value={values.category}
                 onChange={(e) => {
@@ -374,7 +374,7 @@ export default function QuickApplyPage() {
                   set("subDomainOther", "");
                 }}
               >
-                <option value="">Select category</option>
+                <option value="">Select...</option>
                 {categoryOptions.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}

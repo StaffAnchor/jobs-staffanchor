@@ -99,6 +99,7 @@ type FormState = {
   travelPreference: string;
   category: CategoryValue | "";
   subDomain: string;
+  customSubDomain: string;
   secondarySubDomains: string[];
   roleLevel: string;
   roleType: string;
@@ -174,6 +175,7 @@ const initialState: FormState = {
   travelPreference: "",
   category: "",
   subDomain: "",
+  customSubDomain: "",
   secondarySubDomains: [],
   roleLevel: "",
   roleType: "",
@@ -359,6 +361,8 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
   const teamQuota = segNumArr(sd, "team_quota");
   const knownQualification =
     p.highest_qualification && highestQualificationOptions.includes(p.highest_qualification);
+  const knownSubDomain =
+    p.sub_domain && subDomainsForCategory((p.category ?? null) as CategoryValue | null).includes(p.sub_domain);
 
   return {
     ...initialState,
@@ -387,7 +391,8 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
     openToRelocation: p.open_to_relocation ?? "",
     travelPreference: seg(sd, "travel_preference"),
     category: (p.category ?? "") as CategoryValue | "",
-    subDomain: p.sub_domain ?? "",
+    subDomain: knownSubDomain ? (p.sub_domain as string) : p.sub_domain ? "Other" : "",
+    customSubDomain: !knownSubDomain && p.sub_domain ? p.sub_domain : "",
     secondarySubDomains: p.secondary_sub_domains ?? [],
     roleLevel: seg(sd, "role_level"),
     roleType: roleTypeRaw === "Team Lead" ? "Leading a Team" : roleTypeRaw === "IC" ? "Individual Contributor (IC)" : "",
@@ -718,8 +723,11 @@ export default function ApplyForm({
       }
     }
     if (step === 2) {
-      if (!values.category) return "Please select a category.";
+      if (!values.category) return "Please select your function / domain.";
       if (!values.subDomain) return "Please select your primary specialization.";
+      if (values.subDomain === "Other" && !values.customSubDomain.trim()) {
+        return "Please specify your primary specialization.";
+      }
       if (!values.roleLevel) return "Please select your role level.";
       if (!values.roleType) return "Please select whether you are an IC or leading a team.";
       if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
@@ -980,7 +988,7 @@ export default function ApplyForm({
           ? Math.min(Number(values.expectedVariableCtc), 120)
           : null,
         category: values.category || null,
-        sub_domain: values.subDomain || null,
+        sub_domain: (values.subDomain === "Other" ? values.customSubDomain.trim() : values.subDomain) || null,
         secondary_sub_domains: values.secondarySubDomains.filter((d) => d !== "None — single specialization only"),
         segment_data: segmentData,
         self_assessment: {
@@ -1418,13 +1426,14 @@ export default function ApplyForm({
 
           {step === 2 && (
             <>
-              <FormField label="Category" required>
+              <FormField label="Function / Domain" required>
                 <Select
                   value={values.category}
                   onChange={(e) => {
                     const next = e.target.value as CategoryValue | "";
                     update("category", next);
                     update("subDomain", "");
+                    update("customSubDomain", "");
                     update("secondarySubDomains", []);
                   }}
                 >
@@ -1447,7 +1456,16 @@ export default function ApplyForm({
                           {o}
                         </option>
                       ))}
+                      <option value="Other">Other</option>
                     </Select>
+                    {values.subDomain === "Other" && (
+                      <Input
+                        className="mt-2"
+                        value={values.customSubDomain}
+                        onChange={(e) => update("customSubDomain", e.target.value)}
+                        placeholder="Please specify"
+                      />
+                    )}
                   </FormField>
 
                   <FormField label="Secondary Specializations" required>
