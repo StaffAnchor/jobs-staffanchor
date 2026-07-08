@@ -1071,8 +1071,8 @@ export default function ApplyForm({
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#f7f9fc]">
       <main className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-4 flex flex-wrap items-center justify-end gap-4 text-xs font-medium text-slate-500">
-          <span className="flex items-center gap-1.5">
+        <div className="mb-5 flex flex-wrap items-center justify-end gap-2 text-xs font-medium text-slate-500">
+          <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-100">
             {savedLabel ? (
               <>
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
@@ -1082,7 +1082,7 @@ export default function ApplyForm({
               <span>Not saved yet</span>
             )}
           </span>
-          <span className="flex items-center gap-1.5 text-slate-500">
+          <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-slate-500 shadow-sm ring-1 ring-slate-100">
             <Clock className="h-3.5 w-3.5" />
             Estimated time {minutesLeft}-{minutesLeft + 2} min
           </span>
@@ -1090,7 +1090,7 @@ export default function ApplyForm({
 
         <div className="grid gap-6 lg:grid-cols-[260px_1fr_320px] lg:items-start">
           <aside className="space-y-4 lg:sticky lg:top-6">
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
               <CardContent className="space-y-4 py-5">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-slate-900">Profile Progress</p>
@@ -1142,7 +1142,7 @@ export default function ApplyForm({
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
               <CardContent className="space-y-3 py-5 text-center">
                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                   <HelpCircle className="h-5 w-5" />
@@ -1160,26 +1160,26 @@ export default function ApplyForm({
             </Card>
           </aside>
 
-        <Card className="w-full border-slate-200 shadow-sm">
+        <Card className="w-full rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
           <CardContent className="space-y-5 p-6">
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <StepIcon className="h-5 w-5" />
+            <div className="flex items-start gap-3.5 pb-1">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 text-blue-600 ring-1 ring-blue-100">
+                <StepIcon className="h-5.5 w-5.5" />
               </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
                   {STEP_META[step].eyebrow}
                 </p>
-                <h2 className="text-2xl font-bold text-slate-950">{STEP_META[step].heading}</h2>
-                <p className="mt-1 text-sm text-slate-600">{STEP_META[step].subtext}</p>
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{STEP_META[step].heading}</h2>
+                <p className="mt-1 text-sm leading-relaxed text-slate-500">{STEP_META[step].subtext}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-sm text-blue-900">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{STEP_TIPS[step]}</span>
+            <div className="flex items-start gap-2.5 rounded-xl bg-blue-50/70 px-3.5 py-3 text-sm text-blue-900 ring-1 ring-blue-100/80">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+              <span className="leading-relaxed">{STEP_TIPS[step]}</span>
             </div>
-            <p className="text-xs italic text-slate-400">&ldquo;{quote}&rdquo;</p>
+            <p className="text-xs italic leading-relaxed text-slate-400">&ldquo;{quote}&rdquo;</p>
           {step === 0 && (
             <>
               <FormField label="Full Name" required>
@@ -2122,12 +2122,22 @@ export default function ApplyForm({
 
           {errorMsg && <p className="text-sm text-red-600">{errorMsg}</p>}
 
-          <div className="flex items-center justify-between pt-2">
-            <Button type="button" variant="outline" onClick={goBack} disabled={step === 0 || submitting}>
+          <div className="flex items-center justify-between border-t border-slate-100 pt-5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goBack}
+              disabled={step === 0 || submitting}
+              className="rounded-xl"
+            >
               ← Previous
             </Button>
             {step < STEPS.length - 1 ? (
-              <Button type="button" onClick={goNext} className="bg-blue-600 hover:bg-blue-700">
+              <Button
+                type="button"
+                onClick={goNext}
+                className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
+              >
                 Continue →
               </Button>
             ) : (
@@ -2135,7 +2145,7 @@ export default function ApplyForm({
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
               >
                 {submitting ? "Submitting..." : "Submit My Profile"}
               </Button>
@@ -2145,7 +2155,7 @@ export default function ApplyForm({
         </Card>
 
         <aside className="space-y-4 lg:sticky lg:top-6">
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
             <CardContent className="space-y-3 py-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-900">Your Profile Preview</p>
@@ -2174,7 +2184,7 @@ export default function ApplyForm({
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
             <CardContent className="space-y-4 py-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-900">Profile Strength</p>
@@ -2221,7 +2231,7 @@ export default function ApplyForm({
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
             <CardContent className="space-y-2 py-5">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-blue-600" />
