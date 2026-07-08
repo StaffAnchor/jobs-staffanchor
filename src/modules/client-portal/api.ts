@@ -16,6 +16,13 @@ export type ClientMandate = {
   shortlisted_count: number;
 };
 
+export type AiPassport = {
+  headline?: string;
+  compensation_line?: string;
+  targets_line?: string;
+  resume_highlights?: string[];
+};
+
 export type ShortlistCandidate = {
   link_id: string;
   mandate_id: string;
@@ -33,12 +40,16 @@ export type ShortlistCandidate = {
   secondary_sub_domains: string[] | null;
   industries: string[] | null;
   ai_summary: string | null;
+  ai_passport: AiPassport | null;
   overall_recommendation: string | null;
   verified_relocation: string | null;
   verified_notice: string | null;
+  notice_period: number | null;
   resume_file_url: string | null;
   stage: string;
   client_feedback: string | null;
+  requested_interview_at: string | null;
+  confirmed_interview_at: string | null;
 };
 
 export async function getOrCreateMyClientId(): Promise<string> {
@@ -59,8 +70,12 @@ export async function getMyShortlist(mandateId: string): Promise<ShortlistCandid
   return (data ?? []) as ShortlistCandidate[];
 }
 
-export async function submitMyFeedback(linkId: string, feedback: string): Promise<void> {
-  const { error } = await supabase.rpc("submit_my_client_feedback", { p_link_id: linkId, p_feedback: feedback });
+export async function submitMyFeedback(linkId: string, feedback: string, interviewAt?: string): Promise<void> {
+  const { error } = await supabase.rpc("submit_my_client_feedback", {
+    p_link_id: linkId,
+    p_feedback: feedback,
+    p_interview_at: interviewAt ?? null,
+  });
   if (error) throw new Error(error.message);
 }
 

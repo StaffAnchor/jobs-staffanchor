@@ -10,7 +10,21 @@ import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
 import { getMyShortlist, getResumeSignedUrl, type ShortlistCandidate } from "@/modules/client-portal/api";
 import ClientFeedbackButtons from "@/modules/client-portal/ClientFeedbackButtons";
+import ProfilePassportTrigger from "@/modules/client-portal/ProfilePassport";
 import ResumePreview from "@/components/common/ResumePreview";
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function passportRank(r: ShortlistCandidate): number {
+  const recommended = r.overall_recommendation === "Strong Fit" ? 0 : 2;
+  const pending = r.client_feedback ? 1 : 0;
+  return recommended + pending;
+}
 
 const FEEDBACK_LABEL: Record<string, string> = {
   interested: "Interested",
@@ -94,14 +108,19 @@ export default function ClientMandateDetailPage() {
     );
   }
 
-  const recommended = filtered.filter((r) => r.overall_recommendation === "Strong Fit");
-  const others = filtered.filter((r) => r.overall_recommendation !== "Strong Fit");
-  const ordered = [...recommended, ...others];
+  const recommendedCount = filtered.filter((r) => r.overall_recommendation === "Strong Fit").length;
+  // Un-responded candidates float to the top of each recommendation group so
+  // a client isn't re-scanning ones they've already actioned.
+  const ordered = [...filtered].sort((a, b) => passportRank(a) - passportRank(b));
 
   const interestedCount = rows.filter((r) => r.client_feedback === "interested").length;
   const interviewCount = rows.filter((r) => r.client_feedback === "interview_requested").length;
   const notInterestedCount = rows.filter((r) => r.client_feedback === "not_interested").length;
   const pendingCount = rows.filter((r) => !r.client_feedback).length;
+
+  const ctcValues = rows.map((r) => r.expected_fixed_ctc).filter((v): v is number => v != null);
+  const medianCtc = median(ctcValues);
+  const availableSoonCount = rows.filter((r) => r.notice_period != null && r.notice_period <= 15).length;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
@@ -116,7 +135,7 @@ export default function ClientMandateDetailPage() {
         </p>
         <div className="mt-3 flex flex-wrap gap-2 text-xs">
           <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-600">
-            {recommended.length} recommended
+            {recommendedCount} recommended
           </span>
           <span className="rounded-full bg-emerald-100 px-3 py-1 font-medium text-emerald-700">
             {interestedCount} interested
@@ -152,6 +171,22 @@ export default function ClientMandateDetailPage() {
             <option value="not_interested">Not interested</option>
           </Select>
         </div>
+      )}
+
+      {rows.length > 0 && ordered.length > 0 && (medianCtc !== null || availableSoonCount > 0) && (
+        <p className="mb-4 rounded-lg bg-slate-100 px-3.5 py-2 text-xs text-slate-500">
+          {medianCtc !== null && (
+            <>
+              Median expected CTC in this shortlist: <span className="font-semibold text-slate-700">₹{medianCtc}L</span>
+            </>
+          )}
+          {medianCtc !== null && availableSoonCount > 0 && " · "}
+          {availableSoonCount > 0 && (
+            <>
+              <span className="font-semibold text-slate-700">{availableSoonCount}</span> of {rows.length} available within 15 days
+            </>
+          )}
+        </p>
       )}
 
       {rows.length === 0 ? (
@@ -205,7 +240,21 @@ export default function ClientMandateDetailPage() {
                   )}
                 </div>
 
-                {c.ai_summary && <p className="mt-3 text-sm text-slate-700">{c.ai_summary}</p>}
+                {c.ai_summary && <p className="mt-3 text-sm text-slate-700 line-clamp-2">{c.ai_summary}</p>}
+                <ProfilePassportTrigger
+                  fullName={c.full_name}
+                  currentJobTitle={c.current_job_title}
+                  currentEmployer={c.current_employer}
+                  currentLocation={c.current_location}
+                  totalExperienceYears={c.total_experience_years}
+                  subDomain={c.sub_domain}
+                  expectedFixedCtc={c.expected_fixed_ctc}
+                  verifiedRelocation={c.verified_relocation}
+                  verifiedNotice={c.verified_notice}
+                  industries={c.industries}
+                  aiSummary={c.ai_summary}
+                  aiPassport={c.ai_passport}
+                />
 
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div>
@@ -239,7 +288,12 @@ export default function ClientMandateDetailPage() {
                   </div>
                 )}
 
-                <ClientFeedbackButtons linkId={c.link_id} current={c.client_feedback} />
+                <ClientFeedbackButtons
+                  linkId={c.link_id}
+                  current={c.client_feedback}
+                  requestedInterviewAt={c.requested_interview_at}
+                  confirmedInterviewAt={c.confirmed_interview_at}
+                />
               </CardContent>
             </Card>
           ))}
