@@ -16,26 +16,58 @@ const TABS = [
     key: "profile" as const,
     label: "My Profile",
     icon: UserCircle2,
-    activeClasses: "bg-teal-500 text-white shadow-md shadow-teal-900/30",
-    dotClasses: "bg-white/25 text-white",
+    accent: "text-emerald-600",
+    ring: "ring-emerald-100",
   },
   {
     key: "pipeline" as const,
     label: "My Pipeline",
     icon: Briefcase,
-    activeClasses: "bg-teal-500 text-white shadow-md shadow-teal-900/30",
-    dotClasses: "bg-white/25 text-white",
+    accent: "text-indigo-600",
+    ring: "ring-indigo-100",
   },
   {
     key: "refer" as const,
     label: "Refer & Earn",
     icon: Gift,
-    activeClasses: "bg-teal-500 text-white shadow-md shadow-teal-900/30",
-    dotClasses: "bg-white/25 text-white",
+    accent: "text-amber-600",
+    ring: "ring-amber-100",
   },
 ];
 
 type TabKey = (typeof TABS)[number]["key"];
+
+const TAB_META: Record<
+  TabKey,
+  { icon: typeof Briefcase; iconClasses: string; title: string; subtitle: string }
+> = {
+  profile: {
+    icon: UserCircle2,
+    iconClasses: "bg-emerald-50 text-emerald-600",
+    title: "My Profile",
+    subtitle: "Keep your profile current so recruiters can match you to the right roles.",
+  },
+  pipeline: {
+    icon: Briefcase,
+    iconClasses: "bg-indigo-50 text-indigo-600",
+    title: "My Pipeline",
+    subtitle: "Where you stand on every role you've been matched to.",
+  },
+  refer: {
+    icon: Gift,
+    iconClasses: "bg-amber-50 text-amber-600",
+    title: "Refer & Earn",
+    subtitle: "Help someone in your network find their next sales role — and earn a reward when they get placed.",
+  },
+};
+
+function initialsFor(name: string | null | undefined): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
 
 export default function CandidatePortalPage() {
   const router = useRouter();
@@ -119,17 +151,30 @@ export default function CandidatePortalPage() {
     return null;
   };
 
+  const meta = TAB_META[tab];
+  const MetaIcon = meta.icon;
+
   return (
-    <div>
-      <div className="bg-slate-900 pb-5">
-        <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8">
-          <div className="mb-4 flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-400">
-              Welcome back{profile.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
-            </p>
+    <div className="bg-[#f7f9fc]">
+      <div className="relative isolate overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-900 pb-7">
+        <div className="pointer-events-none absolute -top-24 left-1/4 h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -top-16 right-0 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="relative mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
+          <div className="mb-6 flex items-center gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-sm font-bold text-white shadow-lg shadow-emerald-950/40 ring-2 ring-white/10">
+              {initialsFor(profile.full_name)}
+            </div>
+            <div>
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-400/90">
+                <Sparkles className="h-3 w-3" /> Candidate Portal
+              </p>
+              <h1 className="text-lg font-semibold text-white sm:text-xl">
+                Welcome back{profile.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
+              </h1>
+            </div>
           </div>
-          <nav className="inline-flex gap-1 rounded-full bg-white/10 p-1">
+
+          <nav className="inline-flex gap-1 rounded-2xl bg-white/[0.06] p-1 ring-1 ring-white/[0.08] backdrop-blur-sm">
             {TABS.map((t) => {
               const Icon = t.icon;
               const isActive = tab === t.key;
@@ -138,15 +183,19 @@ export default function CandidatePortalPage() {
                 <button
                   key={t.key}
                   onClick={() => setTab(t.key)}
-                  className={`group relative flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-                    isActive ? t.activeClasses : "text-slate-300 hover:bg-white/10 hover:text-white"
+                  className={`group relative flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
+                    isActive
+                      ? "bg-white text-slate-900 shadow-[0_6px_20px_-4px_rgba(0,0,0,0.35)]"
+                      : "text-slate-300 hover:bg-white/[0.06] hover:text-white"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={`h-4 w-4 transition-colors ${isActive ? t.accent : "text-slate-400 group-hover:text-slate-200"}`} />
                   {t.label}
                   {badge != null && (
                     <span
-                      className={`ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${t.dotClasses}`}
+                      className={`flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+                        isActive ? `bg-slate-100 ${t.accent}` : "bg-white/15 text-white"
+                      }`}
                     >
                       {badge}
                     </span>
@@ -158,27 +207,21 @@ export default function CandidatePortalPage() {
         </div>
       </div>
 
-      {tab === "profile" && (
+      {tab === "profile" ? (
         <ApplyForm existingProfile={profile} onSaved={() => loadProfile()} />
-      )}
-      {tab === "pipeline" && (
+      ) : (
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-          <h1 className="mb-1 flex items-center gap-2 text-xl font-bold text-slate-900">
-            <Briefcase className="h-5 w-5 text-indigo-500" /> My Pipeline
-          </h1>
-          <p className="mb-5 text-sm text-slate-500">Where you stand on every role you've been matched to.</p>
-          <MyPipeline />
-        </div>
-      )}
-      {tab === "refer" && (
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-          <h1 className="mb-1 flex items-center gap-2 text-xl font-bold text-slate-900">
-            <Gift className="h-5 w-5 text-emerald-500" /> Refer & Earn
-          </h1>
-          <p className="mb-5 text-sm text-slate-500">
-            Help someone in your network find their next sales role — and earn a reward when they get placed.
-          </p>
-          <ReferEarn openJobs={openJobs} />
+          <div className="mb-6 flex items-start gap-3">
+            <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${meta.iconClasses}`}>
+              <MetaIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-slate-900">{meta.title}</h2>
+              <p className="mt-0.5 text-sm text-slate-500">{meta.subtitle}</p>
+            </div>
+          </div>
+          {tab === "pipeline" && <MyPipeline />}
+          {tab === "refer" && <ReferEarn openJobs={openJobs} />}
         </div>
       )}
     </div>
