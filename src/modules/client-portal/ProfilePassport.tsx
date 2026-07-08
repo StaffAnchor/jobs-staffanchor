@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Sparkles, BadgeCheck, Loader2 } from "lucide-react";
+import { X, Sparkles, BadgeCheck, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import type { AiPassport } from "@/modules/client-portal/api";
 
@@ -120,6 +120,13 @@ export default function ProfilePassportTrigger({
             </div>
 
             <div className="space-y-4 px-6 py-5">
+              {aiPassport?.profile_incomplete && (
+                <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  This candidate hasn&apos;t finished completing their profile yet, so this passport is based on
+                  limited information.
+                </p>
+              )}
               {aiPassport?.headline && <p className="text-sm text-slate-800">{aiPassport.headline}</p>}
               {!aiPassport?.headline && aiSummary && <p className="text-sm text-slate-800">{aiSummary}</p>}
 
