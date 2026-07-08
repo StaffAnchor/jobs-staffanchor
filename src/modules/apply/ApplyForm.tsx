@@ -138,8 +138,11 @@ type FormState = {
   teamQuotaQ4: string;
   bestWin: string;
   toughLoss: string;
+  currentIndustry: string;
+  customCurrentIndustry: string;
   selectedIndustries: string[];
   customIndustry: string;
+  noOtherIndustries: boolean;
   consent: boolean;
 };
 
@@ -211,7 +214,10 @@ const initialState: FormState = {
   bestWin: "",
   toughLoss: "",
   selectedIndustries: [],
+  currentIndustry: "",
+  customCurrentIndustry: "",
   customIndustry: "",
+  noOtherIndustries: false,
   consent: false,
 };
 
@@ -288,6 +294,7 @@ const STRENGTH_FIELDS: (keyof FormState)[] = [
   "bestWin",
   "toughLoss",
   "selectedSkills",
+  "currentIndustry",
   "selectedIndustries",
   "workMode",
   "openToRelocation",
@@ -315,6 +322,7 @@ type ExistingProfile = {
   sub_domain: string | null;
   secondary_sub_domains: string[] | null;
   industries: string[] | null;
+  current_industry: string | null;
   segment_data: Record<string, unknown> | null;
   open_to_relocation: string | null;
   work_mode: string | null;
@@ -419,7 +427,24 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
     teamQuotaQ4: teamQuota[3] ?? "",
     bestWin: p.self_assessment?.best ?? "",
     toughLoss: p.self_assessment?.lost ?? "",
-    selectedIndustries: p.industries ?? [],
+    ...(() => {
+      const knownCurrentIndustry =
+        p.current_industry && industryOptions.includes(p.current_industry);
+      const allIndustries = p.industries ?? [];
+      const others = p.current_industry
+        ? allIndustries.filter((i) => i !== p.current_industry)
+        : allIndustries;
+      return {
+        currentIndustry: knownCurrentIndustry
+          ? (p.current_industry as string)
+          : p.current_industry
+            ? "Other"
+            : "",
+        customCurrentIndustry: !knownCurrentIndustry ? (p.current_industry ?? "") : "",
+        selectedIndustries: others,
+        noOtherIndustries: !!p.current_industry && others.length === 0 && allIndustries.length > 0,
+      };
+    })(),
     consent: true,
   };
 }
@@ -780,7 +805,13 @@ export default function ApplyForm({
     }
     if (step === 4) {
       if (!values.selectedSkills.length) return "Please add at least one skill.";
-      if (!values.selectedIndustries.length) return "Please select at least one industry.";
+      if (!values.currentIndustry) return "Please select your current industry.";
+      if (values.currentIndustry === "Other" && !values.customCurrentIndustry.trim()) {
+        return "Please specify your current industry.";
+      }
+      if (!values.noOtherIndustries && !values.selectedIndustries.length) {
+        return "Please select at least one previous industry, or check 'No other industries'.";
+      }
       if (!values.workMode) return "Please select a work mode preference.";
       if (!values.openToRelocation) return "Please select your relocation preference.";
       if (!values.travelPreference) return "Please select your travel preference.";
@@ -962,7 +993,25 @@ export default function ApplyForm({
           values.highestQualification === "Other"
             ? values.customQualification || null
             : values.highestQualification || null,
-        industries: values.selectedIndustries,
+        // industries[] stores the full union (current + previous) so any
+        // existing consumer that just wants "every industry this person has
+        // touched" (filters, AI summary, etc.) keeps working unchanged --
+        // current_industry is the new, more precise field for "what are
+        // they in right now".
+        current_industry:
+          values.currentIndustry === "Other"
+            ? values.customCurrentIndustry.trim() || null
+            : values.currentIndustry || null,
+        industries: Array.from(
+          new Set(
+            [
+              values.currentIndustry === "Other"
+                ? values.customCurrentIndustry.trim()
+                : values.currentIndustry,
+              ...values.selectedIndustries,
+            ].filter((v): v is string => !!v)
+          )
+        ),
         skills: values.selectedSkills.length ? values.selectedSkills.join(", ") : null,
         consent: values.consent,
       };
@@ -1923,44 +1972,86 @@ export default function ApplyForm({
                   </div>
                 </div>
               </FormField>
-              <FormField label="Key Industries Worked In (multi-select, for searchability)" required>
+              <FormField label="Current Industry" required>
+                <Select
+                  value={values.currentIndustry}
+                  onChange={(e) => update("currentIndustry", e.target.value)}
+                >
+                  <option value="">Select...</option>
+                  {industryOptions.map((industry) => (
+                    <option key={industry} value={industry}>
+                      {industry}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              {values.currentIndustry === "Other" && (
+                <FormField label="Please specify your current industry" required>
+                  <Input
+                    value={values.customCurrentIndustry}
+                    onChange={(e) => update("customCurrentIndustry", e.target.value)}
+                  />
+                </FormField>
+              )}
+              <FormField label="Previous Industries Worked In (multi-select, for searchability)" required>
                 <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {industryOptions.map((industry) => {
-                      const active = values.selectedIndustries.includes(industry);
-                      return (
-                        <button
-                          type="button"
-                          key={industry}
-                          onClick={() => toggleArrayValue("selectedIndustries", industry)}
-                          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                            active
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
-                          }`}
-                        >
-                          {active ? "✓ " : "+ "}
-                          {industry}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <Input
-                      placeholder="Add another industry"
-                      value={values.customIndustry}
-                      onChange={(e) => update("customIndustry", e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addCustomIndustry();
-                        }
+                  <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={values.noOtherIndustries}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setValues((prev) => ({
+                          ...prev,
+                          noOtherIndustries: checked,
+                          selectedIndustries: checked ? [] : prev.selectedIndustries,
+                        }));
                       }}
                     />
-                    <Button type="button" variant="outline" onClick={addCustomIndustry}>
-                      Add
-                    </Button>
-                  </div>
+                    No other industries — I&apos;ve only worked in my current industry
+                  </label>
+                  {!values.noOtherIndustries && (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {industryOptions
+                          .filter((industry) => industry !== values.currentIndustry)
+                          .map((industry) => {
+                            const active = values.selectedIndustries.includes(industry);
+                            return (
+                              <button
+                                type="button"
+                                key={industry}
+                                onClick={() => toggleArrayValue("selectedIndustries", industry)}
+                                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                                  active
+                                    ? "border-slate-900 bg-slate-900 text-white"
+                                    : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                                }`}
+                              >
+                                {active ? "✓ " : "+ "}
+                                {industry}
+                              </button>
+                            );
+                          })}
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <Input
+                          placeholder="Add another industry"
+                          value={values.customIndustry}
+                          onChange={(e) => update("customIndustry", e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addCustomIndustry();
+                            }
+                          }}
+                        />
+                        <Button type="button" variant="outline" onClick={addCustomIndustry}>
+                          Add
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </FormField>
               <FormField label="Work Mode Preference" required>

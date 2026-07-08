@@ -78,6 +78,7 @@ export type CandidateProfile = {
   sub_domain: string | null;
   secondary_sub_domains: string[] | null;
   industries: string[] | null;
+  current_industry: string | null;
   segment_data: Record<string, unknown> | null;
   open_to_relocation: string | null;
   work_mode: string | null;
