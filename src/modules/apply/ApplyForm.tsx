@@ -274,7 +274,9 @@ const DRAFT_STORAGE_KEY = "sa_candidate_draft_v1";
 
 // Curated set of fields used to compute "profile strength" — weighted evenly, just
 // enough signal to feel meaningful without trying to be a perfectly precise score.
-const STRENGTH_FIELDS: (keyof FormState)[] = [
+// Fields every candidate can fill regardless of category/role -- always counted
+// in the profile-strength denominator.
+const STRENGTH_FIELDS_BASE: (keyof FormState)[] = [
   "fullName",
   "email",
   "phone",
@@ -289,18 +291,24 @@ const STRENGTH_FIELDS: (keyof FormState)[] = [
   "subDomain",
   "roleLevel",
   "roleType",
-  "dealCurrency",
-  "dealSizeBand",
-  "icTargetQ4",
-  "quotaQ4",
-  "bestWin",
-  "toughLoss",
   "selectedSkills",
   "currentIndustry",
   "selectedIndustries",
   "workMode",
   "openToRelocation",
 ];
+
+// Sales-only fields (deal size, quarterly performance) -- only shown/fillable
+// when category is b2b_sales/b2c_sales, so they must only count toward the
+// denominator for those candidates. Otherwise a Non-Sales profile could never
+// reach 100% no matter how complete it is.
+const STRENGTH_FIELDS_SALES: (keyof FormState)[] = ["dealCurrency", "dealSizeBand", "bestWin", "toughLoss"];
+
+// Within Sales, the quarterly target fields differ by whether the candidate
+// is an individual contributor or leads a team -- only one branch is ever
+// shown, so only that branch's fields should count.
+const STRENGTH_FIELDS_SALES_IC: (keyof FormState)[] = ["icTargetQ4", "quotaQ4"];
+const STRENGTH_FIELDS_SALES_TEAM: (keyof FormState)[] = ["teamTargetQ4", "teamQuotaQ4"];
 
 export type ExistingProfile = {
   id: string;
@@ -569,11 +577,19 @@ export default function ApplyForm({
   );
 
   const profileStrength = useMemo(() => {
-    const filled = STRENGTH_FIELDS.filter((k) => {
+    const isSalesCandidate = values.category === "b2b_sales" || values.category === "b2c_sales";
+    const applicableFields: (keyof FormState)[] = [...STRENGTH_FIELDS_BASE];
+    if (isSalesCandidate) {
+      applicableFields.push(...STRENGTH_FIELDS_SALES);
+      applicableFields.push(
+        ...(values.roleType === "Leading a Team" ? STRENGTH_FIELDS_SALES_TEAM : STRENGTH_FIELDS_SALES_IC)
+      );
+    }
+    const filled = applicableFields.filter((k) => {
       const v = values[k];
       return Array.isArray(v) ? v.length > 0 : String(v).trim() !== "";
     }).length;
-    return Math.round((filled / STRENGTH_FIELDS.length) * 100);
+    return Math.round((filled / applicableFields.length) * 100);
   }, [values]);
 
   const minutesLeft = useMemo(

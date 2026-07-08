@@ -52,7 +52,7 @@ export function Navbar() {
             </Link>
           )}
           {!isAuthenticated && (
-            <Link href="/register">
+            <Link href={candidateSignedIn ? "/candidate-portal" : "/register"}>
               <Button>Build My Profile</Button>
             </Link>
           )}
