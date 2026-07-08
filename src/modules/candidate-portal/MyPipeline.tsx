@@ -30,15 +30,18 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 const STAGE_COLORS: Record<string, string> = {
-  sourced: "bg-slate-100 text-slate-600",
-  screened: "bg-slate-100 text-slate-600",
-  shortlisted: "bg-teal-100 text-teal-700",
-  submitted: "bg-indigo-100 text-indigo-700",
-  client_interview: "bg-cyan-100 text-cyan-700",
-  offer: "bg-amber-100 text-amber-700",
-  placed: "bg-emerald-100 text-emerald-700",
-  rejected: "bg-red-100 text-red-600",
+  sourced: "bg-slate-100 text-slate-600 ring-1 ring-slate-200/70",
+  screened: "bg-slate-100 text-slate-600 ring-1 ring-slate-200/70",
+  shortlisted: "bg-teal-50 text-teal-700 ring-1 ring-teal-200/70",
+  submitted: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200/70",
+  client_interview: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200/70",
+  offer: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/70",
+  placed: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/70",
+  rejected: "bg-red-50 text-red-600 ring-1 ring-red-200/70",
 };
+
+const CARD_CLASSES =
+  "rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]";
 
 export default function MyPipeline() {
   const [rows, setRows] = useState<PipelineRow[] | null>(null);
@@ -65,15 +68,27 @@ export default function MyPipeline() {
   }
 
   if (rows === null) {
-    return <p className="text-sm text-slate-400">Loading your pipeline…</p>;
+    return (
+      <div className="space-y-3">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-24 animate-pulse rounded-2xl border border-slate-100 bg-white/60 shadow-sm"
+            style={{ animationDelay: `${i * 90}ms` }}
+          />
+        ))}
+      </div>
+    );
   }
 
   if (rows.length === 0) {
     return (
-      <Card className="border-slate-200 shadow-sm">
-        <CardContent className="py-10 text-center">
-          <Briefcase className="mx-auto mb-2 h-6 w-6 text-slate-300" />
-          <p className="text-sm text-slate-500">
+      <Card className={CARD_CLASSES}>
+        <CardContent className="py-14 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50">
+            <Briefcase className="h-5.5 w-5.5 text-indigo-400" />
+          </div>
+          <p className="mx-auto max-w-sm text-sm leading-relaxed text-slate-500">
             You&apos;re not linked to any roles yet. When a recruiter matches you to an opening, you&apos;ll
             see its status here — no more wondering what happened after you applied.
           </p>
@@ -83,7 +98,7 @@ export default function MyPipeline() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3.5">
       <p className="text-sm text-slate-500">
         Every role a StaffAnchor recruiter has matched you to, and exactly where things stand.
       </p>
@@ -92,22 +107,22 @@ export default function MyPipeline() {
         const maxIdx = STAGE_ORDER.length - 1;
         const progressPct = r.stage === "rejected" ? 100 : stageIdx >= 0 ? ((stageIdx + 1) / (maxIdx + 1)) * 100 : 0;
         return (
-          <Card key={r.link_id} className="border-slate-200 shadow-sm">
-            <CardContent className="space-y-2.5 py-4">
+          <Card key={r.link_id} className={CARD_CLASSES}>
+            <CardContent className="space-y-3 py-5">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{r.role_title}</p>
-                  <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-500">
+                <div className="min-w-0">
+                  <p className="truncate text-[15px] font-semibold text-slate-900">{r.role_title}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                     <span>{r.client_display}</span>
                     {r.city && (
                       <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {r.city}
+                        <MapPin className="h-3 w-3 text-slate-400" /> {r.city}
                       </span>
                     )}
                   </div>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap ${
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${
                     STAGE_COLORS[r.stage] ?? "bg-slate-100 text-slate-600"
                   }`}
                 >
@@ -117,7 +132,7 @@ export default function MyPipeline() {
               {r.stage !== "rejected" && (
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                   <div
-                    className="h-full rounded-full bg-blue-500/80 transition-all duration-500"
+                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-400 transition-all duration-700 ease-out"
                     style={{ width: `${Math.max(progressPct, 6)}%` }}
                   />
                 </div>
