@@ -246,6 +246,7 @@ export default function ClientMandateDetailPage() {
 
                 {c.ai_summary && <p className="mt-3 text-sm text-slate-700 line-clamp-2">{c.ai_summary}</p>}
                 <ProfilePassportTrigger
+                  candidateId={c.candidate_id}
                   fullName={c.full_name}
                   currentJobTitle={c.current_job_title}
                   currentEmployer={c.current_employer}

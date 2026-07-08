@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { X, Sparkles, BadgeCheck } from "lucide-react";
+import { X, Sparkles, BadgeCheck, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 import type { AiPassport } from "@/modules/client-portal/api";
 
+const CRM_API_BASE = process.env.NEXT_PUBLIC_CRM_API_BASE ?? "https://staffanchor-crm-claude.vercel.app";
+
 export default function ProfilePassportTrigger({
+  candidateId,
   fullName,
   currentJobTitle,
   currentEmployer,
@@ -15,9 +19,10 @@ export default function ProfilePassportTrigger({
   verifiedRelocation,
   verifiedNotice,
   industries,
-  aiSummary,
-  aiPassport,
+  aiSummary: initialAiSummary,
+  aiPassport: initialAiPassport,
 }: {
+  candidateId: string;
   fullName: string;
   currentJobTitle: string | null;
   currentEmployer: string | null;
@@ -32,8 +37,55 @@ export default function ProfilePassportTrigger({
   aiPassport: AiPassport | null;
 }) {
   const [open, setOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [aiSummary, setAiSummary] = useState(initialAiSummary);
+  const [aiPassport, setAiPassport] = useState(initialAiPassport);
 
-  if (!aiSummary && !aiPassport) return null;
+  async function handleGenerate() {
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Please sign in again.");
+
+      const res = await fetch(`${CRM_API_BASE}/api/public-ai-summary`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ candidateId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Could not generate a summary right now.");
+      setAiSummary(json.summary);
+      setAiPassport(json.passport);
+      setOpen(true);
+    } catch (e) {
+      setGenerateError(e instanceof Error ? e.message : "Could not generate a summary right now.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  if (!aiSummary && !aiPassport) {
+    return (
+      <div className="mt-1">
+        <button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-60"
+        >
+          {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+          {generating ? "Generating…" : "Generate AI passport"}
+        </button>
+        {generateError && <p className="mt-1 text-xs text-rose-600">{generateError}</p>}
+      </div>
+    );
+  }
 
   return (
     <>
