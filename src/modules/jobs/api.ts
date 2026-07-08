@@ -69,6 +69,11 @@ export type QuickApplyPayload = {
   total_experience_years: number | null;
   current_fixed_ctc: number | null;
   notice_period: string;
+  current_job_title: string;
+  current_employer: string;
+  current_employment_status: string;
+  current_industry: string;
+  segment_data: Record<string, unknown>;
   consent: boolean;
 };
 

@@ -25,6 +25,10 @@ import {
   ctcOptions,
   experienceOptions,
   defaultNoticePeriods,
+  employmentStatusOptions,
+  industryOptions,
+  roleTypeOptions,
+  teamSizeOptions,
 } from "@/modules/apply/options";
 
 type FormState = {
@@ -36,6 +40,12 @@ type FormState = {
   currentFixedCtc: string;
   totalExperienceYears: string;
   noticePeriod: string;
+  currentJobTitle: string;
+  currentEmployer: string;
+  employmentStatus: string;
+  currentIndustry: string;
+  roleType: string;
+  teamSize: string;
   consent: boolean;
 };
 
@@ -48,6 +58,12 @@ const initialState: FormState = {
   currentFixedCtc: "",
   totalExperienceYears: "",
   noticePeriod: "",
+  currentJobTitle: "",
+  currentEmployer: "",
+  employmentStatus: "",
+  currentIndustry: "",
+  roleType: "",
+  teamSize: "",
   consent: false,
 };
 
@@ -84,6 +100,12 @@ export default function QuickApplyPage() {
     if (!values.currentFixedCtc) return "Current fixed CTC is required.";
     if (!values.totalExperienceYears) return "Total experience is required.";
     if (!values.noticePeriod) return "Notice period is required.";
+    if (!values.currentJobTitle.trim()) return "Current job title is required.";
+    if (!values.currentEmployer.trim()) return "Current employer is required.";
+    if (!values.employmentStatus) return "Employment status is required.";
+    if (!values.currentIndustry) return "Current industry is required.";
+    if (!values.roleType) return "Please select whether you are an IC or leading a team.";
+    if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
     if (!values.consent) return "Please confirm you're okay with StaffAnchor contacting you.";
     return null;
   }
@@ -97,6 +119,12 @@ export default function QuickApplyPage() {
     setSubmitting(true);
     setErrorMsg(null);
     try {
+      const segmentData: Record<string, unknown> = {
+        role_type: values.roleType === "Leading a Team" ? "Team Lead" : "IC",
+      };
+      if (values.roleType === "Leading a Team" && values.teamSize) {
+        segmentData.team_size = values.teamSize;
+      }
       await submitQuickApply(mandateId, {
         full_name: values.fullName.trim(),
         email: values.email.trim(),
@@ -105,6 +133,11 @@ export default function QuickApplyPage() {
         current_fixed_ctc: values.currentFixedCtc ? Number(values.currentFixedCtc) : null,
         total_experience_years: values.totalExperienceYears ? Number(values.totalExperienceYears) : null,
         notice_period: values.noticePeriod,
+        current_job_title: values.currentJobTitle.trim(),
+        current_employer: values.currentEmployer.trim(),
+        current_employment_status: values.employmentStatus,
+        current_industry: values.currentIndustry,
+        segment_data: segmentData,
         consent: values.consent,
       });
       setSubmitted(true);
@@ -269,6 +302,60 @@ export default function QuickApplyPage() {
                 ))}
               </Select>
             </FormField>
+            <FormField label="Current job title" required>
+              <Input value={values.currentJobTitle} onChange={(e) => set("currentJobTitle", e.target.value)} placeholder="e.g. Senior Account Executive" />
+            </FormField>
+            <FormField label="Current employer" required>
+              <Input value={values.currentEmployer} onChange={(e) => set("currentEmployer", e.target.value)} placeholder="Company name" />
+            </FormField>
+            <FormField label="Employment status" required>
+              <Select value={values.employmentStatus} onChange={(e) => set("employmentStatus", e.target.value)}>
+                <option value="">Select status</option>
+                {employmentStatusOptions.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Current industry" required>
+              <Select value={values.currentIndustry} onChange={(e) => set("currentIndustry", e.target.value)}>
+                <option value="">Select industry</option>
+                {industryOptions.map((i) => (
+                  <option key={i} value={i}>
+                    {i}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="IC or leading a team?" required>
+              <Select
+                value={values.roleType}
+                onChange={(e) => {
+                  set("roleType", e.target.value);
+                  if (e.target.value !== "Leading a Team") set("teamSize", "");
+                }}
+              >
+                <option value="">Select</option>
+                {roleTypeOptions.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            {values.roleType === "Leading a Team" && (
+              <FormField label="Team size" required>
+                <Select value={values.teamSize} onChange={(e) => set("teamSize", e.target.value)}>
+                  <option value="">Select team size</option>
+                  {teamSizeOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
           </div>
 
           <label className="mt-5 flex items-start gap-2 text-[13px] text-slate-600">
