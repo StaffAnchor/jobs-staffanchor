@@ -35,14 +35,17 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  referred: "bg-slate-100 text-slate-600",
-  registered: "bg-blue-100 text-blue-700",
-  submitted: "bg-indigo-100 text-indigo-700",
-  interviewing: "bg-cyan-100 text-cyan-700",
-  placed: "bg-amber-100 text-amber-700",
-  paid: "bg-emerald-100 text-emerald-700",
-  not_selected: "bg-red-100 text-red-600",
+  referred: "bg-slate-100 text-slate-600 ring-1 ring-slate-200/70",
+  registered: "bg-blue-50 text-blue-700 ring-1 ring-blue-200/70",
+  submitted: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200/70",
+  interviewing: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200/70",
+  placed: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/70",
+  paid: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/70",
+  not_selected: "bg-red-50 text-red-600 ring-1 ring-red-200/70",
 };
+
+const CARD_CLASSES =
+  "rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]";
 
 export default function ReferEarn({ openJobs }: { openJobs: JobListing[] }) {
   const [referrals, setReferrals] = useState<Referral[] | null>(null);
@@ -108,27 +111,29 @@ export default function ReferEarn({ openJobs }: { openJobs: JobListing[] }) {
   const activeCount = (referrals ?? []).filter((r) => r.status !== "not_selected").length;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-      <div className="space-y-3 lg:order-2">
-        <Card className="border-blue-200 bg-blue-50/50 shadow-sm">
-          <CardContent className="space-y-3 py-5">
-            <div className="flex items-center gap-2">
-              <Gift className="h-4 w-4 text-blue-600" />
-              <p className="text-sm font-semibold text-slate-900">Refer & earn up to ₹10,000</p>
+    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+      <div className="space-y-4 lg:order-2">
+        <Card className={`${CARD_CLASSES} border-amber-100 bg-gradient-to-br from-amber-50/70 to-white`}>
+          <CardContent className="space-y-4 py-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                <Gift className="h-4.5 w-4.5" />
+              </div>
+              <p className="text-[15px] font-semibold text-slate-900">Refer &amp; earn up to ₹10,000</p>
             </div>
             <p className="text-xs leading-relaxed text-slate-600">
               Know someone great for one of our current openings? Refer them below for the specific role(s)
               they'd be a fit for. If they get placed through StaffAnchor and stay in the role for 90 days,
               you earn a reward of up to ₹10,000 — no limit on how many people you can refer.
             </p>
-            <div className="grid grid-cols-2 gap-2 border-t border-blue-100 pt-3 text-center">
+            <div className="grid grid-cols-2 gap-2 border-t border-amber-100/80 pt-4 text-center">
               <div>
-                <p className="text-lg font-bold text-slate-900">{activeCount}</p>
+                <p className="text-xl font-bold text-slate-900">{activeCount}</p>
                 <p className="text-[11px] text-slate-500">Active referrals</p>
               </div>
               <div>
-                <p className="flex items-center justify-center gap-0.5 text-lg font-bold text-emerald-700">
-                  <IndianRupee className="h-3.5 w-3.5" />
+                <p className="flex items-center justify-center gap-0.5 text-xl font-bold text-emerald-700">
+                  <IndianRupee className="h-4 w-4" />
                   {paidTotal.toLocaleString("en-IN")}
                 </p>
                 <p className="text-[11px] text-slate-500">Earned so far</p>
@@ -137,10 +142,10 @@ export default function ReferEarn({ openJobs }: { openJobs: JobListing[] }) {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-sm">
-          <CardContent className="py-5">
-            <p className="mb-3 text-sm font-semibold text-slate-900">Refer someone</p>
-            <form onSubmit={handleSubmit} className="space-y-3">
+        <Card className={CARD_CLASSES}>
+          <CardContent className="py-6">
+            <p className="mb-4 text-[15px] font-semibold text-slate-900">Refer someone</p>
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               <FormField label="Their name">
                 <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
               </FormField>
@@ -160,25 +165,30 @@ export default function ReferEarn({ openJobs }: { openJobs: JobListing[] }) {
                     There are no open roles to refer against right now — check back soon.
                   </p>
                 ) : (
-                  <div className="max-h-44 space-y-1.5 overflow-y-auto rounded-lg border border-slate-200 p-2">
-                    {openJobs.map((job) => (
-                      <label
-                        key={job.id}
-                        className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-slate-50"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedMandateIds.includes(job.id)}
-                          onChange={() => toggleMandate(job.id)}
-                          className="mt-0.5"
-                        />
-                        <span>
-                          <span className="font-medium text-slate-800">{job.role_title}</span>
-                          {job.client_display && <span className="text-slate-400"> — {job.client_display}</span>}
-                          {job.city && <span className="text-slate-400"> · {job.city}</span>}
-                        </span>
-                      </label>
-                    ))}
+                  <div className="max-h-44 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
+                    {openJobs.map((job) => {
+                      const checked = selectedMandateIds.includes(job.id);
+                      return (
+                        <label
+                          key={job.id}
+                          className={`flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                            checked ? "bg-amber-50" : "hover:bg-slate-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleMandate(job.id)}
+                            className="mt-0.5 accent-amber-600"
+                          />
+                          <span>
+                            <span className="font-medium text-slate-800">{job.role_title}</span>
+                            {job.client_display && <span className="text-slate-400"> — {job.client_display}</span>}
+                            {job.city && <span className="text-slate-400"> · {job.city}</span>}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
                 )}
               </FormField>
@@ -190,7 +200,11 @@ export default function ReferEarn({ openJobs }: { openJobs: JobListing[] }) {
                 />
               </FormField>
               {error && <p className="text-xs text-red-600">{error}</p>}
-              <Button type="submit" disabled={submitting || openJobs.length === 0} className="w-full">
+              <Button
+                type="submit"
+                disabled={submitting || openJobs.length === 0}
+                className="w-full rounded-xl bg-amber-600 shadow-sm shadow-amber-600/20 transition hover:bg-amber-500 hover:shadow-md hover:shadow-amber-600/25"
+              >
                 {submitting ? "Submitting..." : "Submit referral"}
               </Button>
             </form>
@@ -199,14 +213,24 @@ export default function ReferEarn({ openJobs }: { openJobs: JobListing[] }) {
       </div>
 
       <div className="lg:order-1">
-        <p className="mb-3 text-sm text-slate-500">Track every person you've referred and where they stand.</p>
+        <p className="mb-3.5 text-sm text-slate-500">Track every person you've referred and where they stand.</p>
         {referrals === null ? (
-          <p className="text-sm text-slate-400">Loading your referrals…</p>
+          <div className="space-y-2.5">
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className="h-16 animate-pulse rounded-2xl border border-slate-100 bg-white/60 shadow-sm"
+                style={{ animationDelay: `${i * 90}ms` }}
+              />
+            ))}
+          </div>
         ) : referrals.length === 0 ? (
-          <Card className="border-slate-200 shadow-sm">
-            <CardContent className="py-10 text-center">
-              <Users className="mx-auto mb-2 h-6 w-6 text-slate-300" />
-              <p className="text-sm text-slate-500">
+          <Card className={CARD_CLASSES}>
+            <CardContent className="py-14 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50">
+                <Users className="h-5.5 w-5.5 text-amber-400" />
+              </div>
+              <p className="mx-auto max-w-sm text-sm leading-relaxed text-slate-500">
                 You haven&apos;t referred anyone yet. Use the form to refer your first candidate against a
                 current opening.
               </p>
@@ -215,11 +239,11 @@ export default function ReferEarn({ openJobs }: { openJobs: JobListing[] }) {
         ) : (
           <div className="space-y-2.5">
             {referrals.map((r) => (
-              <Card key={r.id} className="border-slate-200 shadow-sm">
-                <CardContent className="space-y-1.5 py-3.5">
+              <Card key={r.id} className={CARD_CLASSES}>
+                <CardContent className="space-y-1.5 py-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-900">{r.referred_name}</p>
+                      <p className="truncate text-sm font-semibold text-slate-900">{r.referred_name}</p>
                       <p className="truncate text-xs text-slate-500">{r.referred_email}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -229,7 +253,7 @@ export default function ReferEarn({ openJobs }: { openJobs: JobListing[] }) {
                         </span>
                       )}
                       <span
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap ${
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${
                           STATUS_COLORS[r.status] ?? "bg-slate-100 text-slate-600"
                         }`}
                       >
