@@ -39,6 +39,20 @@ export type ProfileTimelineEntry = {
   reporting_to?: string;
   client_tier?: string;
   geo_scope?: string;
+  // ---- Sales Passport per-experience detail (added alongside Revenue Impact
+  // above) -- reuses the exact option sets already defined in
+  // modules/apply/options.ts (sellingStyleOptions, salesMotionOptions,
+  // clientProfileOptions/b2cCustomerTypeOptions, inside-sales fields), just
+  // newly wired into the Career Timeline UI. All optional/additive.
+  sales_motion?: string;
+  decision_maker_persona?: string; // B2B: who was actually sold to (CFO/CTO/etc.)
+  customer_type?: string; // B2C: end-consumer persona (HNI/Students/etc.)
+  aht?: string;
+  daily_call_target?: string;
+  daily_talk_time?: string;
+  lead_source?: string;
+  reason_for_leaving?: string;
+  avg_quarterly_target_band?: string; // used for roles other than the current one
 };
 
 export type ResumeTimelineEntry = {

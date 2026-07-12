@@ -328,6 +328,39 @@ export const clientProfileOptions = [
 export const renewalRateBandOptions = ["<50%", "50-70%", "70-85%", "85-95%", "95%+"];
 export const winRateBandOptions = ["<20%", "20-35%", "35-50%", "50-65%", "65%+"];
 
+// ---- Reason for leaving a past role (kept short/dropdown so it stays fast to
+// fill for every older job, not a free-text essay per company) ----
+export const reasonForLeavingOptions = [
+  "Better Compensation",
+  "Better Growth / Role",
+  "Company Shutdown / Layoff",
+  "Contract / Tenure Ended",
+  "Relocation",
+  "Career Change / Domain Switch",
+  "Team / Manager Change",
+  "Company Restructuring",
+  "Health / Personal Reasons",
+  "Higher Studies",
+  "Other",
+];
+
+// ---- Average quarterly target band, used for roles other than the current
+// one -- deliberately a single band rather than the full quarter-by-quarter
+// target+achievement grid, since candidates rarely remember exact historic
+// numbers. Reuses the same currency-style banding logic as deal size where it
+// makes sense, but kept as a flat list since "target" here means a recurring
+// revenue/quota number, not a one-time deal.
+export const avgQuarterlyTargetBandOptions = [
+  "<5L / quarter",
+  "5L-15L / quarter",
+  "15L-30L / quarter",
+  "30L-50L / quarter",
+  "50L-1Cr / quarter",
+  "1Cr-2Cr / quarter",
+  "2Cr-5Cr / quarter",
+  "5Cr+ / quarter",
+];
+
 export const highestQualificationOptions = [
   "High School",
   "Diploma",

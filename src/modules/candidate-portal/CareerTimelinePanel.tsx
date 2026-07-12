@@ -24,11 +24,21 @@ import {
   dealSizeBandsFor,
   salesCycleOptions,
   sellingStyleOptions,
+  salesMotionOptions,
+  clientProfileOptions,
+  b2cCustomerTypeOptions,
+  insideSalesSubDomains,
+  ahtOptions,
+  dailyCallTargetOptions,
+  dailyTalkTimeOptions,
+  leadSourceOptions,
   teamSizeOptions,
   achievementBandOptions,
   renewalRateBandOptions,
   winRateBandOptions,
   geographicScopeOptions,
+  reasonForLeavingOptions,
+  avgQuarterlyTargetBandOptions,
   type CategoryValue,
   type CurrencyValue,
 } from "@/modules/apply/options";
@@ -79,6 +89,15 @@ function emptyEntry(): ProfileTimelineEntry {
     reporting_to: "",
     client_tier: "",
     geo_scope: "",
+    sales_motion: "",
+    decision_maker_persona: "",
+    customer_type: "",
+    aht: "",
+    daily_call_target: "",
+    daily_talk_time: "",
+    lead_source: "",
+    reason_for_leaving: "",
+    avg_quarterly_target_band: "",
   };
 }
 
@@ -177,6 +196,10 @@ export default function CareerTimelinePanel({
   }
 
   const isSalesCategory = form?.category === "b2b_sales" || form?.category === "b2c_sales";
+  const isB2B = form?.category === "b2b_sales";
+  const isB2C = form?.category === "b2c_sales";
+  const isCurrentRole = form?.end_month === null;
+  const isInsideSalesRole = !!form?.sub_domain && insideSalesSubDomains.includes(form.sub_domain);
 
   return (
     <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)]">
@@ -454,6 +477,111 @@ export default function CareerTimelinePanel({
                     </Select>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-500">Sales motion</label>
+                    <Select value={form.sales_motion ?? ""} onChange={(e) => set("sales_motion", e.target.value)}>
+                      <option value="">Select...</option>
+                      {salesMotionOptions.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  {isB2B && (
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-500">Who you sold to (decision-maker)</label>
+                      <Select
+                        value={form.decision_maker_persona ?? ""}
+                        onChange={(e) => set("decision_maker_persona", e.target.value)}
+                      >
+                        <option value="">Select...</option>
+                        {clientProfileOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
+                  {isB2C && (
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-500">Customer type</label>
+                      <Select value={form.customer_type ?? ""} onChange={(e) => set("customer_type", e.target.value)}>
+                        <option value="">Select...</option>
+                        {b2cCustomerTypeOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {isInsideSalesRole && (
+                  <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Inside sales detail
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Average handling time (AHT)</label>
+                        <Select value={form.aht ?? ""} onChange={(e) => set("aht", e.target.value)}>
+                          <option value="">Select...</option>
+                          {ahtOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Daily call target</label>
+                        <Select
+                          value={form.daily_call_target ?? ""}
+                          onChange={(e) => set("daily_call_target", e.target.value)}
+                        >
+                          <option value="">Select...</option>
+                          {dailyCallTargetOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Daily talk time</label>
+                        <Select
+                          value={form.daily_talk_time ?? ""}
+                          onChange={(e) => set("daily_talk_time", e.target.value)}
+                        >
+                          <option value="">Select...</option>
+                          {dailyTalkTimeOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Primary lead source</label>
+                        <Select value={form.lead_source ?? ""} onChange={(e) => set("lead_source", e.target.value)}>
+                          <option value="">Select...</option>
+                          {leadSourceOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
@@ -471,7 +599,12 @@ export default function CareerTimelinePanel({
 
             <div className="border-t border-slate-200 pt-3 mt-1">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                Revenue impact <span className="normal-case font-normal text-slate-400">(optional -- powers the Sales Passport)</span>
+                Revenue impact{" "}
+                <span className="normal-case font-normal text-slate-400">
+                  {isCurrentRole
+                    ? "-- helps recruiters shortlist you faster"
+                    : "-- a quick average is fine, exact numbers aren't expected for older roles"}
+                </span>
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -482,20 +615,37 @@ export default function CareerTimelinePanel({
                     onChange={(e) => set("revenue_generated", e.target.value)}
                   />
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs text-slate-500">Quota attainment</label>
-                  <Select
-                    value={form.quota_attainment_band ?? ""}
-                    onChange={(e) => set("quota_attainment_band", e.target.value)}
-                  >
-                    <option value="">Select...</option>
-                    {achievementBandOptions.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
+                {isCurrentRole ? (
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-500">Quota attainment</label>
+                    <Select
+                      value={form.quota_attainment_band ?? ""}
+                      onChange={(e) => set("quota_attainment_band", e.target.value)}
+                    >
+                      <option value="">Select...</option>
+                      {achievementBandOptions.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-500">Average quarterly target</label>
+                    <Select
+                      value={form.avg_quarterly_target_band ?? ""}
+                      onChange={(e) => set("avg_quarterly_target_band", e.target.value)}
+                    >
+                      <option value="">Select...</option>
+                      {avgQuarterlyTargetBandOptions.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <div className="mt-2 grid grid-cols-2 gap-2">
@@ -580,16 +730,34 @@ export default function CareerTimelinePanel({
                 </div>
               </div>
 
-              <div className="mt-2">
-                <label className="mb-1 block text-xs text-slate-500">Geographic scope</label>
-                <Select value={form.geo_scope ?? ""} onChange={(e) => set("geo_scope", e.target.value)}>
-                  <option value="">Select...</option>
-                  {geographicScopeOptions.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
+              <div className={isCurrentRole ? "mt-2" : "mt-2 grid grid-cols-2 gap-2"}>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">Geographic scope</label>
+                  <Select value={form.geo_scope ?? ""} onChange={(e) => set("geo_scope", e.target.value)}>
+                    <option value="">Select...</option>
+                    {geographicScopeOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                {!isCurrentRole && (
+                  <div>
+                    <label className="mb-1 block text-xs text-slate-500">Reason for leaving</label>
+                    <Select
+                      value={form.reason_for_leaving ?? ""}
+                      onChange={(e) => set("reason_for_leaving", e.target.value)}
+                    >
+                      <option value="">Select...</option>
+                      {reasonForLeavingOptions.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                )}
               </div>
             </div>
 
