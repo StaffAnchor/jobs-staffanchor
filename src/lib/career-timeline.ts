@@ -26,6 +26,19 @@ export type ProfileTimelineEntry = {
   team_size: string;
   start_month: string; // "YYYY-MM"
   end_month: string | null; // null = current role
+  // ---- Revenue impact (Sales Passport "Revenue Journey" cards) -- mirrors
+  // staffanchor-crm's src/lib/career-timeline.ts exactly. All optional,
+  // additive, display-only -- never used in stability/domain scoring.
+  revenue_generated?: string;
+  quota_attainment_band?: string;
+  largest_deal_band?: string;
+  largest_deal_currency?: string;
+  new_logos_count?: string;
+  renewal_rate_band?: string;
+  win_rate_band?: string;
+  reporting_to?: string;
+  client_tier?: string;
+  geo_scope?: string;
 };
 
 export type ResumeTimelineEntry = {

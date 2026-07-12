@@ -324,6 +324,10 @@ export const clientProfileOptions = [
   "Sales Head", "VP / Director level", "Business Owner (SMB)",
 ];
 
+// ---- Career Timeline "revenue impact" fields (mirrors CRM's candidate-options.ts) ----
+export const renewalRateBandOptions = ["<50%", "50-70%", "70-85%", "85-95%", "95%+"];
+export const winRateBandOptions = ["<20%", "20-35%", "35-50%", "50-65%", "65%+"];
+
 export const highestQualificationOptions = [
   "High School",
   "Diploma",

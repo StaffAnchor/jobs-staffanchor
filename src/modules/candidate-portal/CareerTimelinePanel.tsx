@@ -25,6 +25,10 @@ import {
   salesCycleOptions,
   sellingStyleOptions,
   teamSizeOptions,
+  achievementBandOptions,
+  renewalRateBandOptions,
+  winRateBandOptions,
+  geographicScopeOptions,
   type CategoryValue,
   type CurrencyValue,
 } from "@/modules/apply/options";
@@ -65,6 +69,16 @@ function emptyEntry(): ProfileTimelineEntry {
     team_size: "",
     start_month: "",
     end_month: null,
+    revenue_generated: "",
+    quota_attainment_band: "",
+    largest_deal_band: "",
+    largest_deal_currency: "",
+    new_logos_count: "",
+    renewal_rate_band: "",
+    win_rate_band: "",
+    reporting_to: "",
+    client_tier: "",
+    geo_scope: "",
   };
 }
 
@@ -453,6 +467,130 @@ export default function CareerTimelinePanel({
                   </option>
                 ))}
               </Select>
+            </div>
+
+            <div className="border-t border-slate-200 pt-3 mt-1">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                Revenue impact <span className="normal-case font-normal text-slate-400">(optional -- powers the Sales Passport)</span>
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">Revenue generated</label>
+                  <Input
+                    placeholder="e.g. ₹82 Cr"
+                    value={form.revenue_generated ?? ""}
+                    onChange={(e) => set("revenue_generated", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">Quota attainment</label>
+                  <Select
+                    value={form.quota_attainment_band ?? ""}
+                    onChange={(e) => set("quota_attainment_band", e.target.value)}
+                  >
+                    <option value="">Select...</option>
+                    {achievementBandOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 flex items-center justify-between text-xs text-slate-500">
+                    Largest deal closed
+                    <button
+                      type="button"
+                      onClick={() =>
+                        set("largest_deal_currency", (form.largest_deal_currency === "USD" ? "INR" : "USD") as string)
+                      }
+                      className="text-blue-600"
+                    >
+                      ({form.largest_deal_currency || "INR"})
+                    </button>
+                  </label>
+                  <Select value={form.largest_deal_band ?? ""} onChange={(e) => set("largest_deal_band", e.target.value)}>
+                    <option value="">Select...</option>
+                    {dealSizeBandsFor(form.category as CategoryValue, (form.largest_deal_currency as CurrencyValue) || "INR").map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">New logos won</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 22"
+                    value={form.new_logos_count ?? ""}
+                    onChange={(e) => set("new_logos_count", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">Renewal rate</label>
+                  <Select value={form.renewal_rate_band ?? ""} onChange={(e) => set("renewal_rate_band", e.target.value)}>
+                    <option value="">Select...</option>
+                    {renewalRateBandOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">Win rate</label>
+                  <Select value={form.win_rate_band ?? ""} onChange={(e) => set("win_rate_band", e.target.value)}>
+                    <option value="">Select...</option>
+                    {winRateBandOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">Reporting to</label>
+                  <Input
+                    placeholder="e.g. VP Sales"
+                    value={form.reporting_to ?? ""}
+                    onChange={(e) => set("reporting_to", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">Client tier</label>
+                  <Select value={form.client_tier ?? ""} onChange={(e) => set("client_tier", e.target.value)}>
+                    <option value="">Select...</option>
+                    {customerSegmentOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+
+              <div className="mt-2">
+                <label className="mb-1 block text-xs text-slate-500">Geographic scope</label>
+                <Select value={form.geo_scope ?? ""} onChange={(e) => set("geo_scope", e.target.value)}>
+                  <option value="">Select...</option>
+                  {geographicScopeOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
 
             <div className="flex gap-2 pt-1">
