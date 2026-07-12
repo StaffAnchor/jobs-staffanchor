@@ -1850,12 +1850,6 @@ export default function ApplyForm({
                           </Select>
                         </FormField>
                       )}
-
-                      <p className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
-                        Deal size, sales cycle, selling style, sales motion, and other role-specific details are
-                        captured on your current role's Career Timeline entry — you'll find them there, not repeated
-                        here.
-                      </p>
                     </>
                   )}
                 </>

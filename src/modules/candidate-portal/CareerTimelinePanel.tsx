@@ -227,11 +227,15 @@ export default function CareerTimelinePanel({
   // Purely local state updates now -- no network call, no candidateId. The
   // wizard's own submit (or its background progressive-save) is what
   // actually persists this array, exactly like every other field on the form.
-  function handleSaveForm() {
-    if (!form) return;
+  // Validates + persists the current `form` into the timeline array.
+  // Returns true on success (caller decides what to do next -- close the
+  // form, or immediately open a fresh blank one), false if validation failed
+  // (setError has already been called; form stays open so the candidate can fix it).
+  function saveCurrentEntry(): boolean {
+    if (!form) return false;
     if (!form.company.trim() || !form.start_month) {
       setError("Company and start month are required.");
-      return;
+      return false;
     }
     const isCurrent = form.end_month === null;
     const isSales = form.category === "b2b_sales" || form.category === "b2c_sales";
@@ -240,16 +244,16 @@ export default function CareerTimelinePanel({
       const quarters4 = (a: (string | undefined)[]) => a.every((v) => (v ?? "").trim() !== "");
       if (!form.target_currency) {
         setError(`Please select a currency for your ${isTeamLead ? "team's" : ""} quarterly target.`);
-        return;
+        return false;
       }
       if (!quarters4([form.target_q1, form.target_q2, form.target_q3, form.target_q4, form.achieved_q1, form.achieved_q2, form.achieved_q3, form.achieved_q4])) {
         setError(`Please fill in ${isTeamLead ? "the team's" : "your"} target and achievement % for all 4 quarters.`);
-        return;
+        return false;
       }
       if (isTeamLead && form.has_ic_target_too === "Yes") {
         if (!form.ic_target_currency) {
           setError("Please select a currency for your individual target.");
-          return;
+          return false;
         }
         if (
           !quarters4([
@@ -264,37 +268,51 @@ export default function CareerTimelinePanel({
           ])
         ) {
           setError("Please fill in your individual target and achievement % for all 4 quarters.");
-          return;
+          return false;
         }
       }
       if ((form.best_win ?? "").trim().length < 100) {
         setError("Your best win needs at least 100 characters — specific numbers help recruiters most.");
-        return;
+        return false;
       }
       if ((form.tough_loss ?? "").trim().length < 100) {
         setError("Your missed-target reflection needs at least 100 characters.");
-        return;
+        return false;
       }
     }
     if (!isCurrent && isSales) {
       if (!(form.avg_quarterly_revenue_value ?? "").trim()) {
         setError("Please enter an average quarterly revenue figure for this role.");
-        return;
+        return false;
       }
       if (!/^\d+$/.test((form.avg_quarterly_revenue_value ?? "").trim())) {
         setError("Average quarterly revenue should be numbers only.");
-        return;
+        return false;
       }
       if (!form.avg_quarterly_revenue_currency) {
         setError("Please select a currency for the average quarterly revenue.");
-        return;
+        return false;
       }
     }
     setError("");
     const exists = profileEntries.some((e) => e.id === form.id);
     const next = exists ? profileEntries.map((e) => (e.id === form.id ? form : e)) : [...profileEntries, form];
     onChange(next);
-    setForm(null);
+    return true;
+  }
+
+  function handleSaveForm() {
+    if (saveCurrentEntry()) setForm(null);
+  }
+
+  // Round 9 follow-up: previously the "+ Add a role" trigger only appeared
+  // after the current role was saved and the form closed, which candidates
+  // read as "I have to finish this one before I can even start the next" --
+  // confusing when they're mid-way through their latest role and already
+  // thinking about the one before it. This lets them save the role they're
+  // on and jump straight into a blank one without closing the panel.
+  function handleSaveAndAddAnother() {
+    if (saveCurrentEntry()) startAdd();
   }
 
   function handleDelete(id: string) {
@@ -332,38 +350,14 @@ export default function CareerTimelinePanel({
           uploaded a resume, we also pull roles from it automatically below.
         </p>
 
-        {(stabilityScore != null || domainScore != null) && (
-          <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
-            {stabilityScore != null && (
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                  <TrendingUp className="h-4 w-4" />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {stabilityScore}
-                    <span className="text-xs font-normal text-slate-400">/100</span>
-                  </p>
-                  <p className="text-[11px] text-slate-500">Stability{stabilityLabel ? ` -- ${stabilityLabel}` : ""}</p>
-                </div>
-              </div>
-            )}
-            {domainScore != null && (
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                  <ShieldCheck className="h-4 w-4" />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {domainScore}
-                    <span className="text-xs font-normal text-slate-400">/100</span>
-                  </p>
-                  <p className="text-[11px] text-slate-500">Domain consistency</p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Stability / Domain consistency scores are recruiter-facing signals
+            (surfaced in the CRM instead) -- deliberately not shown here so a
+            candidate doesn't see themselves labelled "Frequent Job-Hopper"
+            on their own form. stabilityScore/domainScore are still computed
+            above since other logic in this component may reference them. */}
+        {void stabilityScore}
+        {void stabilityLabel}
+        {void domainScore}
 
         {gaps.length > 0 && (
           <div className="space-y-1.5">
@@ -586,24 +580,27 @@ export default function CareerTimelinePanel({
                     </Select>
                   </div>
                   <div>
-                    <label className="mb-1 flex items-center justify-between text-xs text-slate-500">
-                      Deal size
-                      <button
-                        type="button"
-                        onClick={() => setDealCurrency((c) => (c === "INR" ? "USD" : "INR"))}
-                        className="text-blue-600"
+                    <label className="mb-1 block text-xs text-slate-500">Deal size</label>
+                    <div className="grid grid-cols-[80px_1fr] gap-1.5">
+                      <Select
+                        value={dealCurrency}
+                        onChange={(e) => setDealCurrency(e.target.value as CurrencyValue)}
                       >
-                        ({dealCurrency})
-                      </button>
-                    </label>
-                    <Select value={form.deal_size_band} onChange={(e) => set("deal_size_band", e.target.value)}>
-                      <option value="">Select...</option>
-                      {dealSizeBandsFor(form.category as CategoryValue, dealCurrency).map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                    </Select>
+                        {currencyOptions.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </Select>
+                      <Select value={form.deal_size_band} onChange={(e) => set("deal_size_band", e.target.value)}>
+                        <option value="">Select...</option>
+                        {dealSizeBandsFor(form.category as CategoryValue, dealCurrency).map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
@@ -738,27 +735,27 @@ export default function CareerTimelinePanel({
 
               {!isCurrentRole && isSalesCategory && (
                 <div className="mb-2 rounded-md border border-slate-200 bg-slate-50 p-2.5">
-                  <label className="mb-1 flex items-center justify-between text-xs font-medium text-slate-600">
+                  <label className="mb-1 block text-xs font-medium text-slate-600">
                     Average quarterly revenue generated *
-                    <button
-                      type="button"
-                      onClick={() =>
-                        set(
-                          "avg_quarterly_revenue_currency",
-                          (form.avg_quarterly_revenue_currency === "USD" ? "INR" : "USD") as string
-                        )
-                      }
-                      className="text-blue-600"
-                    >
-                      ({form.avg_quarterly_revenue_currency || "INR"})
-                    </button>
                   </label>
-                  <Input
-                    type="number"
-                    placeholder="Full quarter average, not monthly -- numbers only"
-                    value={form.avg_quarterly_revenue_value ?? ""}
-                    onChange={(e) => set("avg_quarterly_revenue_value", e.target.value)}
-                  />
+                  <div className="grid grid-cols-[80px_1fr] gap-1.5">
+                    <Select
+                      value={form.avg_quarterly_revenue_currency || "INR"}
+                      onChange={(e) => set("avg_quarterly_revenue_currency", e.target.value)}
+                    >
+                      {currencyOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </Select>
+                    <Input
+                      type="number"
+                      placeholder="Full quarter average, not monthly -- numbers only"
+                      value={form.avg_quarterly_revenue_value ?? ""}
+                      onChange={(e) => set("avg_quarterly_revenue_value", e.target.value)}
+                    />
+                  </div>
                   <p className="mt-1 text-[11px] text-slate-400">
                     We don't expect exact target/achievement recall for an old role -- just the average revenue you
                     brought in per quarter.
@@ -795,26 +792,27 @@ export default function CareerTimelinePanel({
 
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <div>
-                  <label className="mb-1 flex items-center justify-between text-xs text-slate-500">
-                    Largest deal closed
-                    <button
-                      type="button"
-                      onClick={() =>
-                        set("largest_deal_currency", (form.largest_deal_currency === "USD" ? "INR" : "USD") as string)
-                      }
-                      className="text-blue-600"
+                  <label className="mb-1 block text-xs text-slate-500">Largest deal closed</label>
+                  <div className="grid grid-cols-[80px_1fr] gap-1.5">
+                    <Select
+                      value={form.largest_deal_currency || "INR"}
+                      onChange={(e) => set("largest_deal_currency", e.target.value)}
                     >
-                      ({form.largest_deal_currency || "INR"})
-                    </button>
-                  </label>
-                  <Select value={form.largest_deal_band ?? ""} onChange={(e) => set("largest_deal_band", e.target.value)}>
-                    <option value="">Select...</option>
-                    {dealSizeBandsFor(form.category as CategoryValue, (form.largest_deal_currency as CurrencyValue) || "INR").map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </Select>
+                      {currencyOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </Select>
+                    <Select value={form.largest_deal_band ?? ""} onChange={(e) => set("largest_deal_band", e.target.value)}>
+                      <option value="">Select...</option>
+                      {dealSizeBandsFor(form.category as CategoryValue, (form.largest_deal_currency as CurrencyValue) || "INR").map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <label className="mb-1 block text-xs text-slate-500">New logos won</label>
@@ -853,7 +851,7 @@ export default function CareerTimelinePanel({
                 </div>
               </div>
 
-              <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="mt-2">
                 <div>
                   <label className="mb-1 block text-xs text-slate-500">Reporting to</label>
                   <Input
@@ -862,17 +860,11 @@ export default function CareerTimelinePanel({
                     onChange={(e) => set("reporting_to", e.target.value)}
                   />
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs text-slate-500">Client tier</label>
-                  <Select value={form.client_tier ?? ""} onChange={(e) => set("client_tier", e.target.value)}>
-                    <option value="">Select...</option>
-                    {customerSegmentOptions.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
+                {/* "Client tier" removed (Round 9 follow-up) -- it was a duplicate
+                    of "Customer segment" above (same customerSegmentOptions list),
+                    which was confusing candidates. client_tier is still a valid
+                    field on the type/DB for any existing data, just no longer
+                    collected here. */}
               </div>
 
               <div className={isCurrentRole ? "mt-2" : "mt-2 grid grid-cols-2 gap-2"}>
@@ -1064,9 +1056,12 @@ export default function CareerTimelinePanel({
               </div>
             )}
 
-            <div className="flex gap-2 pt-1">
+            <div className="flex flex-wrap gap-2 pt-1">
               <Button onClick={handleSaveForm} className="flex-1">
                 Save role
+              </Button>
+              <Button variant="outline" onClick={handleSaveAndAddAnother} className="flex-1">
+                Save &amp; add another role
               </Button>
               <Button variant="outline" onClick={() => setForm(null)}>
                 Cancel
