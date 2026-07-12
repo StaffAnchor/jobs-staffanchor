@@ -1866,6 +1866,12 @@ export default function ApplyForm({
                   </FormField>
 
                   <FormField label="Secondary Specializations" required>
+                    {values.secondarySubDomains.length === 0 && (
+                      <p className="mb-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
+                        Even one extra specialization can open up more mandates you'd be a fit for — pick "None" if you're a
+                        true specialist.
+                      </p>
+                    )}
                     <div className="grid gap-1.5">
                       {[...subDomainOptions.filter((o) => o !== values.subDomain), "None — single specialization only"].map(
                         (o) => (
@@ -2265,6 +2271,12 @@ export default function ApplyForm({
               )}
               <FormField label="Tell us about your best win" required>
                 <div className="space-y-1">
+                  {values.bestWin.trim().length === 0 && (
+                    <p className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
+                      This is your chance to make a specific, number-driven story stick with a recruiter — a good one gets
+                      remembered long after a resume is closed.
+                    </p>
+                  )}
                   <p className="text-xs text-slate-500">
                     Min. 100 characters — e.g. deal size, client, timeline, and why it mattered.
                   </p>
@@ -2304,6 +2316,11 @@ export default function ApplyForm({
             <>
               <FormField label="Key Skills / Tools" required>
                 <div className="space-y-2">
+                  {values.selectedSkills.length === 0 && (
+                    <p className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
+                      Profiles with 5+ specific skills get shortlisted noticeably more often — tap a few below to get started.
+                    </p>
+                  )}
                   {suggestedSkills.length > 0 && (
                     <p className="text-xs text-slate-500">
                       Suggested for {values.subDomain || "your specialization"} — tap to add:

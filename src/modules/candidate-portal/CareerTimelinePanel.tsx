@@ -298,8 +298,9 @@ export default function CareerTimelinePanel({
         <div>
           <h4 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Confirmed roles</h4>
           {profileEntries.length === 0 && (
-            <p className="mb-2 rounded-lg border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-400">
-              No roles added yet.
+            <p className="mb-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
+              A full career timeline is what turns a resume into a story recruiters can actually pitch — add your first
+              role below to get started.
             </p>
           )}
           <div className="space-y-1.5">
