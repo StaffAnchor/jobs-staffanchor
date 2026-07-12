@@ -132,6 +132,7 @@ export default function ProfilePassportTrigger({
 
               {aiPassport?.compensation_line && <p className="text-sm text-slate-600">{aiPassport.compensation_line}</p>}
               {aiPassport?.targets_line && <p className="text-sm text-slate-600">{aiPassport.targets_line}</p>}
+              {aiPassport?.stability_line && <p className="text-sm text-slate-600">{aiPassport.stability_line}</p>}
 
               {aiPassport?.resume_highlights && aiPassport.resume_highlights.length > 0 && (
                 <div>

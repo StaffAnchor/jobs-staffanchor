@@ -20,6 +20,7 @@ export type AiPassport = {
   headline?: string;
   compensation_line?: string;
   targets_line?: string;
+  stability_line?: string;
   resume_highlights?: string[];
   profile_incomplete?: boolean;
 };
