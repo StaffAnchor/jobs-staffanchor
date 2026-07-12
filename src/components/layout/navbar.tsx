@@ -18,6 +18,15 @@ export function Navbar() {
     pathname === "/dashboard" ||
     (role === "ADMIN" && pathname.startsWith("/dashboard/admin") && !isCandidatesActive);
 
+  // Client Portal pages (client-login, client-portal/*) are a completely
+  // separate audience from candidates -- they should never see candidate-
+  // facing nav items (All Jobs, Sign Up/Login, Build My Profile). Routed
+  // purely off the URL namespace rather than session type, since both
+  // candidates and clients authenticate through the same Supabase Auth
+  // users table and telling them apart would need an extra client_users
+  // lookup on every page just for the navbar.
+  const isClientPortalArea = pathname.startsWith("/client-portal") || pathname.startsWith("/client-login");
+
   useEffect(() => {
     let cancelled = false;
     supabase.auth.getUser().then(({ data }) => {
@@ -31,6 +40,41 @@ export function Navbar() {
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  if (isClientPortalArea) {
+    return (
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+          <Link href="/client-portal" className="text-lg font-bold tracking-tight text-slate-900">
+            StaffAnchor
+          </Link>
+          <nav className="flex items-center gap-2">
+            {candidateSignedIn && (
+              <>
+                <Link href="/client-portal">
+                  <Button variant={pathname === "/client-portal" ? "default" : "ghost"}>My Hiring</Button>
+                </Link>
+                <Link href="/client-portal/request-mandate">
+                  <Button variant={pathname.startsWith("/client-portal/request-mandate") ? "default" : "ghost"}>
+                    Request a Role
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    window.location.href = "/client-login";
+                  }}
+                >
+                  Logout
+                </Button>
+              </>
+            )}
+          </nav>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
