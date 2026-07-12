@@ -612,7 +612,50 @@ export default function ApplyForm({
     return values.roleLevel || categoryLabel || "Role not set yet";
   }, [values.roleLevel, values.category]);
 
-  const strengthLabel = profileStrength >= 80 ? "Great" : profileStrength >= 45 ? "Good" : "Getting started";
+  // Tiered Passport Readiness Metric -- a coarser, more motivating read on the
+  // same underlying profileStrength number than a bare percentage. Recruiters
+  // and hiring managers think in tiers ("is this a strong profile or a thin
+  // one") more readily than in exact percentages, and tiers give candidates a
+  // concrete next milestone to chase rather than a number that just ticks up.
+  // Purely a presentation layer over the existing profileStrength calculation
+  // -- no new fields, no change to what counts toward it.
+  const readinessTier: "Basic" | "Good" | "Excellent" | "Premium" =
+    profileStrength >= 90 ? "Premium" : profileStrength >= 65 ? "Excellent" : profileStrength >= 35 ? "Good" : "Basic";
+
+  const READINESS_META: Record<
+    "Basic" | "Good" | "Excellent" | "Premium",
+    { ring: string; chipBg: string; chipText: string; dot: string; blurb: string }
+  > = {
+    Basic: {
+      ring: "#94a3b8",
+      chipBg: "bg-slate-100",
+      chipText: "text-slate-600",
+      dot: "bg-slate-400",
+      blurb: "A few more sections and recruiters will start seeing a real picture of you.",
+    },
+    Good: {
+      ring: "#2563eb",
+      chipBg: "bg-blue-50",
+      chipText: "text-blue-700",
+      dot: "bg-blue-500",
+      blurb: "Solid start -- fill in your role details and targets to stand out further.",
+    },
+    Excellent: {
+      ring: "#7c3aed",
+      chipBg: "bg-violet-50",
+      chipText: "text-violet-700",
+      dot: "bg-violet-500",
+      blurb: "Strong profile -- recruiters can already make a confident first read on you.",
+    },
+    Premium: {
+      ring: "#059669",
+      chipBg: "bg-emerald-50",
+      chipText: "text-emerald-700",
+      dot: "bg-emerald-500",
+      blurb: "Complete profile -- you're in the top tier of what recruiters see.",
+    },
+  };
+  const readinessMeta = READINESS_META[readinessTier];
 
   function addCustomSkill(skillOverride?: string) {
     const skill = (skillOverride ?? values.customSkill).trim();
@@ -1066,7 +1109,7 @@ export default function ApplyForm({
         <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-sky-200/30 blur-3xl" />
         <main className="relative mx-auto flex w-full max-w-xl px-4 py-16 sm:px-6 lg:px-8">
           <Card className="w-full border-slate-200 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.35)]">
-            <CardContent className="space-y-3 py-10 text-center">
+            <CardContent className="space-y-4 py-10 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
                 ✓
               </div>
@@ -1075,6 +1118,20 @@ export default function ApplyForm({
                 Thanks, {values.fullName.split(" ")[0] || "there"}. A StaffAnchor recruiter will review your profile
                 and reach out if there&apos;s a mandate fit. No spam, no cold calls for irrelevant roles.
               </p>
+              <div
+                className={`mx-auto flex max-w-xs items-center justify-center gap-2 rounded-2xl px-4 py-3 ${readinessMeta.chipBg}`}
+              >
+                <span className={`h-2 w-2 rounded-full ${readinessMeta.dot}`} />
+                <p className={`text-sm font-semibold ${readinessMeta.chipText}`}>
+                  Passport Readiness: {readinessTier} ({profileStrength}%)
+                </p>
+              </div>
+              {readinessTier !== "Premium" && (
+                <p className="text-xs text-slate-500">
+                  Come back anytime from your Candidate Portal to add more detail and move up a tier — more complete
+                  profiles get seen first.
+                </p>
+              )}
             </CardContent>
           </Card>
         </main>
@@ -1109,14 +1166,24 @@ export default function ApplyForm({
             <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
               <CardContent className="space-y-4 py-5">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-slate-900">Profile Progress</p>
-                  <span className="text-sm font-bold text-blue-600">{profileStrength}%</span>
+                  <p className="text-sm font-semibold text-slate-900">Passport Readiness</p>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${readinessMeta.chipBg} ${readinessMeta.chipText}`}>
+                    {readinessTier}
+                  </span>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full rounded-full bg-blue-600 transition-all duration-500"
-                    style={{ width: `${profileStrength}%` }}
-                  />
+                <div className="flex gap-1">
+                  {(["Basic", "Good", "Excellent", "Premium"] as const).map((tier, i) => {
+                    const tierOrder = ["Basic", "Good", "Excellent", "Premium"];
+                    const reached = tierOrder.indexOf(readinessTier) >= i;
+                    return (
+                      <div
+                        key={tier}
+                        className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${
+                          reached ? "bg-blue-600" : "bg-slate-200"
+                        }`}
+                      />
+                    );
+                  })}
                 </div>
                 <p className="text-xs text-slate-500">
                   Step {step + 1} of {STEPS.length}
@@ -2203,25 +2270,23 @@ export default function ApplyForm({
           <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
             <CardContent className="space-y-4 py-5">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-900">Profile Strength</p>
-                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                  {strengthLabel}
+                <p className="text-sm font-semibold text-slate-900">Passport Readiness</p>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${readinessMeta.chipBg} ${readinessMeta.chipText}`}>
+                  {readinessTier}
                 </span>
               </div>
               <div className="flex items-center gap-4">
                 <div
-                  className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full"
+                  className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full transition-all duration-500"
                   style={{
-                    background: `conic-gradient(#2563eb ${profileStrength * 3.6}deg, #e2e8f0 0deg)`,
+                    background: `conic-gradient(${readinessMeta.ring} ${profileStrength * 3.6}deg, #e2e8f0 0deg)`,
                   }}
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-sm font-bold text-slate-900">
                     {profileStrength}%
                   </div>
                 </div>
-                <p className="text-xs leading-5 text-slate-500">
-                  Complete more sections to increase your visibility to recruiters.
-                </p>
+                <p className="text-xs leading-5 text-slate-500">{readinessMeta.blurb}</p>
               </div>
               <ul className="space-y-2 border-t border-slate-100 pt-3">
                 {STEPS.map((label, i) => (
