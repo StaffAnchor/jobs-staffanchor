@@ -86,3 +86,38 @@ export async function getResumeSignedUrl(resumeFileUrl: string): Promise<string 
   if (error) return null;
   return data?.signedUrl ?? null;
 }
+
+// Self-service hiring-brief intake for a client who already has portal
+// access -- same review-gate as the public shareable link (submit_employer_
+// inquiry / the token flow): this always lands in employer_inquiries, never
+// directly in mandates, so a recruiter still has to review and explicitly
+// click "Create Mandate" in the CRM. Company name and contact details are
+// resolved server-side from the caller's own client_users row, so the client
+// can't spoof a different client's identity.
+export async function submitMyMandateRequest(payload: Record<string, unknown>): Promise<string> {
+  const { data, error } = await supabase.rpc("submit_my_client_mandate_request", { payload });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
+export type MandateOptionSets = {
+  selling_style: { value: string; label: string }[];
+  industries: { value: string; label: string }[];
+  languages: { value: string; label: string }[];
+};
+
+const EMPTY_OPTION_SETS: MandateOptionSets = { selling_style: [], industries: [], languages: [] };
+
+// Same shared mandate_option_sets table that backs the CRM's mandate forms
+// and the public staffanchor.com mandate-request page -- one source of
+// truth for these three option lists across all three surfaces.
+export async function getMandateOptionSets(): Promise<MandateOptionSets> {
+  const { data, error } = await supabase.rpc("get_mandate_option_sets");
+  if (error) throw new Error(error.message);
+  return {
+    selling_style: data?.selling_style ?? [],
+    industries: data?.industries ?? [],
+    languages: data?.languages ?? [],
+  };
+}
+export { EMPTY_OPTION_SETS };

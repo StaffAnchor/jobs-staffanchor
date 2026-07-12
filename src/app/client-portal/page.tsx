@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, MapPin, Search, Users } from "lucide-react";
+import { LogOut, MapPin, Plus, Search, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -104,9 +104,16 @@ export default function ClientPortalPage() {
           <h1 className="mt-1 text-2xl font-bold text-slate-900">Your open roles</h1>
           <p className="mt-1 text-sm text-slate-500">Review shortlists and share feedback with your recruiter.</p>
         </div>
-        <Button variant="outline" onClick={handleSignOut}>
-          <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign out
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/client-portal/request-mandate">
+            <Button>
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> Request a new role
+            </Button>
+          </Link>
+          <Button variant="outline" onClick={handleSignOut}>
+            <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign out
+          </Button>
+        </div>
       </div>
 
       {mandates.length > 0 && (
@@ -152,9 +159,16 @@ export default function ClientPortalPage() {
 
       {mandates.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-sm text-slate-500">
-            No roles have been assigned to your account yet. Your StaffAnchor recruiter will notify you once one
-            is live.
+          <CardContent className="space-y-3 py-12 text-center text-sm text-slate-500">
+            <p>
+              No roles have been assigned to your account yet. Your StaffAnchor recruiter will notify you once one
+              is live.
+            </p>
+            <Link href="/client-portal/request-mandate">
+              <Button variant="outline">
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> Request a new role
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       ) : filtered.length === 0 ? (
