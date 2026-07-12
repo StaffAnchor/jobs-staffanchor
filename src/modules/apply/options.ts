@@ -308,6 +308,22 @@ export const workModeOptions = ["Onsite", "Hybrid", "Remote", "Open to Any (as p
 export const relocationOptions = ["Yes", "No", "Maybe"];
 export const travelPreferenceOptions = ["No Travel", "Some Travel (occasional)", "Extensive Travel"];
 
+// B2C: who the end consumer actually is (mirrors CRM's candidate-options.ts).
+export const b2cCustomerTypeOptions = [
+  "Middle Class", "Upper Middle Class", "High Net-worth Individuals (HNI)",
+  "Parents", "Students", "Working Professionals", "Young Professionals / First Jobbers",
+  "Homemakers", "Senior Citizens", "Retail Walk-in Visitors", "Small Business Owners",
+  "Urban Consumers", "Rural / Semi-Urban Consumers",
+];
+
+// B2B: the actual decision-maker persona/title this role sells to (mirrors
+// CRM's candidate-options.ts).
+export const clientProfileOptions = [
+  "CEO / Founder", "CFO", "COO", "CHRO / HR Head", "HR Manager", "CTO / Tech Head",
+  "IT Head", "Plant Head / Operations Head", "Procurement Head", "Marketing Head",
+  "Sales Head", "VP / Director level", "Business Owner (SMB)",
+];
+
 export const highestQualificationOptions = [
   "High School",
   "Diploma",

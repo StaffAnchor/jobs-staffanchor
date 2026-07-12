@@ -15,6 +15,7 @@ import {
   type MandateOptionSets,
 } from "@/modules/client-portal/api";
 import MultiSelectChips from "@/modules/client-portal/MultiSelectChips";
+import WeekOffPicker, { emptyWeekOffValue, type WeekOffValue } from "@/modules/client-portal/WeekOffPicker";
 import {
   b2bSubDomains,
   b2cSubDomains,
@@ -24,6 +25,8 @@ import {
   salesCycleOptions,
   currencyOptions,
   dealSizeBandsFor,
+  b2cCustomerTypeOptions,
+  clientProfileOptions,
   type CurrencyValue,
   type CategoryValue,
 } from "@/modules/apply/options";
@@ -115,10 +118,15 @@ export default function RequestMandatePage() {
     preferredIndustries: [] as string[],
     industriesSoldTo: [] as string[],
     languagesRequired: [] as string[],
+    weekOff: emptyWeekOffValue as WeekOffValue,
+    b2cCustomerTypes: [] as string[],
+    clientProfile: [] as string[],
     message: "",
   });
 
   const isSalesRole = form.category === "b2b_sales" || form.category === "b2c_sales";
+  const isB2B = form.category === "b2b_sales";
+  const isB2C = form.category === "b2c_sales";
   const subDomainOptions = subDomainsFor(form.category);
   const dealSizeOptions = dealSizeBandsFor(
     (form.category || null) as CategoryValue | null,
@@ -179,6 +187,12 @@ export default function RequestMandatePage() {
         preferred_industries: form.preferredIndustries,
         industries_sold_to: isSalesRole ? form.industriesSoldTo : [],
         languages_required: form.languagesRequired,
+        week_off: form.weekOff.week_off_type === "fixed" ? form.weekOff.week_off : [],
+        week_off_type: form.weekOff.week_off_type,
+        rotational_offs_per_week: form.weekOff.week_off_type === "rotational" ? form.weekOff.rotational_offs_per_week : "",
+        mandatory_working_days: form.weekOff.week_off_type === "rotational" ? form.weekOff.mandatory_working_days : [],
+        b2c_customer_types: isB2C ? form.b2cCustomerTypes : [],
+        client_profile: isB2B ? form.clientProfile : [],
         message: form.message,
       });
       setSubmitted(true);
@@ -518,6 +532,30 @@ export default function RequestMandatePage() {
                     className={inputCls}
                   />
                 </div>
+
+                {isB2C && (
+                  <div>
+                    <label className={labelCls}>Who are the end consumers? (B2C)</label>
+                    <MultiSelectChips
+                      options={b2cCustomerTypeOptions.map((o) => ({ value: o, label: o }))}
+                      selected={form.b2cCustomerTypes}
+                      onChange={(next) => setForm((f) => ({ ...f, b2cCustomerTypes: next }))}
+                      placeholder="Search consumer types..."
+                    />
+                  </div>
+                )}
+
+                {isB2B && (
+                  <div>
+                    <label className={labelCls}>Client profile -- who do they actually sell to? (B2B)</label>
+                    <MultiSelectChips
+                      options={clientProfileOptions.map((o) => ({ value: o, label: o }))}
+                      selected={form.clientProfile}
+                      onChange={(next) => setForm((f) => ({ ...f, clientProfile: next }))}
+                      placeholder="Search titles..."
+                    />
+                  </div>
+                )}
               </>
             )}
 
@@ -568,6 +606,8 @@ export default function RequestMandatePage() {
                 </select>
               </div>
             </div>
+
+            <WeekOffPicker value={form.weekOff} onChange={(next) => setForm((f) => ({ ...f, weekOff: next }))} />
 
             <div className="grid grid-cols-2 gap-3">
               <div>
