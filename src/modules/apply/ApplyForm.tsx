@@ -997,6 +997,14 @@ export default function ApplyForm({
     return null;
   }
 
+  // Smart Skip: step 3 ("Performance") only has content for sales candidates
+  // -- quarterly targets, best-win/missed-target reflections. A non-sales
+  // candidate would otherwise land on a step with nothing to fill in and
+  // just click Continue again, which reads as broken rather than smart.
+  // These two helpers make the skip symmetric in both directions so Back
+  // from step 4 doesn't strand a non-sales candidate back on the empty step.
+  const isSalesCategory = values.category === "b2b_sales" || values.category === "b2c_sales";
+
   function goNext() {
     const err = validateStep();
     if (err) {
@@ -1008,12 +1016,18 @@ export default function ApplyForm({
     toast.success(`${completedLabel} completed — profile strength ${profileStrength}%`);
     setStepJustCompleted(true);
     setTimeout(() => setStepJustCompleted(false), 1200);
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep((s) => {
+      const next = s === 2 && !isSalesCategory ? s + 2 : s + 1;
+      return Math.min(next, STEPS.length - 1);
+    });
   }
 
   function goBack() {
     setErrorMsg(null);
-    setStep((s) => Math.max(s - 1, 0));
+    setStep((s) => {
+      const prev = s === 4 && !isSalesCategory ? s - 2 : s - 1;
+      return Math.max(prev, 0);
+    });
   }
 
   async function handleSubmit() {
@@ -1299,38 +1313,54 @@ export default function ApplyForm({
                   Step {step + 1} of {STEPS.length}
                 </p>
                 <ul className="space-y-0">
-                  {STEPS.map((label, i) => (
-                    <li key={label} className="flex gap-3">
-                      <div className="flex flex-col items-center">
-                        <div
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                            i < step
-                              ? "bg-emerald-500 text-white"
-                              : i === step
-                                ? "bg-blue-600 text-white"
-                                : "bg-slate-200 text-slate-500"
-                          }`}
-                        >
-                          {i < step ? "✓" : i + 1}
+                  {STEPS.map((label, i) => {
+                    // Smart Skip: step 3 ("Performance") has no content for a
+                    // non-sales candidate -- goNext()/goBack() already jump
+                    // over it, so the step list should say so rather than
+                    // showing a step they'll never actually land on as
+                    // "Pending" forever.
+                    const isSkipped = i === 3 && !isSalesCategory;
+                    return (
+                      <li key={label} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                              isSkipped
+                                ? "bg-slate-100 text-slate-400"
+                                : i < step
+                                  ? "bg-emerald-500 text-white"
+                                  : i === step
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-slate-200 text-slate-500"
+                            }`}
+                          >
+                            {isSkipped ? "–" : i < step ? "✓" : i + 1}
+                          </div>
+                          {i < STEPS.length - 1 && (
+                            <div className={`w-px flex-1 ${i < step ? "bg-emerald-300" : "bg-slate-200"}`} style={{ minHeight: 24 }} />
+                          )}
                         </div>
-                        {i < STEPS.length - 1 && (
-                          <div className={`w-px flex-1 ${i < step ? "bg-emerald-300" : "bg-slate-200"}`} style={{ minHeight: 24 }} />
-                        )}
-                      </div>
-                      <div className="pb-4">
-                        <p
-                          className={`text-sm ${
-                            i === step ? "font-semibold text-blue-600" : i < step ? "text-slate-700" : "text-slate-400"
-                          }`}
-                        >
-                          {label}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {i < step ? "Completed" : i === step ? "In Progress" : "Pending"}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
+                        <div className="pb-4">
+                          <p
+                            className={`text-sm ${
+                              isSkipped
+                                ? "text-slate-300 line-through"
+                                : i === step
+                                  ? "font-semibold text-blue-600"
+                                  : i < step
+                                    ? "text-slate-700"
+                                    : "text-slate-400"
+                            }`}
+                          >
+                            {label}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {isSkipped ? "Not applicable" : i < step ? "Completed" : i === step ? "In Progress" : "Pending"}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </CardContent>
             </Card>
@@ -2476,25 +2506,34 @@ export default function ApplyForm({
                 <p className="text-xs leading-5 text-slate-500">{readinessMeta.blurb}</p>
               </div>
               <ul className="space-y-2 border-t border-slate-100 pt-3">
-                {STEPS.map((label, i) => (
-                  <li key={label} className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5">
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          i < step ? "bg-emerald-500" : i === step ? "bg-blue-600" : "bg-slate-300"
-                        }`}
-                      />
-                      <span
-                        className={
-                          i === step ? "font-medium text-slate-900" : i < step ? "text-slate-600" : "text-slate-400"
-                        }
-                      >
-                        {label}
+                {STEPS.map((label, i) => {
+                  const isSkipped = i === 3 && !isSalesCategory;
+                  return (
+                    <li key={label} className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            isSkipped ? "bg-slate-200" : i < step ? "bg-emerald-500" : i === step ? "bg-blue-600" : "bg-slate-300"
+                          }`}
+                        />
+                        <span
+                          className={
+                            isSkipped
+                              ? "text-slate-300 line-through"
+                              : i === step
+                                ? "font-medium text-slate-900"
+                                : i < step
+                                  ? "text-slate-600"
+                                  : "text-slate-400"
+                          }
+                        >
+                          {label}
+                        </span>
                       </span>
-                    </span>
-                    <span className="font-medium text-slate-400">+{STEP_WEIGHTS[i]}%</span>
-                  </li>
-                ))}
+                      <span className="font-medium text-slate-400">{isSkipped ? "n/a" : `+${STEP_WEIGHTS[i]}%`}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </CardContent>
           </Card>
