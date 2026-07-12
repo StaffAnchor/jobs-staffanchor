@@ -17,6 +17,11 @@ import {
   User,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  computeCareerGaps,
+  type ProfileTimelineEntry,
+  type ResumeTimelineEntry,
+} from "@/lib/career-timeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -383,6 +388,15 @@ export type ExistingProfile = {
   skills: string | null;
   self_assessment: { best?: string; lost?: string } | null;
   status: string;
+  // Optional -- only present when the caller (candidate portal) already
+  // loaded the Career Timeline alongside the rest of the profile. Used purely
+  // to reweight Passport Readiness; never rendered or edited by this form
+  // itself (that stays CareerTimelinePanel's job).
+  // Typed loosely (unknown) to match how the candidate-portal page already
+  // passes this column through elsewhere (see its `as never` casts into
+  // CareerTimelinePanel) -- cast to the real shape at the point of use below.
+  career_timeline_profile?: unknown;
+  career_timeline_resume?: unknown;
 };
 
 function seg(data: Record<string, unknown> | null | undefined, key: string): string {
@@ -713,8 +727,36 @@ export default function ApplyForm({
       const v = values[k];
       return Array.isArray(v) ? v.length > 0 : String(v).trim() !== "";
     }).length;
-    return Math.round((filled / applicableFields.length) * 100);
-  }, [values]);
+
+    // Career Timeline counts as its own weighted section (3 units, same as any
+    // other field) rather than one line item per job -- a candidate with a
+    // short work history isn't penalized the way a literal per-job checklist
+    // would, while someone who's confirmed nothing still reads as incomplete.
+    // Only meaningful once a Career Timeline actually exists to score (i.e. in
+    // the candidate portal, via existingProfile) -- the anonymous signup/apply
+    // flow has no timeline yet, so this section simply doesn't apply there.
+    let timelineWeight = 0;
+    let timelineScore = 0;
+    const timelineEntries = (existingProfile?.career_timeline_profile ?? []) as ProfileTimelineEntry[];
+    const resumeEntries = (existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[];
+    if (isEditMode) {
+      timelineWeight = 3;
+      if (timelineEntries.length > 0) timelineScore += 1;
+      const mostRecent = [...timelineEntries].sort((a, b) => (a.start_month < b.start_month ? 1 : -1))[0];
+      if (mostRecent && (mostRecent.quota_attainment_band || mostRecent.revenue_generated)) timelineScore += 1;
+      const gaps = computeCareerGaps({
+        profileEntries: timelineEntries,
+        resumeEntries,
+        currentEmployer: values.currentEmployer || null,
+      });
+      const unresolvedResumeFlags = gaps.filter((g) => g.type === "resume_not_in_profile").length;
+      if (resumeEntries.length === 0 || unresolvedResumeFlags === 0) timelineScore += 1;
+    }
+
+    const totalUnits = applicableFields.length + timelineWeight;
+    const filledUnits = filled + timelineScore;
+    return Math.round((filledUnits / totalUnits) * 100);
+  }, [values, isEditMode, existingProfile]);
 
   const minutesLeft = useMemo(
     () => STEP_TIME_MINUTES.slice(step).reduce((a, b) => a + b, 0),
