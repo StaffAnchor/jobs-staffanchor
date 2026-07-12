@@ -316,6 +316,21 @@ export default function QuickApplyPage() {
           Thanks, {values.fullName.split(" ")[0]}. A StaffAnchor recruiter will reach out to complete the rest of
           your profile and discuss next steps for the {job.role_title ?? "role"} opening.
         </p>
+        {values.email && (
+          <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-left">
+            <p className="text-sm font-medium text-slate-900">Want to hear about future openings too?</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Create a free candidate account with the same email so we can match you to other roles as they open up
+              -- no password needed, just a sign-in link.
+            </p>
+            <Link
+              href={`/candidate-login?email=${encodeURIComponent(values.email)}`}
+              className="mt-2 inline-block"
+            >
+              <Button className="h-8 px-3 text-xs">Sign up for future openings</Button>
+            </Link>
+          </div>
+        )}
         <Link href="/jobs" className="mt-6 inline-block">
           <Button variant="outline">Browse more roles</Button>
         </Link>

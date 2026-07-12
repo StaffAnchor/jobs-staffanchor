@@ -147,41 +147,11 @@ type FormState = {
   roleLevel: string;
   roleType: string;
   teamSize: string;
-  dealCurrency: CurrencyValue | "";
-  dealSizeBand: string;
-  cycle: string;
-  motion: string[];
-  style: string;
-  segment: string;
-  funnel: string;
-  scope: string;
-  scopeDetail: string;
-  scopeRegions: string[];
-  aht: string;
-  dailyCallTarget: string;
-  dailyTalkTime: string;
-  leadSources: string[];
-  hasIcTarget: string;
-  icTargetCurrency: CurrencyValue | "";
-  teamTargetCurrency: CurrencyValue | "";
-  icTargetQ1: string;
-  icTargetQ2: string;
-  icTargetQ3: string;
-  icTargetQ4: string;
-  quotaQ1: string;
-  quotaQ2: string;
-  quotaQ3: string;
-  quotaQ4: string;
-  teamTargetQ1: string;
-  teamTargetQ2: string;
-  teamTargetQ3: string;
-  teamTargetQ4: string;
-  teamQuotaQ1: string;
-  teamQuotaQ2: string;
-  teamQuotaQ3: string;
-  teamQuotaQ4: string;
-  bestWin: string;
-  toughLoss: string;
+  // Deal size/cycle/style/motion/segment/funnel/scope, inside-sales fields,
+  // quarterly targets, and best-win/missed-target are now all captured once
+  // on the Career Timeline current-role card instead of duplicated here as
+  // global fields (Round 8 restructure) -- see CareerTimelinePanel.tsx and
+  // the derivation in handleSubmit below.
   currentIndustry: string;
   customCurrentIndustry: string;
   selectedIndustries: string[];
@@ -228,41 +198,6 @@ const initialState: FormState = {
   roleLevel: "",
   roleType: "",
   teamSize: "",
-  dealCurrency: "",
-  dealSizeBand: "",
-  cycle: "",
-  motion: [],
-  style: "",
-  segment: "",
-  funnel: "",
-  scope: "",
-  scopeDetail: "",
-  scopeRegions: [],
-  aht: "",
-  dailyCallTarget: "",
-  dailyTalkTime: "",
-  leadSources: [],
-  hasIcTarget: "",
-  icTargetCurrency: "",
-  teamTargetCurrency: "",
-  icTargetQ1: "",
-  icTargetQ2: "",
-  icTargetQ3: "",
-  icTargetQ4: "",
-  quotaQ1: "",
-  quotaQ2: "",
-  quotaQ3: "",
-  quotaQ4: "",
-  teamTargetQ1: "",
-  teamTargetQ2: "",
-  teamTargetQ3: "",
-  teamTargetQ4: "",
-  teamQuotaQ1: "",
-  teamQuotaQ2: "",
-  teamQuotaQ3: "",
-  teamQuotaQ4: "",
-  bestWin: "",
-  toughLoss: "",
   selectedIndustries: [],
   currentIndustry: "",
   customCurrentIndustry: "",
@@ -272,18 +207,23 @@ const initialState: FormState = {
   careerTimeline: [],
 };
 
-const STEPS = [
-  "Basic Information",
-  "Career Timeline",
-  "Career & Compensation",
-  "Sales Specialization",
-  "Performance",
-  "Preferences & Submit",
-] as const;
+// Round 8 restructure: collapsed from 6 steps to 4. "Career & Compensation"
+// and "Sales Specialization" used to split "who you are" (comp, experience,
+// qualification) from "how you sell" (deal size, cycle, style, motion) --
+// but deal size/cycle/style/motion are properties of a specific role, not a
+// fixed trait of the candidate, and Career Timeline already asks them per
+// role. Merged the identity-level fields (comp, quals, Function/Domain,
+// specialization, role level) into one "Profile Information" step, and moved
+// every role-specific field (deal size, cycle, style, motion, segment, inside
+// -sales detail, current employer/title, and the quarterly target/achievement
+// grid + best-win/missed-target reflections) into Career Timeline's
+// current-role card -- asked exactly once, attached to the role it's
+// actually about, instead of duplicated across a global step.
+const STEPS = ["Basic Information", "Career Timeline", "Profile Information", "Preferences & Submit"] as const;
 
-const STEP_TIME_MINUTES = [1, 1.5, 1.5, 2, 1.5, 1];
+const STEP_TIME_MINUTES = [1, 2, 1.5, 1];
 
-const STEP_WEIGHTS = [15, 15, 20, 20, 15, 15];
+const STEP_WEIGHTS = [15, 40, 30, 15];
 
 const STEP_META = [
   {
@@ -296,25 +236,14 @@ const STEP_META = [
     icon: Briefcase,
     eyebrow: "Career Timeline",
     heading: "Walk us through your career",
-    subtext: "Add every role, most recent first — this is what turns a resume into a story recruiters can pitch.",
-  },
-  {
-    icon: Briefcase,
-    eyebrow: "Career & Compensation",
-    heading: "Tell us where you stand today",
-    subtext: "Current role, experience, and compensation — the context every mandate is filtered by.",
+    subtext:
+      "Add every role, most recent first. For your current role we'll also ask about targets, achievement, and specifics — everything else you'll only see once, attached to the right job.",
   },
   {
     icon: Target,
-    eyebrow: "Sales Specialization",
-    heading: "What do you specialize in?",
-    subtext: "Specific specializations get found. Generalist profiles get buried.",
-  },
-  {
-    icon: BarChart3,
-    eyebrow: "Sales Performance",
-    heading: "Tell us about your performance",
-    subtext: "Help us understand how you've delivered results over the last few quarters.",
+    eyebrow: "Profile Information",
+    heading: "Tell us where you stand today",
+    subtext: "Experience, compensation, and specialization — the context every mandate is filtered by.",
   },
   {
     icon: Settings2,
@@ -326,11 +255,9 @@ const STEP_META = [
 
 const STEP_TIPS: Record<number, string> = {
   0: "Recruiters reach out fastest when your contact details and resume are on record.",
-  1: "A full career timeline is the single biggest thing that turns a resume into a story a recruiter can actually pitch to a client.",
-  2: "Comp and experience are what let a recruiter tell whether a mandate is even a fit — before wasting your time on a call.",
-  3: "Specialization is what makes you findable. Generalist profiles get buried; specific ones get shortlisted.",
-  4: "Real target vs. achievement is the single most-checked detail on a sales profile. Specific numbers get 3x more recruiter attention than vague claims.",
-  5: "Almost done — skills and industries are how recruiters filter and find you for the right mandate.",
+  1: "A full career timeline -- with real target vs. achievement on your current role -- is the single biggest thing that turns a resume into a story a recruiter can actually pitch to a client.",
+  2: "Specific specializations get found and comp context lets a recruiter tell whether a mandate is even a fit -- before wasting your time on a call.",
+  3: "Almost done — skills and industries are how recruiters filter and find you for the right mandate.",
 };
 
 const DRAFT_STORAGE_KEY = "sa_candidate_draft_v1";
@@ -370,17 +297,10 @@ const STRENGTH_FIELDS_BASE: (keyof FormState)[] = [
   "openToRelocation",
 ];
 
-// Sales-only fields (deal size, quarterly performance) -- only shown/fillable
-// when category is b2b_sales/b2c_sales, so they must only count toward the
-// denominator for those candidates. Otherwise a Non-Sales profile could never
-// reach 100% no matter how complete it is.
-const STRENGTH_FIELDS_SALES: (keyof FormState)[] = ["dealCurrency", "dealSizeBand", "bestWin", "toughLoss"];
-
-// Within Sales, the quarterly target fields differ by whether the candidate
-// is an individual contributor or leads a team -- only one branch is ever
-// shown, so only that branch's fields should count.
-const STRENGTH_FIELDS_SALES_IC: (keyof FormState)[] = ["icTargetQ4", "quotaQ4"];
-const STRENGTH_FIELDS_SALES_TEAM: (keyof FormState)[] = ["teamTargetQ4", "teamQuotaQ4"];
+// Deal size, quarterly targets, and best-win/missed-target now live on the
+// Career Timeline current-role entry rather than as separate global fields
+// (Round 8 restructure) -- their completeness is folded into the timeline
+// scoring inside profileStrength below instead of a flat field list here.
 
 export type ExistingProfile = {
   id: string;
@@ -444,10 +364,6 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
   const sd = p.segment_data ?? null;
   const knownCity = p.current_location && cityOptions.includes(p.current_location);
   const roleTypeRaw = seg(sd, "role_type");
-  const icTargets = segNumArr(sd, "ic_targets");
-  const quota = segNumArr(sd, "quota");
-  const teamTargets = segNumArr(sd, "team_targets");
-  const teamQuota = segNumArr(sd, "team_quota");
   const knownQualification =
     p.highest_qualification && highestQualificationOptions.includes(p.highest_qualification);
   const knownSubDomain =
@@ -486,41 +402,11 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
     roleLevel: seg(sd, "role_level"),
     roleType: roleTypeRaw === "Team Lead" ? "Leading a Team" : roleTypeRaw === "IC" ? "Individual Contributor (IC)" : "",
     teamSize: seg(sd, "team_size"),
-    dealCurrency: (seg(sd, "deal_size_currency") || seg(sd, "ticket_currency")) as CurrencyValue | "",
-    dealSizeBand: seg(sd, "deal_size") || seg(sd, "ticket"),
-    cycle: seg(sd, "cycle"),
-    motion: segArr(sd, "motion"),
-    style: seg(sd, "style"),
-    segment: seg(sd, "segment"),
-    funnel: seg(sd, "funnel"),
-    scope: seg(sd, "scope"),
-    scopeDetail: seg(sd, "scope_detail"),
-    scopeRegions: segArr(sd, "scope_regions"),
-    aht: seg(sd, "aht"),
-    dailyCallTarget: seg(sd, "daily_call_target"),
-    dailyTalkTime: seg(sd, "daily_talk_time"),
-    leadSources: segArr(sd, "lead_sources"),
-    hasIcTarget: icTargets.some((v) => v !== "") ? "Yes" : "No",
-    icTargetCurrency: seg(sd, "ic_target_currency") as CurrencyValue | "",
-    teamTargetCurrency: seg(sd, "team_target_currency") as CurrencyValue | "",
-    icTargetQ1: icTargets[0] ?? "",
-    icTargetQ2: icTargets[1] ?? "",
-    icTargetQ3: icTargets[2] ?? "",
-    icTargetQ4: icTargets[3] ?? "",
-    quotaQ1: quota[0] ?? "",
-    quotaQ2: quota[1] ?? "",
-    quotaQ3: quota[2] ?? "",
-    quotaQ4: quota[3] ?? "",
-    teamTargetQ1: teamTargets[0] ?? "",
-    teamTargetQ2: teamTargets[1] ?? "",
-    teamTargetQ3: teamTargets[2] ?? "",
-    teamTargetQ4: teamTargets[3] ?? "",
-    teamQuotaQ1: teamQuota[0] ?? "",
-    teamQuotaQ2: teamQuota[1] ?? "",
-    teamQuotaQ3: teamQuota[2] ?? "",
-    teamQuotaQ4: teamQuota[3] ?? "",
-    bestWin: p.self_assessment?.best ?? "",
-    toughLoss: p.self_assessment?.lost ?? "",
+    // Deal size, sales cycle, selling style, motion, segment, scope,
+    // inside-sales detail, quarterly targets/achievement, and best-win/
+    // missed-target are no longer separate global FormState fields (Round 8)
+    // -- they're reconstructed below straight from career_timeline_profile's
+    // current-role entry, same as everywhere else in the wizard.
     ...(() => {
       const knownCurrentIndustry =
         p.current_industry && industryOptions.includes(p.current_industry);
@@ -697,6 +583,23 @@ export default function ApplyForm({
     values.selectedSkills,
   ]);
 
+  // Round 8: currentEmployer/currentJobTitle are no longer entered directly
+  // in this wizard -- they're sourced from whichever Career Timeline entry
+  // has end_month === null (the current role), kept in sync here so the
+  // progressive-save effect above, the gap-detection call, and the final
+  // submit payload all keep working off these two fields unchanged.
+  useEffect(() => {
+    const current = values.careerTimeline.find((e) => e.end_month === null);
+    if (!current) return;
+    if (current.company === values.currentEmployer && current.title === values.currentJobTitle) return;
+    setValues((prev) => ({
+      ...prev,
+      currentEmployer: current.company || prev.currentEmployer,
+      currentJobTitle: current.title || prev.currentJobTitle,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.careerTimeline]);
+
   // Tick the "Saved Xs ago" label.
   useEffect(() => {
     const tick = () => {
@@ -729,47 +632,39 @@ export default function ApplyForm({
   const quote = useMemo(() => quotes[step % quotes.length], [quotes, step]);
   const subDomainOptions = subDomainsForCategory(values.category || null);
   const suggestedSkills = useMemo(() => skillSuggestionsFor(values.subDomain || null), [values.subDomain]);
-  const dealSizeOptions = useMemo(
-    () => dealSizeBandsFor(values.category || null, values.dealCurrency),
-    [values.category, values.dealCurrency]
-  );
-  const isInsideSales = insideSalesSubDomains.includes(values.subDomain);
   const skillSearchResults = useMemo(
     () => searchSkills(values.customSkill, values.selectedSkills),
     [values.customSkill, values.selectedSkills]
   );
 
   const profileStrength = useMemo(() => {
-    const isSalesCandidate = values.category === "b2b_sales" || values.category === "b2c_sales";
     const applicableFields: (keyof FormState)[] = [...STRENGTH_FIELDS_BASE];
-    if (isSalesCandidate) {
-      applicableFields.push(...STRENGTH_FIELDS_SALES);
-      applicableFields.push(
-        ...(values.roleType === "Leading a Team" ? STRENGTH_FIELDS_SALES_TEAM : STRENGTH_FIELDS_SALES_IC)
-      );
-    }
     const filled = applicableFields.filter((k) => {
       const v = values[k];
       return Array.isArray(v) ? v.length > 0 : String(v).trim() !== "";
     }).length;
 
-    // Career Timeline is now its own step in this same wizard (values.careerTimeline),
-    // so it's scored as a regular 3-unit section rather than a special
-    // edit-mode-only bonus -- every candidate fills it, on signup or profile edit alike.
+    // Career Timeline is its own step (values.careerTimeline). Its weight is
+    // higher than a plain field now that deal size, quarterly targets, and
+    // best-win/missed-target all live on the current-role entry instead of
+    // as separate global fields (Round 8 restructure).
     let timelineWeight = 3;
     let timelineScore = 0;
     const timelineEntries = values.careerTimeline ?? [];
     const resumeEntries = (existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[];
     if (timelineEntries.length > 0) timelineScore += 1;
-    const mostRecent = [...timelineEntries].sort((a, b) => (a.start_month < b.start_month ? 1 : -1))[0];
-    if (mostRecent && (mostRecent.quota_attainment_band || mostRecent.revenue_generated)) timelineScore += 1;
+    const currentEntry = timelineEntries.find((e) => e.end_month === null);
+    const isCurrentSales = currentEntry?.category === "b2b_sales" || currentEntry?.category === "b2c_sales";
+    if (currentEntry && (!isCurrentSales || currentEntry.deal_size_band)) timelineScore += 1;
+    if (!isCurrentSales || (currentEntry && currentEntry.achieved_q4 && (currentEntry.best_win ?? "").length >= 100)) {
+      timelineScore += 1;
+    }
     const gaps = computeCareerGaps({
       profileEntries: timelineEntries,
       resumeEntries,
       currentEmployer: values.currentEmployer || null,
     });
-    const unresolvedResumeFlags = gaps.filter((g) => g.type === "resume_not_in_profile").length;
-    if (resumeEntries.length === 0 || unresolvedResumeFlags === 0) timelineScore += 1;
+    void gaps; // computed for future use (unresolved-resume-flag surfacing); not yet folded into the score
 
     const totalUnits = applicableFields.length + timelineWeight;
     const filledUnits = filled + timelineScore;
@@ -851,50 +746,10 @@ export default function ApplyForm({
     );
   }
 
-  function quarterField(
-    label: string,
-    targetValue: string,
-    onTarget: (v: string) => void,
-    achievementValue: string,
-    onAchievement: (v: string) => void,
-    currencyLabel?: string
-  ) {
-    return (
-      <div key={label} className="space-y-2 rounded-md border border-slate-200 p-3">
-        <p className="text-xs font-semibold text-slate-500">{label}</p>
-        <FormField label={currencyLabel ? `Quarterly Target (${currencyLabel})` : "Quarterly Target"} required>
-          <Input
-            type="number"
-            placeholder="Full quarter, not monthly"
-            value={targetValue}
-            onChange={(e) => onTarget(e.target.value)}
-          />
-          <p className="text-xs text-slate-400">Enter the target for the full quarter (3 months), not a monthly number.</p>
-        </FormField>
-        <FormField label="Achieved %" required>
-          <div className="flex flex-wrap gap-1.5">
-            {achievementBandOptions.map((o) => {
-              const active = achievementValue === o;
-              return (
-                <button
-                  type="button"
-                  key={o}
-                  onClick={() => onAchievement(o)}
-                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
-                    active
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
-                  }`}
-                >
-                  {o}
-                </button>
-              );
-            })}
-          </div>
-        </FormField>
-      </div>
-    );
-  }
+  // quarterField (the old global-target-fields JSX helper) was removed in the
+  // Round 8 restructure -- the quarterly target/achievement grid now lives
+  // directly inside CareerTimelinePanel's current-role card, which has its
+  // own local QuarterField component.
 
   function addCustomIndustry() {
     const industry = values.customIndustry.trim();
@@ -976,20 +831,13 @@ export default function ApplyForm({
   }
 
   function toggleArrayValue(
-    key: "secondarySubDomains" | "motion" | "selectedSkills" | "leadSources" | "selectedIndustries" | "scopeRegions",
+    key: "secondarySubDomains" | "selectedSkills" | "selectedIndustries",
     value: string
   ) {
     setValues((prev) => {
       const current = prev[key];
       const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
       return { ...prev, [key]: next };
-    });
-  }
-
-  function allFilled(keys: (keyof FormState)[]) {
-    return keys.every((k) => {
-      const v = values[k];
-      return Array.isArray(v) ? v.length > 0 : String(v).trim() !== "";
     });
   }
 
@@ -1007,21 +855,24 @@ export default function ApplyForm({
       if (!values.linkedinUrl.trim()) return "LinkedIn profile URL is required.";
       if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
     }
+    if (step === 1) {
+      // Deep, per-role validation (deal size, quarterly targets, best-win/
+      // missed-target, etc.) already happens inside CareerTimelinePanel's own
+      // "Save role" action. Here we just make sure a current role actually
+      // exists before letting the wizard move on -- current-role details are
+      // the single most important thing this whole form is built to capture.
+      if (!values.careerTimeline.length) {
+        return "Please add your current role to your Career Timeline before continuing.";
+      }
+      if (!values.careerTimeline.some((e) => e.end_month === null)) {
+        return "Please add (or mark) your current role in the Career Timeline -- check 'Current role' on the entry that's still ongoing.";
+      }
+    }
     if (step === 2) {
       if (!values.currentEmploymentStatus) return "Employment status is required.";
       if (!values.totalExperienceYears) return "Total experience is required.";
       if (!values.currentFixedCtc) return "Current fixed CTC is required.";
       if (!values.currentVariableCtc) return "Current variable CTC is required (select 0 LPA if none).";
-      if (!values.currentEmployer.trim()) return "Current / last employer is required.";
-      const isCurrentlyEmployed = [
-        "Employed",
-        "Serving Notice",
-        "Self-Employed",
-        "Entrepreneur / Founder",
-      ].includes(values.currentEmploymentStatus);
-      if (isCurrentlyEmployed) {
-        if (!values.currentJobTitle.trim()) return "Current job title is required.";
-      }
       if (!values.noticePeriod) return "Please let us know how many days you'd need to join.";
       if (!values.expectedFixedCtc) return "Expected fixed CTC is required.";
       if (!values.expectedVariableCtc) return "Expected variable CTC is required (select 0 LPA if none).";
@@ -1029,8 +880,6 @@ export default function ApplyForm({
       if (values.highestQualification === "Other" && !values.customQualification.trim()) {
         return "Please specify your qualification.";
       }
-    }
-    if (step === 3) {
       if (!values.category) return "Please select your function / domain.";
       if (!values.subDomain) return "Please select your primary specialization.";
       if (values.subDomain === "Other" && !values.customSubDomain.trim()) {
@@ -1042,84 +891,8 @@ export default function ApplyForm({
       if (isSales && !values.secondarySubDomains.length) {
         return "Please select at least one option (choose 'None — single specialization only' if not applicable).";
       }
-      if (isSales) {
-        if (!values.dealCurrency) return "Please select a currency.";
-        if (!values.dealSizeBand) return "Please select a typical deal/ticket size.";
-      }
-      if (values.category === "b2b_sales") {
-        if (!values.cycle) return "Please select your typical sales cycle.";
-        if (!values.style) return "Please select your selling style.";
-        if (!values.motion.length) return "Please select at least one sales motion.";
-        if (!values.segment) return "Please select your customer segment.";
-      }
-      if (values.category === "b2c_sales") {
-        if (!values.funnel) return "Please select a funnel stage.";
-        if (!values.scope) return "Please select your geographic scope.";
-        if (values.scope === "Single City" && !values.scopeDetail.trim()) {
-          return "Please tell us which city.";
-        }
-        if (values.scope === "Multi-City" && !values.scopeDetail.trim()) {
-          return "Please tell us which cities.";
-        }
-        if (values.scope === "Regional (Multiple States)" && !values.scopeDetail.trim()) {
-          return "Please tell us which states.";
-        }
-        if (values.scope === "International / Global" && !values.scopeRegions.length) {
-          return "Please select at least one region.";
-        }
-      }
-      if (isInsideSales) {
-        if (!values.aht) return "Please select an AHT range.";
-        if (!values.dailyCallTarget) return "Please select a daily call target.";
-        if (!values.dailyTalkTime) return "Please select a daily talk-time range.";
-        if (!values.leadSources.length) return "Please select at least one lead source / process.";
-      }
     }
-    if (step === 4 && isSales) {
-      if (values.bestWin.trim().length < 100) {
-        return "Your best win needs at least 100 characters — specific numbers help recruiters most.";
-      }
-      if (values.toughLoss.trim().length < 100) {
-        return "Your missed-target reflection needs at least 100 characters.";
-      }
-
-      if (values.roleType === "Leading a Team") {
-        if (!values.teamTargetCurrency) return "Please select a currency for your team target.";
-        if (
-          !allFilled([
-            "teamTargetQ1",
-            "teamTargetQ2",
-            "teamTargetQ3",
-            "teamTargetQ4",
-            "teamQuotaQ1",
-            "teamQuotaQ2",
-            "teamQuotaQ3",
-            "teamQuotaQ4",
-          ])
-        ) {
-          return "Please fill in your team's target and achievement % for all 4 quarters.";
-        }
-        if (!values.hasIcTarget) {
-          return "Please tell us whether you also carry an individual sales target.";
-        }
-        if (values.hasIcTarget === "Yes") {
-          if (!values.icTargetCurrency) return "Please select a currency for your individual target.";
-          if (
-            !allFilled(["icTargetQ1", "icTargetQ2", "icTargetQ3", "icTargetQ4", "quotaQ1", "quotaQ2", "quotaQ3", "quotaQ4"])
-          ) {
-            return "Please fill in your individual target and achievement % for all 4 quarters.";
-          }
-        }
-      } else {
-        if (!values.icTargetCurrency) return "Please select a currency for your sales target.";
-        if (
-          !allFilled(["icTargetQ1", "icTargetQ2", "icTargetQ3", "icTargetQ4", "quotaQ1", "quotaQ2", "quotaQ3", "quotaQ4"])
-        ) {
-          return "Please fill in your sales target and achievement % for all 4 quarters.";
-        }
-      }
-    }
-    if (step === 5) {
+    if (step === 3) {
       if (!values.selectedSkills.length) return "Please add at least one skill.";
       if (!values.currentIndustry) return "Please select your current industry.";
       if (values.currentIndustry === "Other" && !values.customCurrentIndustry.trim()) {
@@ -1136,12 +909,6 @@ export default function ApplyForm({
     return null;
   }
 
-  // Smart Skip: step 3 ("Performance") only has content for sales candidates
-  // -- quarterly targets, best-win/missed-target reflections. A non-sales
-  // candidate would otherwise land on a step with nothing to fill in and
-  // just click Continue again, which reads as broken rather than smart.
-  // These two helpers make the skip symmetric in both directions so Back
-  // from step 4 doesn't strand a non-sales candidate back on the empty step.
   const isSalesCategory = values.category === "b2b_sales" || values.category === "b2c_sales";
 
   function goNext() {
@@ -1155,18 +922,12 @@ export default function ApplyForm({
     toast.success(`${completedLabel} completed — profile strength ${profileStrength}%`);
     setStepJustCompleted(true);
     setTimeout(() => setStepJustCompleted(false), 1200);
-    setStep((s) => {
-      const next = s === 3 && !isSalesCategory ? s + 2 : s + 1;
-      return Math.min(next, STEPS.length - 1);
-    });
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
 
   function goBack() {
     setErrorMsg(null);
-    setStep((s) => {
-      const prev = s === 5 && !isSalesCategory ? s - 2 : s - 1;
-      return Math.max(prev, 0);
-    });
+    setStep((s) => Math.max(s - 1, 0));
   }
 
   async function handleSubmit() {
@@ -1199,6 +960,15 @@ export default function ApplyForm({
         resumeFileUrl = path;
       }
 
+      // Round 8: deal size, sales cycle, selling style, motion, segment, scope,
+      // inside-sales detail, and quarterly target/achievement all now live on
+      // the current Career Timeline entry (the one with end_month === null)
+      // instead of as separate global wizard fields -- derive segment_data
+      // from it here so existing CRM filters/matching (which read these exact
+      // top-level segment_data keys) keep working unchanged.
+      const currentTimelineEntry = values.careerTimeline.find((e) => e.end_month === null);
+      const isCurrentTeamLead = !!currentTimelineEntry?.team_size;
+
       const segmentData: Record<string, unknown> = {
         role_level: values.roleLevel,
         role_type: values.roleType === "Leading a Team" ? "Team Lead" : "IC",
@@ -1209,78 +979,88 @@ export default function ApplyForm({
         segmentData.team_size = values.teamSize;
       }
 
-      // Quarterly targets & achievement (last 4 quarters). A team lead always reports
-      // the team's own target + achievement; if they also carry an individual number,
-      // that's reported separately and summed into a computed total per quarter.
-      const icTargets = [values.icTargetQ1, values.icTargetQ2, values.icTargetQ3, values.icTargetQ4]
-        .filter((v) => v.trim() !== "")
-        .map((v) => Number(v));
-      const icAchievement = [values.quotaQ1, values.quotaQ2, values.quotaQ3, values.quotaQ4].filter(
-        (v) => v.trim() !== ""
-      );
-      const teamTargets = [values.teamTargetQ1, values.teamTargetQ2, values.teamTargetQ3, values.teamTargetQ4]
-        .filter((v) => v.trim() !== "")
-        .map((v) => Number(v));
-      const teamAchievement = [
-        values.teamQuotaQ1,
-        values.teamQuotaQ2,
-        values.teamQuotaQ3,
-        values.teamQuotaQ4,
-      ].filter((v) => v.trim() !== "");
+      if (currentTimelineEntry) {
+        // Quarterly targets & achievement (current role only). A team lead
+        // always reports the team's own target + achievement; if they also
+        // carry an individual number, that's reported separately and summed
+        // into a computed total per quarter.
+        const teamTargets = [
+          currentTimelineEntry.target_q1,
+          currentTimelineEntry.target_q2,
+          currentTimelineEntry.target_q3,
+          currentTimelineEntry.target_q4,
+        ]
+          .filter((v): v is string => !!v && v.trim() !== "")
+          .map((v) => Number(v));
+        const teamAchievement = [
+          currentTimelineEntry.achieved_q1,
+          currentTimelineEntry.achieved_q2,
+          currentTimelineEntry.achieved_q3,
+          currentTimelineEntry.achieved_q4,
+        ].filter((v): v is string => !!v && v.trim() !== "");
+        const icTargets = [
+          currentTimelineEntry.ic_target_q1,
+          currentTimelineEntry.ic_target_q2,
+          currentTimelineEntry.ic_target_q3,
+          currentTimelineEntry.ic_target_q4,
+        ]
+          .filter((v): v is string => !!v && v.trim() !== "")
+          .map((v) => Number(v));
+        const icAchievement = [
+          currentTimelineEntry.ic_achieved_q1,
+          currentTimelineEntry.ic_achieved_q2,
+          currentTimelineEntry.ic_achieved_q3,
+          currentTimelineEntry.ic_achieved_q4,
+        ].filter((v): v is string => !!v && v.trim() !== "");
 
-      if (values.roleType === "Leading a Team") {
-        if (teamTargets.length) segmentData.team_targets = teamTargets;
-        if (teamAchievement.length) segmentData.team_quota = teamAchievement;
-        if (values.teamTargetCurrency) segmentData.team_target_currency = values.teamTargetCurrency;
-        if (values.hasIcTarget === "Yes") {
-          if (icTargets.length) segmentData.ic_targets = icTargets;
-          if (icAchievement.length) segmentData.quota = icAchievement;
-          if (values.icTargetCurrency) segmentData.ic_target_currency = values.icTargetCurrency;
-          if (
-            icTargets.length === 4 &&
-            teamTargets.length === 4 &&
-            values.icTargetCurrency &&
-            values.icTargetCurrency === values.teamTargetCurrency
-          ) {
-            segmentData.total_targets = teamTargets.map((t, i) => t + icTargets[i]);
+        if (isCurrentTeamLead) {
+          if (teamTargets.length) segmentData.team_targets = teamTargets;
+          if (teamAchievement.length) segmentData.team_quota = teamAchievement;
+          if (currentTimelineEntry.target_currency) segmentData.team_target_currency = currentTimelineEntry.target_currency;
+          if (currentTimelineEntry.has_ic_target_too === "Yes") {
+            if (icTargets.length) segmentData.ic_targets = icTargets;
+            if (icAchievement.length) segmentData.quota = icAchievement;
+            if (currentTimelineEntry.ic_target_currency) segmentData.ic_target_currency = currentTimelineEntry.ic_target_currency;
+            if (
+              icTargets.length === 4 &&
+              teamTargets.length === 4 &&
+              currentTimelineEntry.ic_target_currency &&
+              currentTimelineEntry.ic_target_currency === currentTimelineEntry.target_currency
+            ) {
+              segmentData.total_targets = teamTargets.map((t, i) => t + icTargets[i]);
+            }
           }
+        } else {
+          if (teamTargets.length) segmentData.ic_targets = teamTargets;
+          if (teamAchievement.length) segmentData.quota = teamAchievement;
+          if (currentTimelineEntry.target_currency) segmentData.ic_target_currency = currentTimelineEntry.target_currency;
         }
-      } else {
-        if (icTargets.length) segmentData.ic_targets = icTargets;
-        if (icAchievement.length) segmentData.quota = icAchievement;
-        if (values.icTargetCurrency) segmentData.ic_target_currency = values.icTargetCurrency;
-      }
 
-      if (values.category === "b2b_sales") {
-        Object.assign(segmentData, {
-          deal_size: values.dealSizeBand || undefined,
-          deal_size_currency: values.dealCurrency || undefined,
-          cycle: values.cycle || undefined,
-          style: values.style || undefined,
-          motion: values.motion.length ? values.motion : undefined,
-          segment: values.segment || undefined,
-        });
-      } else if (values.category === "b2c_sales") {
-        Object.assign(segmentData, {
-          ticket: values.dealSizeBand || undefined,
-          ticket_currency: values.dealCurrency || undefined,
-          funnel: values.funnel || undefined,
-          scope: values.scope || undefined,
-          scope_detail:
-            values.scope === "Single City" || values.scope === "Multi-City" || values.scope === "Regional (Multiple States)"
-              ? values.scopeDetail || undefined
-              : undefined,
-          scope_regions: values.scope === "International / Global" ? values.scopeRegions : undefined,
-        });
-      }
+        if (currentTimelineEntry.category === "b2b_sales") {
+          Object.assign(segmentData, {
+            deal_size: currentTimelineEntry.deal_size_band || undefined,
+            deal_size_currency: currentTimelineEntry.largest_deal_currency || undefined,
+            cycle: currentTimelineEntry.sales_cycle || undefined,
+            style: currentTimelineEntry.selling_style || undefined,
+            motion: currentTimelineEntry.sales_motion || undefined,
+            segment: currentTimelineEntry.customer_segment || undefined,
+          });
+        } else if (currentTimelineEntry.category === "b2c_sales") {
+          Object.assign(segmentData, {
+            ticket: currentTimelineEntry.deal_size_band || undefined,
+            ticket_currency: currentTimelineEntry.largest_deal_currency || undefined,
+            scope: currentTimelineEntry.geo_scope || undefined,
+          });
+        }
 
-      if (isInsideSales) {
-        Object.assign(segmentData, {
-          aht: values.aht || undefined,
-          daily_call_target: values.dailyCallTarget || undefined,
-          daily_talk_time: values.dailyTalkTime || undefined,
-          lead_sources: values.leadSources.length ? values.leadSources : undefined,
-        });
+        if (insideSalesSubDomains.includes(currentTimelineEntry.sub_domain)) {
+          Object.assign(segmentData, {
+            aht: currentTimelineEntry.aht || undefined,
+            daily_call_target: currentTimelineEntry.daily_call_target || undefined,
+            daily_talk_time: currentTimelineEntry.daily_talk_time || undefined,
+            lead_sources: currentTimelineEntry.lead_source ? [currentTimelineEntry.lead_source] : undefined,
+          });
+        }
       }
 
       // Career Timeline now lives inside this same wizard (Step 2), so its
@@ -1322,8 +1102,8 @@ export default function ApplyForm({
         secondary_sub_domains: values.secondarySubDomains.filter((d) => d !== "None — single specialization only"),
         segment_data: segmentData,
         self_assessment: {
-          best: values.bestWin || undefined,
-          lost: values.toughLoss || undefined,
+          best: currentTimelineEntry?.best_win || undefined,
+          lost: currentTimelineEntry?.tough_loss || undefined,
         },
         open_to_relocation: values.openToRelocation || null,
         work_mode: values.workMode || null,
@@ -1362,8 +1142,8 @@ export default function ApplyForm({
         // "applicant" -- submit_candidate never demotes an existing higher stage.
         profile_stage:
           values.secondarySubDomains.filter((d) => d !== "None — single specialization only").length > 0 ||
-          values.bestWin.trim().length > 0 ||
-          values.toughLoss.trim().length > 0 ||
+          (currentTimelineEntry?.best_win?.trim().length ?? 0) > 0 ||
+          (currentTimelineEntry?.tough_loss?.trim().length ?? 0) > 0 ||
           values.travelPreference
             ? "full_profile"
             : "applicant",
@@ -1769,12 +1549,13 @@ export default function ApplyForm({
 
           {step === 2 && (
             <>
-              <FormField label="Current / Last Employer" required>
-                <Input value={values.currentEmployer} onChange={(e) => update("currentEmployer", e.target.value)} />
-              </FormField>
-              <FormField label="Current Job Title" required>
-                <Input value={values.currentJobTitle} onChange={(e) => update("currentJobTitle", e.target.value)} />
-              </FormField>
+              {(values.currentEmployer || values.currentJobTitle) && (
+                <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                  Current role: <span className="font-medium text-slate-700">{values.currentJobTitle || "—"}</span> at{" "}
+                  <span className="font-medium text-slate-700">{values.currentEmployer || "—"}</span> — from your Career
+                  Timeline entry. Edit it on the Career Timeline step if this needs updating.
+                </p>
+              )}
               <FormField label="Employment Status" required>
                 <Select
                   value={values.currentEmploymentStatus}
@@ -1901,7 +1682,7 @@ export default function ApplyForm({
             </>
           )}
 
-          {step === 3 && (
+          {step === 2 && (
             <>
               <FormField label="Function / Domain" required>
                 <Select
@@ -2009,390 +1790,16 @@ export default function ApplyForm({
                     </FormField>
                   )}
 
-                  {isInsideSales && (
-                    <>
-                      <p className="pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        Inside Sales Specifics
-                      </p>
-                      <FormField label="Average Handling Time (AHT)" required>
-                        <Select value={values.aht} onChange={(e) => update("aht", e.target.value)}>
-                          <option value="">Select...</option>
-                          {ahtOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                      <FormField label="Daily Call Target (per user)" required>
-                        <Select
-                          value={values.dailyCallTarget}
-                          onChange={(e) => update("dailyCallTarget", e.target.value)}
-                        >
-                          <option value="">Select...</option>
-                          {dailyCallTargetOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                      <FormField label="Daily Talk-Time (hours, per user)" required>
-                        <Select
-                          value={values.dailyTalkTime}
-                          onChange={(e) => update("dailyTalkTime", e.target.value)}
-                        >
-                          <option value="">Select...</option>
-                          {dailyTalkTimeOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                      <FormField label="Lead Source / Process (select all that apply)" required>
-                        <div className="grid gap-1.5">
-                          {leadSourceOptions.map((o) => (
-                            <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
-                              <input
-                                type="checkbox"
-                                checked={values.leadSources.includes(o)}
-                                onChange={() => toggleArrayValue("leadSources", o)}
-                              />
-                              {o}
-                            </label>
-                          ))}
-                        </div>
-                      </FormField>
-                    </>
-                  )}
-
-                  {values.category === "b2b_sales" && (
-                    <>
-                      <div className="grid grid-cols-2 gap-3">
-                        <FormField label="Deal Size Currency" required>
-                          <Select
-                            value={values.dealCurrency}
-                            onChange={(e) => {
-                              update("dealCurrency", e.target.value as CurrencyValue | "");
-                              update("dealSizeBand", "");
-                            }}
-                          >
-                            <option value="">Select...</option>
-                            {currencyOptions.map((o) => (
-                              <option key={o} value={o}>
-                                {o}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormField>
-                        <FormField label="Typical Deal Size" required>
-                          <Select
-                            value={values.dealSizeBand}
-                            onChange={(e) => update("dealSizeBand", e.target.value)}
-                            disabled={!values.dealCurrency}
-                          >
-                            <option value="">{values.dealCurrency ? "Select..." : "Choose currency first"}</option>
-                            {dealSizeOptions.map((o) => (
-                              <option key={o} value={o}>
-                                {o}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormField>
-                      </div>
-                      <FormField label="Typical Sales Cycle" required>
-                        <Select value={values.cycle} onChange={(e) => update("cycle", e.target.value)}>
-                          <option value="">Select...</option>
-                          {salesCycleOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                      <FormField label="Selling Style" required>
-                        <Select value={values.style} onChange={(e) => update("style", e.target.value)}>
-                          <option value="">Select...</option>
-                          {sellingStyleOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                      <FormField label="Sales Motion (select all that apply)" required>
-                        <div className="grid gap-1.5">
-                          {salesMotionOptions.map((o) => (
-                            <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
-                              <input
-                                type="checkbox"
-                                checked={values.motion.includes(o)}
-                                onChange={() => toggleArrayValue("motion", o)}
-                              />
-                              {o}
-                            </label>
-                          ))}
-                        </div>
-                      </FormField>
-                      <FormField label="Customer Segment" required>
-                        <Select value={values.segment} onChange={(e) => update("segment", e.target.value)}>
-                          <option value="">Select...</option>
-                          {customerSegmentOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                    </>
-                  )}
-
-                  {values.category === "b2c_sales" && (
-                    <>
-                      <div className="grid grid-cols-2 gap-3">
-                        <FormField label="Ticket Size Currency" required>
-                          <Select
-                            value={values.dealCurrency}
-                            onChange={(e) => {
-                              update("dealCurrency", e.target.value as CurrencyValue | "");
-                              update("dealSizeBand", "");
-                            }}
-                          >
-                            <option value="">Select...</option>
-                            {currencyOptions.map((o) => (
-                              <option key={o} value={o}>
-                                {o}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormField>
-                        <FormField label="Typical Ticket Size" required>
-                          <Select
-                            value={values.dealSizeBand}
-                            onChange={(e) => update("dealSizeBand", e.target.value)}
-                            disabled={!values.dealCurrency}
-                          >
-                            <option value="">{values.dealCurrency ? "Select..." : "Choose currency first"}</option>
-                            {dealSizeOptions.map((o) => (
-                              <option key={o} value={o}>
-                                {o}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormField>
-                      </div>
-                      <FormField label="Funnel Stage" required>
-                        <Select value={values.funnel} onChange={(e) => update("funnel", e.target.value)}>
-                          <option value="">Select...</option>
-                          {funnelStageOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                      <FormField label="Geographic Scope" required>
-                        <Select
-                          value={values.scope}
-                          onChange={(e) => {
-                            update("scope", e.target.value);
-                            update("scopeDetail", "");
-                            update("scopeRegions", []);
-                          }}
-                        >
-                          <option value="">Select...</option>
-                          {geographicScopeOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                      {values.scope === "Single City" && (
-                        <FormField label="Which city?" required>
-                          <Input
-                            placeholder="e.g. Mumbai"
-                            value={values.scopeDetail}
-                            onChange={(e) => update("scopeDetail", e.target.value)}
-                          />
-                        </FormField>
-                      )}
-                      {values.scope === "Multi-City" && (
-                        <FormField label="Which cities?" required>
-                          <Input
-                            placeholder="e.g. Mumbai, Pune, Nashik"
-                            value={values.scopeDetail}
-                            onChange={(e) => update("scopeDetail", e.target.value)}
-                          />
-                        </FormField>
-                      )}
-                      {values.scope === "Regional (Multiple States)" && (
-                        <FormField label="Which states?" required>
-                          <Input
-                            placeholder="e.g. Maharashtra, Gujarat, Goa"
-                            value={values.scopeDetail}
-                            onChange={(e) => update("scopeDetail", e.target.value)}
-                          />
-                        </FormField>
-                      )}
-                      {values.scope === "International / Global" && (
-                        <FormField label="Which regions?" required>
-                          <div className="grid grid-cols-2 gap-2">
-                            {internationalRegionOptions.map((r) => (
-                              <label key={r} className="flex items-center gap-2 text-sm text-slate-700">
-                                <input
-                                  type="checkbox"
-                                  checked={values.scopeRegions.includes(r)}
-                                  onChange={() => toggleArrayValue("scopeRegions", r)}
-                                />
-                                {r}
-                              </label>
-                            ))}
-                          </div>
-                        </FormField>
-                      )}
-                    </>
-                  )}
+                  <p className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
+                    Deal size, sales cycle, selling style, sales motion, and other role-specific details are captured on
+                    your current role's Career Timeline entry — you'll find them there, not repeated here.
+                  </p>
                 </>
               )}
             </>
           )}
 
-          {step === 4 && (
-            <>
-              {(values.category === "b2b_sales" || values.category === "b2c_sales") && (
-                <>
-                  {values.roleType === "Leading a Team" && (
-                    <>
-                      <p className="text-sm text-slate-600">
-                        Share your <strong>team&apos;s</strong> overall <strong>quarterly</strong> target (the
-                        number for the full 3-month quarter, not a monthly figure) and achieved % for the last 4
-                        completed quarters, counting back from today — not calendar Q1-Q4 of any particular year.
-                      </p>
-                      <FormField label="Team Target Currency" required>
-                        <Select
-                          value={values.teamTargetCurrency}
-                          onChange={(e) => update("teamTargetCurrency", e.target.value as CurrencyValue | "")}
-                        >
-                          <option value="">Select...</option>
-                          {currencyOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        {quarterField("4 quarters ago", values.teamTargetQ1, (v) => update("teamTargetQ1", v), values.teamQuotaQ1, (v) => update("teamQuotaQ1", v), values.teamTargetCurrency)}
-                        {quarterField("3 quarters ago", values.teamTargetQ2, (v) => update("teamTargetQ2", v), values.teamQuotaQ2, (v) => update("teamQuotaQ2", v), values.teamTargetCurrency)}
-                        {quarterField("2 quarters ago", values.teamTargetQ3, (v) => update("teamTargetQ3", v), values.teamQuotaQ3, (v) => update("teamQuotaQ3", v), values.teamTargetCurrency)}
-                        {quarterField("Most recent completed quarter", values.teamTargetQ4, (v) => update("teamTargetQ4", v), values.teamQuotaQ4, (v) => update("teamQuotaQ4", v), values.teamTargetCurrency)}
-                      </div>
-
-                      <FormField label="Do you also carry your own individual sales target, in addition to the team target?" required>
-                        <Select value={values.hasIcTarget} onChange={(e) => update("hasIcTarget", e.target.value)}>
-                          <option value="">Select...</option>
-                          <option value="Yes">Yes</option>
-                          <option value="No">No — only a team target</option>
-                        </Select>
-                      </FormField>
-                    </>
-                  )}
-
-                  {(values.roleType !== "Leading a Team" || values.hasIcTarget === "Yes") && (
-                    <>
-                      <p className="text-sm text-slate-600">
-                        Share your <strong>individual quarterly</strong> target (the number for the full
-                        3-month quarter, not a monthly figure) and achieved % for the last 4 completed quarters,
-                        counting back from today — not calendar Q1-Q4 of any particular year.
-                      </p>
-                      <FormField label="Individual Target Currency" required>
-                        <Select
-                          value={values.icTargetCurrency}
-                          onChange={(e) => update("icTargetCurrency", e.target.value as CurrencyValue | "")}
-                        >
-                          <option value="">Select...</option>
-                          {currencyOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormField>
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        {quarterField("4 quarters ago", values.icTargetQ1, (v) => update("icTargetQ1", v), values.quotaQ1, (v) => update("quotaQ1", v), values.icTargetCurrency)}
-                        {quarterField("3 quarters ago", values.icTargetQ2, (v) => update("icTargetQ2", v), values.quotaQ2, (v) => update("quotaQ2", v), values.icTargetCurrency)}
-                        {quarterField("2 quarters ago", values.icTargetQ3, (v) => update("icTargetQ3", v), values.quotaQ3, (v) => update("quotaQ3", v), values.icTargetCurrency)}
-                        {quarterField("Most recent completed quarter", values.icTargetQ4, (v) => update("icTargetQ4", v), values.quotaQ4, (v) => update("quotaQ4", v), values.icTargetCurrency)}
-                      </div>
-                    </>
-                  )}
-
-                  {values.roleType === "Leading a Team" &&
-                    values.hasIcTarget === "Yes" &&
-                    [values.teamTargetQ1, values.teamTargetQ2, values.teamTargetQ3, values.teamTargetQ4].every(
-                      (v) => v.trim() !== ""
-                    ) &&
-                    [values.icTargetQ1, values.icTargetQ2, values.icTargetQ3, values.icTargetQ4].every(
-                      (v) => v.trim() !== ""
-                    ) && (
-                      <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                        Total target (team + individual), by quarter:{" "}
-                        {[
-                          Number(values.teamTargetQ1) + Number(values.icTargetQ1),
-                          Number(values.teamTargetQ2) + Number(values.icTargetQ2),
-                          Number(values.teamTargetQ3) + Number(values.icTargetQ3),
-                          Number(values.teamTargetQ4) + Number(values.icTargetQ4),
-                        ].join(" / ")}
-                      </div>
-                    )}
-                </>
-              )}
-              <FormField label="Tell us about your best win" required>
-                <div className="space-y-1">
-                  {values.bestWin.trim().length === 0 && (
-                    <p className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
-                      This is your chance to make a specific, number-driven story stick with a recruiter — a good one gets
-                      remembered long after a resume is closed.
-                    </p>
-                  )}
-                  <p className="text-xs text-slate-500">
-                    Min. 100 characters — e.g. deal size, client, timeline, and why it mattered.
-                  </p>
-                  <textarea
-                    maxLength={500}
-                    placeholder="Describe a deal or achievement you are most proud of."
-                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100"
-                    value={values.bestWin}
-                    onChange={(e) => update("bestWin", e.target.value)}
-                  />
-                  <p className={`text-right text-xs ${values.bestWin.length < 100 ? "text-amber-600" : "text-slate-400"}`}>
-                    {values.bestWin.length} / 500 {values.bestWin.length < 100 ? `(min 100)` : ""}
-                  </p>
-                </div>
-              </FormField>
-              <FormField label="Tell us about a target you missed, and what you learned" required>
-                <div className="space-y-1">
-                  <p className="text-xs text-slate-500">
-                    Min. 100 characters — what happened, and what you changed afterward.
-                  </p>
-                  <textarea
-                    maxLength={500}
-                    placeholder="What happened, and what did you learn from it?"
-                    className="min-h-24 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none transition focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100"
-                    value={values.toughLoss}
-                    onChange={(e) => update("toughLoss", e.target.value)}
-                  />
-                  <p className={`text-right text-xs ${values.toughLoss.length < 100 ? "text-amber-600" : "text-slate-400"}`}>
-                    {values.toughLoss.length} / 500 {values.toughLoss.length < 100 ? `(min 100)` : ""}
-                  </p>
-                </div>
-              </FormField>
-            </>
-          )}
-
-          {step === 5 && (
+          {step === 3 && (
             <>
               <FormField label="Key Skills / Tools" required>
                 <div className="space-y-2">

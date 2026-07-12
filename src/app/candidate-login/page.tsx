@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Mail, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,15 @@ export default function CandidateLoginPage() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Prefills from ?email=... when arriving via the "sign up for future
+  // openings" link after a Quick Apply submission -- read off window.location
+  // directly (rather than useSearchParams) so this plain client component
+  // doesn't need a Suspense boundary for static export.
+  useEffect(() => {
+    const prefill = new URLSearchParams(window.location.search).get("email");
+    if (prefill) setEmail(prefill);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
