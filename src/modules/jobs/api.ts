@@ -84,6 +84,7 @@ export type QuickApplyPayload = {
   resume_file_url: string | null;
   segment_data: Record<string, unknown>;
   consent: boolean;
+  profile_stage?: "lead" | "applicant" | "full_profile";
 };
 
 export async function submitQuickApply(mandateId: string, payload: QuickApplyPayload) {

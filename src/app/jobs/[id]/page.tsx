@@ -31,7 +31,20 @@ import {
   teamSizeOptions,
   categoryOptions,
   subDomainsForCategory,
+  dealSizeBandsFor,
+  salesCycleOptions,
+  sellingStyleOptions,
+  salesMotionOptions,
+  customerSegmentOptions,
+  funnelStageOptions,
+  geographicScopeOptions,
+  insideSalesSubDomains,
+  ahtOptions,
+  dailyCallTargetOptions,
+  dailyTalkTimeOptions,
+  leadSourceOptions,
   type CategoryValue,
+  type CurrencyValue,
 } from "@/modules/apply/options";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -60,6 +73,22 @@ type FormState = {
   subDomainOther: string;
   roleType: string;
   teamSize: string;
+  // Sales Specialization (current role) -- Stage 2 fields, dropdown/multiselect
+  // only per the onboarding design, mirroring ApplyForm's exact segment_data
+  // keys so a candidate who applies here and later opens Build Your Profile
+  // sees this pre-filled rather than asked twice.
+  dealCurrency: CurrencyValue | "";
+  dealSizeBand: string;
+  cycle: string;
+  style: string;
+  motion: string[];
+  segment: string;
+  funnel: string;
+  scope: string;
+  aht: string;
+  dailyCallTarget: string;
+  dailyTalkTime: string;
+  leadSources: string[];
   consent: boolean;
 };
 
@@ -81,6 +110,18 @@ const initialState: FormState = {
   subDomainOther: "",
   roleType: "",
   teamSize: "",
+  dealCurrency: "",
+  dealSizeBand: "",
+  cycle: "",
+  style: "",
+  motion: [],
+  segment: "",
+  funnel: "",
+  scope: "",
+  aht: "",
+  dailyCallTarget: "",
+  dailyTalkTime: "",
+  leadSources: [],
   consent: false,
 };
 
@@ -111,8 +152,27 @@ export default function QuickApplyPage() {
     [values.category]
   );
 
+  const isB2B = values.category === "b2b_sales";
+  const isB2C = values.category === "b2c_sales";
+  const isSalesCategory = isB2B || isB2C;
+  const isInsideSales = insideSalesSubDomains.includes(values.subDomain);
+  const dealBandOptions = useMemo(
+    () => dealSizeBandsFor(values.category || null, values.dealCurrency || ""),
+    [values.category, values.dealCurrency]
+  );
+
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setValues((v) => ({ ...v, [key]: value }));
+  }
+
+  function toggleArrayValue(key: "motion" | "leadSources", value: string) {
+    setValues((v) => {
+      const current = v[key];
+      return {
+        ...v,
+        [key]: current.includes(value) ? current.filter((x) => x !== value) : [...current, value],
+      };
+    });
   }
 
   function validate(): string | null {
@@ -153,6 +213,35 @@ export default function QuickApplyPage() {
         segmentData.team_size = values.teamSize;
       }
 
+      // Sales Specialization (current role) -- same segment_data keys ApplyForm
+      // uses, so this data shows up pre-filled rather than re-asked if the
+      // candidate later opens Build Your Profile.
+      if (isB2B) {
+        Object.assign(segmentData, {
+          deal_size: values.dealSizeBand || undefined,
+          deal_size_currency: values.dealCurrency || undefined,
+          cycle: values.cycle || undefined,
+          style: values.style || undefined,
+          motion: values.motion.length ? values.motion : undefined,
+          segment: values.segment || undefined,
+        });
+      } else if (isB2C) {
+        Object.assign(segmentData, {
+          ticket: values.dealSizeBand || undefined,
+          ticket_currency: values.dealCurrency || undefined,
+          funnel: values.funnel || undefined,
+          scope: values.scope || undefined,
+        });
+      }
+      if (isInsideSales) {
+        Object.assign(segmentData, {
+          aht: values.aht || undefined,
+          daily_call_target: values.dailyCallTarget || undefined,
+          daily_talk_time: values.dailyTalkTime || undefined,
+          lead_sources: values.leadSources.length ? values.leadSources : undefined,
+        });
+      }
+
       let resumeFileUrl: string | null = null;
       if (resumeFile) {
         const path = `${crypto.randomUUID()}-${resumeFile.name}`;
@@ -182,6 +271,7 @@ export default function QuickApplyPage() {
         resume_file_url: resumeFileUrl,
         segment_data: segmentData,
         consent: values.consent,
+        profile_stage: "applicant",
       });
       setSubmitted(true);
       toast.success("Application submitted — a recruiter will be in touch.");
@@ -529,6 +619,181 @@ export default function QuickApplyPage() {
                 </Select>
               </FormField>
             )}
+
+            {isSalesCategory && (
+              <>
+                <div className="sm:col-span-2">
+                  <p className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
+                    A few quick details about your current role — adding these noticeably increases your chances of being
+                    shortlisted for this mandate.
+                  </p>
+                </div>
+                <FormField label="Sales cycle">
+                  <Select value={values.cycle} onChange={(e) => set("cycle", e.target.value)}>
+                    <option value="">Select...</option>
+                    {salesCycleOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField label="Selling style">
+                  <Select value={values.style} onChange={(e) => set("style", e.target.value)}>
+                    <option value="">Select...</option>
+                    {sellingStyleOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField
+                  label={isB2B ? "Typical deal size" : "Typical ticket size"}
+                  className={values.dealCurrency ? "" : ""}
+                >
+                  <div className="mb-1 flex items-center justify-end gap-1 text-xs text-slate-500">
+                    <button
+                      type="button"
+                      onClick={() => set("dealCurrency", values.dealCurrency === "USD" ? "INR" : "USD")}
+                      className="font-medium text-blue-600"
+                    >
+                      ({values.dealCurrency || "INR"})
+                    </button>
+                  </div>
+                  <Select
+                    value={values.dealSizeBand}
+                    onChange={(e) => {
+                      if (!values.dealCurrency) set("dealCurrency", "INR");
+                      set("dealSizeBand", e.target.value);
+                    }}
+                  >
+                    <option value="">Select...</option>
+                    {dealBandOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                {isB2B ? (
+                  <FormField label="Customer segment">
+                    <Select value={values.segment} onChange={(e) => set("segment", e.target.value)}>
+                      <option value="">Select...</option>
+                      {customerSegmentOptions.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                ) : (
+                  <>
+                    <FormField label="Sales motion">
+                      <Select value={values.funnel} onChange={(e) => set("funnel", e.target.value)}>
+                        <option value="">Select...</option>
+                        {funnelStageOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField label="Geographic scope">
+                      <Select value={values.scope} onChange={(e) => set("scope", e.target.value)}>
+                        <option value="">Select...</option>
+                        {geographicScopeOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                  </>
+                )}
+                {isB2B && (
+                  <FormField label="Sales motion" className="sm:col-span-2">
+                    <div className="flex flex-wrap gap-2">
+                      {salesMotionOptions.map((o) => {
+                        const active = values.motion.includes(o);
+                        return (
+                          <button
+                            type="button"
+                            key={o}
+                            onClick={() => toggleArrayValue("motion", o)}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                              active
+                                ? "border-slate-900 bg-slate-900 text-white"
+                                : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                            }`}
+                          >
+                            {active ? "✓ " : "+ "}
+                            {o}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </FormField>
+                )}
+                {isInsideSales && (
+                  <>
+                    <FormField label="Average handling time (AHT)">
+                      <Select value={values.aht} onChange={(e) => set("aht", e.target.value)}>
+                        <option value="">Select...</option>
+                        {ahtOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField label="Daily call target">
+                      <Select value={values.dailyCallTarget} onChange={(e) => set("dailyCallTarget", e.target.value)}>
+                        <option value="">Select...</option>
+                        {dailyCallTargetOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField label="Daily talk time">
+                      <Select value={values.dailyTalkTime} onChange={(e) => set("dailyTalkTime", e.target.value)}>
+                        <option value="">Select...</option>
+                        {dailyTalkTimeOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField label="Primary lead sources" className="sm:col-span-2">
+                      <div className="flex flex-wrap gap-2">
+                        {leadSourceOptions.map((o) => {
+                          const active = values.leadSources.includes(o);
+                          return (
+                            <button
+                              type="button"
+                              key={o}
+                              onClick={() => toggleArrayValue("leadSources", o)}
+                              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                                active
+                                  ? "border-slate-900 bg-slate-900 text-white"
+                                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                              }`}
+                            >
+                              {active ? "✓ " : "+ "}
+                              {o}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </FormField>
+                  </>
+                )}
+              </>
+            )}
+
             <FormField label="Resume" required className="sm:col-span-2">
               <label
                 htmlFor="resume-upload"
