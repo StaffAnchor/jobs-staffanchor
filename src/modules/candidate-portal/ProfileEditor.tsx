@@ -86,6 +86,11 @@ export type CandidateProfile = {
   skills: string | null;
   self_assessment: { best?: string; lost?: string } | null;
   status: string;
+  career_timeline_profile?: unknown;
+  career_timeline_resume?: unknown;
+  stability_score?: number | null;
+  domain_consistency_score?: number | null;
+  resume_text?: string | null;
 };
 
 function seg(data: Record<string, unknown> | null, key: string): string {

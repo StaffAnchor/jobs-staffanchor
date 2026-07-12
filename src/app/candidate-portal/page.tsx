@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
 import { type CandidateProfile } from "@/modules/candidate-portal/ProfileEditor";
 import ApplyForm from "@/modules/apply/ApplyForm";
+import CareerTimelinePanel from "@/modules/candidate-portal/CareerTimelinePanel";
 import MyPipeline from "@/modules/candidate-portal/MyPipeline";
 import ReferEarn from "@/modules/candidate-portal/ReferEarn";
 import MandatoryBasicsGate from "@/modules/candidate-portal/MandatoryBasicsGate";
@@ -223,7 +224,19 @@ export default function CandidatePortalPage() {
       </div>
 
       {tab === "profile" ? (
-        <ApplyForm existingProfile={profile} onSaved={() => loadProfile()} />
+        <>
+          <ApplyForm existingProfile={profile} onSaved={() => loadProfile()} />
+          <div className="mx-auto max-w-3xl px-4 pb-10 sm:px-6 lg:px-8">
+            <CareerTimelinePanel
+              candidateId={profile.id}
+              currentEmployer={profile.current_employer ?? null}
+              initialProfileEntries={(profile.career_timeline_profile ?? []) as never}
+              initialResumeEntries={(profile.career_timeline_resume ?? []) as never}
+              initialStabilityScore={profile.stability_score ?? null}
+              initialDomainConsistencyScore={profile.domain_consistency_score ?? null}
+            />
+          </div>
+        </>
       ) : (
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-start gap-3">
