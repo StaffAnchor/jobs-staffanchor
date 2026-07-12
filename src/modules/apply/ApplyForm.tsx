@@ -63,6 +63,40 @@ import {
   type CurrencyValue,
 } from "@/modules/apply/options";
 
+// Live parse-on-upload: the "magical triage checklist" shown while
+// /api/parse-resume-preview reads the just-attached resume. Purely cosmetic
+// staged reveal (not literally tied to server progress, since a single fetch
+// has no intermediate progress events) -- but paced to roughly match how long
+// the real extraction takes, so it reads as "working" rather than "fake".
+const TRIAGE_STEPS = [
+  "Reading your resume…",
+  "Finding your current role…",
+  "Mapping your specialty…",
+  "Almost done…",
+];
+
+// Shape returned by /api/parse-resume-preview -- kept in sync manually with
+// that route's ParsedResumePreview type (avoided a cross-import from an API
+// route module to keep this component decoupled from route internals).
+type ResumeExtraction = {
+  full_name: string | null;
+  phone: string | null;
+  linkedin_url: string | null;
+  current_employer: string | null;
+  current_job_title: string | null;
+  total_experience_years: number | null;
+  highest_qualification: string | null;
+  current_industry: string | null;
+  skills: string[];
+  category_guess: "b2b_sales" | "b2c_sales" | "non_sales" | "" | null;
+};
+
+function findMatchingOption(options: readonly string[], raw: string | null): string | null {
+  if (!raw) return null;
+  const norm = raw.trim().toLowerCase();
+  return options.find((o) => o.toLowerCase() === norm || o.toLowerCase().includes(norm) || norm.includes(o.toLowerCase())) ?? null;
+}
+
 const FALLBACK_QUOTES = [
   "Every great career move starts with five honest minutes. Let's get yours on record.",
   "A little context now saves both of us the back-and-forth later.",
@@ -476,6 +510,17 @@ export default function ApplyForm({
   );
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const hasExistingResume = !!existingProfile?.resume_file_url;
+  // Live parse-on-upload preview state (Sales Passport "magical resume-triage"
+  // step). Entirely additive over the existing resumeFile/values state --
+  // resumeFile itself, its eventual upload to storage, and the final DB
+  // submission payload are all untouched. This only pre-fills `values` via
+  // the same `update()` setter every other field already uses, gated behind
+  // an explicit "looks right?" confirmation so a bad AI guess never silently
+  // overwrites what a candidate typed themselves.
+  const [resumeParseStatus, setResumeParseStatus] = useState<"idle" | "parsing" | "done">("idle");
+  const [resumeExtraction, setResumeExtraction] = useState<ResumeExtraction | null>(null);
+  const [extractionHandled, setExtractionHandled] = useState(false);
+  const [triageStepIndex, setTriageStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -724,6 +769,71 @@ export default function ApplyForm({
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function parseResumeLive(file: File) {
+    setResumeExtraction(null);
+    setExtractionHandled(false);
+    setResumeParseStatus("parsing");
+    setTriageStepIndex(0);
+    const stepTimer = setInterval(() => {
+      setTriageStepIndex((i) => Math.min(i + 1, TRIAGE_STEPS.length - 1));
+    }, 650);
+    try {
+      const fd = new FormData();
+      fd.append("resume", file);
+      const res = await fetch("/api/parse-resume-preview", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data?.ok && data.fields) {
+        setResumeExtraction(data.fields as ResumeExtraction);
+        setResumeParseStatus("done");
+      } else {
+        // Nothing usable came back (unparseable file, no API key configured,
+        // model failure) -- fall back silently to the plain, un-prefilled
+        // form rather than showing an error for what is a pure enhancement.
+        setResumeParseStatus("idle");
+      }
+    } catch {
+      setResumeParseStatus("idle");
+    } finally {
+      clearInterval(stepTimer);
+    }
+  }
+
+  // Applies every non-empty extracted field into the existing FormState via
+  // the same `update()`/setValues path used everywhere else in the wizard --
+  // no new state shape, no bypass of validation later in the flow. Only
+  // called when the candidate explicitly confirms the verification card.
+  function applyResumeExtraction() {
+    if (!resumeExtraction) return;
+    const matchedQualification = findMatchingOption(highestQualificationOptions, resumeExtraction.highest_qualification);
+    const matchedIndustry = findMatchingOption(industryOptions, resumeExtraction.current_industry);
+    setValues((prev) => ({
+      ...prev,
+      fullName: resumeExtraction.full_name || prev.fullName,
+      phone: resumeExtraction.phone ? resumeExtraction.phone.replace(/\D/g, "").slice(-10) : prev.phone,
+      linkedinUrl: resumeExtraction.linkedin_url || prev.linkedinUrl,
+      currentEmployer: resumeExtraction.current_employer || prev.currentEmployer,
+      currentJobTitle: resumeExtraction.current_job_title || prev.currentJobTitle,
+      totalExperienceYears:
+        resumeExtraction.total_experience_years != null
+          ? String(Math.min(41, Math.max(0, resumeExtraction.total_experience_years)))
+          : prev.totalExperienceYears,
+      highestQualification: matchedQualification || (resumeExtraction.highest_qualification ? "Other" : prev.highestQualification),
+      customQualification:
+        !matchedQualification && resumeExtraction.highest_qualification
+          ? resumeExtraction.highest_qualification
+          : prev.customQualification,
+      currentIndustry: matchedIndustry || (resumeExtraction.current_industry ? "Other" : prev.currentIndustry),
+      customCurrentIndustry:
+        !matchedIndustry && resumeExtraction.current_industry ? resumeExtraction.current_industry : prev.customCurrentIndustry,
+      category: resumeExtraction.category_guess || prev.category,
+      selectedSkills:
+        resumeExtraction.skills.length > 0
+          ? Array.from(new Set([...prev.selectedSkills, ...resumeExtraction.skills]))
+          : prev.selectedSkills,
+    }));
+    setExtractionHandled(true);
   }
 
   function toggleArrayValue(
@@ -1365,11 +1475,88 @@ export default function ApplyForm({
                     id="resume-upload"
                     type="file"
                     accept=".pdf,.doc,.docx"
-                    onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      setResumeFile(file);
+                      if (file && /\.(pdf|docx)$/i.test(file.name)) {
+                        parseResumeLive(file);
+                      } else {
+                        setResumeParseStatus("idle");
+                        setResumeExtraction(null);
+                      }
+                    }}
                     className="hidden"
                   />
                 </label>
               </FormField>
+
+              {resumeParseStatus === "parsing" && (
+                <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3.5 transition-all duration-300">
+                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-blue-700">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-600" />
+                    Scanning your resume
+                  </p>
+                  <ul className="space-y-1.5">
+                    {TRIAGE_STEPS.map((label, i) => (
+                      <li key={label} className="flex items-center gap-2 text-xs">
+                        <span
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] transition-colors duration-300 ${
+                            i < triageStepIndex
+                              ? "bg-emerald-500 text-white"
+                              : i === triageStepIndex
+                                ? "bg-blue-600 text-white"
+                                : "bg-slate-200 text-slate-400"
+                          }`}
+                        >
+                          {i < triageStepIndex ? "✓" : ""}
+                        </span>
+                        <span className={i <= triageStepIndex ? "text-slate-700" : "text-slate-400"}>{label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {resumeParseStatus === "done" && resumeExtraction && !extractionHandled && (
+                <div className="space-y-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3.5 transition-all duration-300">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Here&apos;s what we found in your resume
+                  </p>
+                  <ul className="space-y-1 text-xs text-slate-700">
+                    {resumeExtraction.full_name && <li>• Name: {resumeExtraction.full_name}</li>}
+                    {resumeExtraction.current_employer && (
+                      <li>
+                        • Current role: {resumeExtraction.current_job_title || "—"} at {resumeExtraction.current_employer}
+                      </li>
+                    )}
+                    {resumeExtraction.total_experience_years != null && (
+                      <li>• Experience: ~{resumeExtraction.total_experience_years} years</li>
+                    )}
+                    {resumeExtraction.highest_qualification && <li>• Qualification: {resumeExtraction.highest_qualification}</li>}
+                    {resumeExtraction.current_industry && <li>• Industry: {resumeExtraction.current_industry}</li>}
+                    {resumeExtraction.skills.length > 0 && <li>• Skills: {resumeExtraction.skills.join(", ")}</li>}
+                  </ul>
+                  <p className="text-[11px] text-emerald-700/80">
+                    Look right? We&apos;ll pre-fill the next steps so you don&apos;t have to retype it.
+                  </p>
+                  <div className="flex gap-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={applyResumeExtraction}
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] hover:bg-emerald-700 active:scale-[0.98]"
+                    >
+                      Looks right, use this
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExtractionHandled(true)}
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-all duration-200 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] hover:border-slate-400 active:scale-[0.98]"
+                    >
+                      I&apos;ll fill it myself
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
