@@ -14,7 +14,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabaseClient";
 import {
   b2bSubDomains,
   b2cSubDomains,
@@ -33,7 +32,6 @@ import {
   dailyTalkTimeOptions,
   leadSourceOptions,
   teamSizeOptions,
-  achievementBandOptions,
   renewalRateBandOptions,
   winRateBandOptions,
   geographicScopeOptions,
@@ -50,6 +48,15 @@ import {
   type ProfileTimelineEntry,
   type ResumeTimelineEntry,
 } from "@/lib/career-timeline";
+
+// Controlled component: this used to own its own Supabase read/write
+// (candidateId + immediate per-role .update() calls), rendered as a
+// separate always-visible panel below the "Build Your Profile" wizard. It
+// is now Step 2 of that same wizard (see ApplyForm.tsx) -- entries live in
+// the wizard's own `values.careerTimeline` state and are only persisted for
+// real when the whole wizard is submitted, exactly like every other field.
+// This avoids the previous confusing UX where "Passport Readiness" moved on
+// one part of the screen while Career Timeline silently saved itself below.
 
 const CATEGORY_OPTIONS: { value: ProfileTimelineEntry["category"]; label: string }[] = [
   { value: "b2b_sales", label: "B2B Sales" },
@@ -109,25 +116,19 @@ function monthLabel(m: string | null): string {
 }
 
 export default function CareerTimelinePanel({
-  candidateId,
+  entries,
+  onChange,
   currentEmployer,
-  initialProfileEntries,
-  initialResumeEntries,
-  initialStabilityScore,
-  initialDomainConsistencyScore,
+  resumeEntries,
 }: {
-  candidateId: string;
+  entries: ProfileTimelineEntry[];
+  onChange: (next: ProfileTimelineEntry[]) => void;
   currentEmployer: string | null;
-  initialProfileEntries: ProfileTimelineEntry[];
-  initialResumeEntries: ResumeTimelineEntry[];
-  initialStabilityScore: number | null;
-  initialDomainConsistencyScore: number | null;
+  resumeEntries: ResumeTimelineEntry[];
 }) {
-  const [profileEntries, setProfileEntries] = useState<ProfileTimelineEntry[]>(initialProfileEntries ?? []);
-  const [resumeEntries] = useState<ResumeTimelineEntry[]>(initialResumeEntries ?? []);
+  const profileEntries = entries ?? [];
   const [form, setForm] = useState<ProfileTimelineEntry | null>(null);
   const [dealCurrency, setDealCurrency] = useState<CurrencyValue>("INR");
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const merged = useMemo(() => mergeTimelines(profileEntries, resumeEntries), [profileEntries, resumeEntries]);
@@ -138,51 +139,33 @@ export default function CareerTimelinePanel({
     [profileEntries, resumeEntries, currentEmployer]
   );
 
-  const stabilityScore = stability?.score ?? initialStabilityScore;
+  const stabilityScore = stability?.score ?? null;
   const stabilityLabel = stability?.label;
-  const domainScore = domainConsistency?.score ?? initialDomainConsistencyScore;
+  const domainScore = domainConsistency?.score ?? null;
 
   function set<K extends keyof ProfileTimelineEntry>(key: K, value: ProfileTimelineEntry[K]) {
     setForm((f) => (f ? { ...f, [key]: value } : f));
   }
 
-  async function persistEntries(next: ProfileTimelineEntry[]) {
-    setSaving(true);
-    setError("");
-    const merged2 = mergeTimelines(next, resumeEntries);
-    const stab = computeStabilityScore(merged2);
-    const dom = computeDomainConsistencyScore(next);
-    const { error: err } = await supabase
-      .from("candidates")
-      .update({
-        career_timeline_profile: next,
-        stability_score: stab?.score ?? null,
-        domain_consistency_score: dom?.score ?? null,
-      })
-      .eq("id", candidateId);
-    setSaving(false);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    setProfileEntries(next);
-  }
-
-  async function handleSaveForm() {
+  // Purely local state updates now -- no network call, no candidateId. The
+  // wizard's own submit (or its background progressive-save) is what
+  // actually persists this array, exactly like every other field on the form.
+  function handleSaveForm() {
     if (!form) return;
     if (!form.company.trim() || !form.start_month) {
       setError("Company and start month are required.");
       return;
     }
+    setError("");
     const exists = profileEntries.some((e) => e.id === form.id);
     const next = exists ? profileEntries.map((e) => (e.id === form.id ? form : e)) : [...profileEntries, form];
-    await persistEntries(next);
+    onChange(next);
     setForm(null);
   }
 
-  async function handleDelete(id: string) {
+  function handleDelete(id: string) {
     if (!window.confirm("Remove this role from your timeline?")) return;
-    await persistEntries(profileEntries.filter((e) => e.id !== id));
+    onChange(profileEntries.filter((e) => e.id !== id));
   }
 
   function startAdd(prefill?: Partial<ProfileTimelineEntry>) {
@@ -603,7 +586,7 @@ export default function CareerTimelinePanel({
                 Revenue impact{" "}
                 <span className="normal-case font-normal text-slate-400">
                   {isCurrentRole
-                    ? "-- helps recruiters shortlist you faster"
+                    ? "-- your target vs. achievement for this role is captured in the Performance step"
                     : "-- a quick average is fine, exact numbers aren't expected for older roles"}
                 </span>
               </p>
@@ -616,22 +599,7 @@ export default function CareerTimelinePanel({
                     onChange={(e) => set("revenue_generated", e.target.value)}
                   />
                 </div>
-                {isCurrentRole ? (
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">Quota attainment</label>
-                    <Select
-                      value={form.quota_attainment_band ?? ""}
-                      onChange={(e) => set("quota_attainment_band", e.target.value)}
-                    >
-                      <option value="">Select...</option>
-                      {achievementBandOptions.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                ) : (
+                {!isCurrentRole && (
                   <div>
                     <label className="mb-1 block text-xs text-slate-500">Average quarterly target</label>
                     <Select
@@ -763,8 +731,8 @@ export default function CareerTimelinePanel({
             </div>
 
             <div className="flex gap-2 pt-1">
-              <Button onClick={handleSaveForm} disabled={saving} className="flex-1">
-                {saving ? "Saving..." : "Save role"}
+              <Button onClick={handleSaveForm} className="flex-1">
+                Save role
               </Button>
               <Button variant="outline" onClick={() => setForm(null)}>
                 Cancel

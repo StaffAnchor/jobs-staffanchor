@@ -19,9 +19,13 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 import {
   computeCareerGaps,
+  computeStabilityScore,
+  computeDomainConsistencyScore,
+  mergeTimelines,
   type ProfileTimelineEntry,
   type ResumeTimelineEntry,
 } from "@/lib/career-timeline";
+import CareerTimelinePanel from "@/modules/candidate-portal/CareerTimelinePanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -184,6 +188,11 @@ type FormState = {
   customIndustry: string;
   noOtherIndustries: boolean;
   consent: boolean;
+  // Career Timeline now lives inside the same wizard (its own step, right
+  // after Basic Information) instead of a separate always-visible panel --
+  // see ApplyForm's "Career Timeline" step render + CareerTimelinePanel,
+  // which is now a controlled component driven entirely by this array.
+  careerTimeline: ProfileTimelineEntry[];
 };
 
 const initialState: FormState = {
@@ -260,13 +269,21 @@ const initialState: FormState = {
   customIndustry: "",
   noOtherIndustries: false,
   consent: false,
+  careerTimeline: [],
 };
 
-const STEPS = ["Basic Information", "Career & Compensation", "Sales Specialization", "Performance", "Preferences & Submit"] as const;
+const STEPS = [
+  "Basic Information",
+  "Career Timeline",
+  "Career & Compensation",
+  "Sales Specialization",
+  "Performance",
+  "Preferences & Submit",
+] as const;
 
-const STEP_TIME_MINUTES = [1, 1.5, 2, 1.5, 1];
+const STEP_TIME_MINUTES = [1, 1.5, 1.5, 2, 1.5, 1];
 
-const STEP_WEIGHTS = [20, 20, 25, 20, 15];
+const STEP_WEIGHTS = [15, 15, 20, 20, 15, 15];
 
 const STEP_META = [
   {
@@ -274,6 +291,12 @@ const STEP_META = [
     eyebrow: "Basic Information",
     heading: "Let's start with the basics",
     subtext: "Your contact details and resume — how a recruiter actually reaches you.",
+  },
+  {
+    icon: Briefcase,
+    eyebrow: "Career Timeline",
+    heading: "Walk us through your career",
+    subtext: "Add every role, most recent first — this is what turns a resume into a story recruiters can pitch.",
   },
   {
     icon: Briefcase,
@@ -303,10 +326,11 @@ const STEP_META = [
 
 const STEP_TIPS: Record<number, string> = {
   0: "Recruiters reach out fastest when your contact details and resume are on record.",
-  1: "Comp and experience are what let a recruiter tell whether a mandate is even a fit — before wasting your time on a call.",
-  2: "Specialization is what makes you findable. Generalist profiles get buried; specific ones get shortlisted.",
-  3: "Real target vs. achievement is the single most-checked detail on a sales profile. Specific numbers get 3x more recruiter attention than vague claims.",
-  4: "Almost done — skills and industries are how recruiters filter and find you for the right mandate.",
+  1: "A full career timeline is the single biggest thing that turns a resume into a story a recruiter can actually pitch to a client.",
+  2: "Comp and experience are what let a recruiter tell whether a mandate is even a fit — before wasting your time on a call.",
+  3: "Specialization is what makes you findable. Generalist profiles get buried; specific ones get shortlisted.",
+  4: "Real target vs. achievement is the single most-checked detail on a sales profile. Specific numbers get 3x more recruiter attention than vague claims.",
+  5: "Almost done — skills and industries are how recruiters filter and find you for the right mandate.",
 };
 
 const DRAFT_STORAGE_KEY = "sa_candidate_draft_v1";
@@ -516,6 +540,7 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
       };
     })(),
     consent: true,
+    careerTimeline: ((p.career_timeline_profile ?? []) as ProfileTimelineEntry[]),
   };
 }
 
@@ -728,35 +753,28 @@ export default function ApplyForm({
       return Array.isArray(v) ? v.length > 0 : String(v).trim() !== "";
     }).length;
 
-    // Career Timeline counts as its own weighted section (3 units, same as any
-    // other field) rather than one line item per job -- a candidate with a
-    // short work history isn't penalized the way a literal per-job checklist
-    // would, while someone who's confirmed nothing still reads as incomplete.
-    // Only meaningful once a Career Timeline actually exists to score (i.e. in
-    // the candidate portal, via existingProfile) -- the anonymous signup/apply
-    // flow has no timeline yet, so this section simply doesn't apply there.
-    let timelineWeight = 0;
+    // Career Timeline is now its own step in this same wizard (values.careerTimeline),
+    // so it's scored as a regular 3-unit section rather than a special
+    // edit-mode-only bonus -- every candidate fills it, on signup or profile edit alike.
+    let timelineWeight = 3;
     let timelineScore = 0;
-    const timelineEntries = (existingProfile?.career_timeline_profile ?? []) as ProfileTimelineEntry[];
+    const timelineEntries = values.careerTimeline ?? [];
     const resumeEntries = (existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[];
-    if (isEditMode) {
-      timelineWeight = 3;
-      if (timelineEntries.length > 0) timelineScore += 1;
-      const mostRecent = [...timelineEntries].sort((a, b) => (a.start_month < b.start_month ? 1 : -1))[0];
-      if (mostRecent && (mostRecent.quota_attainment_band || mostRecent.revenue_generated)) timelineScore += 1;
-      const gaps = computeCareerGaps({
-        profileEntries: timelineEntries,
-        resumeEntries,
-        currentEmployer: values.currentEmployer || null,
-      });
-      const unresolvedResumeFlags = gaps.filter((g) => g.type === "resume_not_in_profile").length;
-      if (resumeEntries.length === 0 || unresolvedResumeFlags === 0) timelineScore += 1;
-    }
+    if (timelineEntries.length > 0) timelineScore += 1;
+    const mostRecent = [...timelineEntries].sort((a, b) => (a.start_month < b.start_month ? 1 : -1))[0];
+    if (mostRecent && (mostRecent.quota_attainment_band || mostRecent.revenue_generated)) timelineScore += 1;
+    const gaps = computeCareerGaps({
+      profileEntries: timelineEntries,
+      resumeEntries,
+      currentEmployer: values.currentEmployer || null,
+    });
+    const unresolvedResumeFlags = gaps.filter((g) => g.type === "resume_not_in_profile").length;
+    if (resumeEntries.length === 0 || unresolvedResumeFlags === 0) timelineScore += 1;
 
     const totalUnits = applicableFields.length + timelineWeight;
     const filledUnits = filled + timelineScore;
     return Math.round((filledUnits / totalUnits) * 100);
-  }, [values, isEditMode, existingProfile]);
+  }, [values, existingProfile]);
 
   const minutesLeft = useMemo(
     () => STEP_TIME_MINUTES.slice(step).reduce((a, b) => a + b, 0),
@@ -989,7 +1007,7 @@ export default function ApplyForm({
       if (!values.linkedinUrl.trim()) return "LinkedIn profile URL is required.";
       if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
     }
-    if (step === 1) {
+    if (step === 2) {
       if (!values.currentEmploymentStatus) return "Employment status is required.";
       if (!values.totalExperienceYears) return "Total experience is required.";
       if (!values.currentFixedCtc) return "Current fixed CTC is required.";
@@ -1012,7 +1030,7 @@ export default function ApplyForm({
         return "Please specify your qualification.";
       }
     }
-    if (step === 2) {
+    if (step === 3) {
       if (!values.category) return "Please select your function / domain.";
       if (!values.subDomain) return "Please select your primary specialization.";
       if (values.subDomain === "Other" && !values.customSubDomain.trim()) {
@@ -1057,7 +1075,7 @@ export default function ApplyForm({
         if (!values.leadSources.length) return "Please select at least one lead source / process.";
       }
     }
-    if (step === 3 && isSales) {
+    if (step === 4 && isSales) {
       if (values.bestWin.trim().length < 100) {
         return "Your best win needs at least 100 characters — specific numbers help recruiters most.";
       }
@@ -1101,7 +1119,7 @@ export default function ApplyForm({
         }
       }
     }
-    if (step === 4) {
+    if (step === 5) {
       if (!values.selectedSkills.length) return "Please add at least one skill.";
       if (!values.currentIndustry) return "Please select your current industry.";
       if (values.currentIndustry === "Other" && !values.customCurrentIndustry.trim()) {
@@ -1138,7 +1156,7 @@ export default function ApplyForm({
     setStepJustCompleted(true);
     setTimeout(() => setStepJustCompleted(false), 1200);
     setStep((s) => {
-      const next = s === 2 && !isSalesCategory ? s + 2 : s + 1;
+      const next = s === 3 && !isSalesCategory ? s + 2 : s + 1;
       return Math.min(next, STEPS.length - 1);
     });
   }
@@ -1146,7 +1164,7 @@ export default function ApplyForm({
   function goBack() {
     setErrorMsg(null);
     setStep((s) => {
-      const prev = s === 4 && !isSalesCategory ? s - 2 : s - 1;
+      const prev = s === 5 && !isSalesCategory ? s - 2 : s - 1;
       return Math.max(prev, 0);
     });
   }
@@ -1265,6 +1283,14 @@ export default function ApplyForm({
         });
       }
 
+      // Career Timeline now lives inside this same wizard (Step 2), so its
+      // scores get computed and saved alongside everything else in this one
+      // submit -- no separate save action, no separate DB write.
+      const resumeTimelineEntries = (existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[];
+      const mergedTimeline = mergeTimelines(values.careerTimeline, resumeTimelineEntries);
+      const stabilityResult = computeStabilityScore(mergedTimeline);
+      const domainResult = computeDomainConsistencyScore(values.careerTimeline);
+
       const payload = {
         full_name: values.fullName.trim(),
         email: values.email.trim(),
@@ -1325,6 +1351,9 @@ export default function ApplyForm({
           )
         ),
         skills: values.selectedSkills.length ? values.selectedSkills.join(", ") : null,
+        career_timeline_profile: values.careerTimeline,
+        stability_score: stabilityResult?.score ?? null,
+        domain_consistency_score: domainResult?.score ?? null,
         consent: values.consent,
         // Reaching this final submit with the Stage-3-only fields (secondary
         // specializations, self-assessment write-ups, travel preference) filled
@@ -1458,7 +1487,7 @@ export default function ApplyForm({
                     // over it, so the step list should say so rather than
                     // showing a step they'll never actually land on as
                     // "Pending" forever.
-                    const isSkipped = i === 3 && !isSalesCategory;
+                    const isSkipped = i === 4 && !isSalesCategory;
                     return (
                       <li key={label} className="flex gap-3">
                         <div className="flex flex-col items-center">
@@ -1730,6 +1759,15 @@ export default function ApplyForm({
           )}
 
           {step === 1 && (
+            <CareerTimelinePanel
+              entries={values.careerTimeline}
+              onChange={(next) => update("careerTimeline", next)}
+              currentEmployer={values.currentEmployer || null}
+              resumeEntries={(existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[]}
+            />
+          )}
+
+          {step === 2 && (
             <>
               <FormField label="Current / Last Employer" required>
                 <Input value={values.currentEmployer} onChange={(e) => update("currentEmployer", e.target.value)} />
@@ -1863,7 +1901,7 @@ export default function ApplyForm({
             </>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <>
               <FormField label="Function / Domain" required>
                 <Select
@@ -2221,7 +2259,7 @@ export default function ApplyForm({
             </>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <>
               {(values.category === "b2b_sales" || values.category === "b2c_sales") && (
                 <>
@@ -2354,7 +2392,7 @@ export default function ApplyForm({
             </>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <>
               <FormField label="Key Skills / Tools" required>
                 <div className="space-y-2">
@@ -2663,7 +2701,7 @@ export default function ApplyForm({
               </div>
               <ul className="space-y-2 border-t border-slate-100 pt-3">
                 {STEPS.map((label, i) => {
-                  const isSkipped = i === 3 && !isSalesCategory;
+                  const isSkipped = i === 4 && !isSalesCategory;
                   return (
                     <li key={label} className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1.5">
