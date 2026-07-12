@@ -305,6 +305,15 @@ const STEP_TIPS: Record<number, string> = {
 };
 
 const DRAFT_STORAGE_KEY = "sa_candidate_draft_v1";
+// Sales Passport progressive-save architecture: whichever door a candidate walks
+// in through (bare signup or a direct job application), the moment their Stage 1
+// identity fields are valid we push a real (not just localStorage) row via the
+// same submit_candidate RPC the final submit already uses -- so a recruiter can
+// see a live lead the instant someone starts, not only once they finish. This is
+// a background best-effort sync only: it never blocks the UI, never touches the
+// resume upload/segment_data/final-submit payload logic, and silently no-ops on
+// failure since the real, authoritative save still happens in handleSubmit.
+const CANDIDATE_ID_STORAGE_KEY = "sa_candidate_id_v1";
 
 // Curated set of fields used to compute "profile strength" — weighted evenly, just
 // enough signal to feel meaningful without trying to be a perfectly precise score.
@@ -529,6 +538,7 @@ export default function ApplyForm({
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [savedLabel, setSavedLabel] = useState<string>("");
   const [stepJustCompleted, setStepJustCompleted] = useState(false);
+  const [earlySaveCandidateId, setEarlySaveCandidateId] = useState<string | null>(null);
 
   // Restore a draft from localStorage on first load (resume upload can't be
   // restored — the browser doesn't let us persist raw File objects — so the
@@ -578,6 +588,75 @@ export default function ApplyForm({
     }, 600);
     return () => clearTimeout(handle);
   }, [values, step]);
+
+  // Progressive save to Supabase (real row, not just localStorage) -- fires once
+  // Stage 1 identity fields are valid, upgraded to profile_stage "applicant" once
+  // Stage 2 current-role fields are also filled in. Deliberately excludes the
+  // resume upload and quarterly-target segment_data -- those stay exclusively in
+  // handleSubmit's final, authoritative payload so this background sync can
+  // never race or conflict with it.
+  useEffect(() => {
+    if (isEditMode) return;
+    const hasStage1 = values.fullName.trim() && values.email.trim() && values.phone.trim() && values.category;
+    if (!hasStage1) return;
+    const handle = setTimeout(async () => {
+      try {
+        const hasStage2Core = !!(values.currentEmployer && values.currentJobTitle && values.totalExperienceYears);
+        const stage = hasStage2Core ? "applicant" : "lead";
+        const payload: Record<string, unknown> = {
+          full_name: values.fullName.trim(),
+          email: values.email.trim(),
+          phone: values.phone.trim(),
+          current_location: values.currentLocation || undefined,
+          category: values.category || undefined,
+          sub_domain: values.subDomain || undefined,
+          current_employer: values.currentEmployer || undefined,
+          current_job_title: values.currentJobTitle || undefined,
+          current_employment_status: values.currentEmploymentStatus || undefined,
+          total_experience_years: values.totalExperienceYears
+            ? Math.min(Number(values.totalExperienceYears), 40)
+            : undefined,
+          notice_period: values.noticePeriod || undefined,
+          highest_qualification: values.highestQualification || undefined,
+          current_industry: values.currentIndustry || undefined,
+          skills: values.selectedSkills.length ? values.selectedSkills.join(", ") : undefined,
+          source: "onboarding_progressive_save",
+          created_by: "self_registration",
+          profile_stage: stage,
+        };
+        const { data, error } = await supabase.rpc("submit_candidate", { payload });
+        if (!error && data) {
+          setEarlySaveCandidateId(data as string);
+          try {
+            window.localStorage.setItem(CANDIDATE_ID_STORAGE_KEY, data as string);
+          } catch {
+            // ignore storage errors
+          }
+        }
+      } catch {
+        // Best-effort background sync only -- silently skip on any failure.
+        // The real save still happens in handleSubmit regardless.
+      }
+    }, 4000);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isEditMode,
+    values.fullName,
+    values.email,
+    values.phone,
+    values.category,
+    values.subDomain,
+    values.currentLocation,
+    values.currentEmployer,
+    values.currentJobTitle,
+    values.currentEmploymentStatus,
+    values.totalExperienceYears,
+    values.noticePeriod,
+    values.highestQualification,
+    values.currentIndustry,
+    values.selectedSkills,
+  ]);
 
   // Tick the "Saved Xs ago" label.
   useEffect(() => {
@@ -1205,6 +1284,18 @@ export default function ApplyForm({
         ),
         skills: values.selectedSkills.length ? values.selectedSkills.join(", ") : null,
         consent: values.consent,
+        // Reaching this final submit with the Stage-3-only fields (secondary
+        // specializations, self-assessment write-ups, travel preference) filled
+        // in marks a genuinely completed Build Your Profile wizard; a shorter
+        // submission (bare signup or a quick job application) still counts as
+        // "applicant" -- submit_candidate never demotes an existing higher stage.
+        profile_stage:
+          values.secondarySubDomains.filter((d) => d !== "None — single specialization only").length > 0 ||
+          values.bestWin.trim().length > 0 ||
+          values.toughLoss.trim().length > 0 ||
+          values.travelPreference
+            ? "full_profile"
+            : "applicant",
       };
 
       const { error } = await supabase.rpc("submit_candidate", { payload });
@@ -1279,6 +1370,12 @@ export default function ApplyForm({
               <span>Not saved yet</span>
             )}
           </span>
+          {!isEditMode && earlySaveCandidateId && (
+            <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-slate-500 shadow-sm ring-1 ring-slate-100">
+              <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
+              <span className="text-blue-700">On record with our team</span>
+            </span>
+          )}
           <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-slate-500 shadow-sm ring-1 ring-slate-100">
             <Clock className="h-3.5 w-3.5" />
             Estimated time {minutesLeft}-{minutesLeft + 2} min
