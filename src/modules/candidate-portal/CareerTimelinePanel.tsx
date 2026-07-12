@@ -107,6 +107,8 @@ function emptyEntry(): ProfileTimelineEntry {
     lead_source: "",
     reason_for_leaving: "",
     avg_quarterly_target_band: "",
+    avg_quarterly_revenue_value: "",
+    avg_quarterly_revenue_currency: "",
     target_currency: "",
     target_q1: "",
     target_q2: "",
@@ -274,6 +276,20 @@ export default function CareerTimelinePanel({
         return;
       }
     }
+    if (!isCurrent && isSales) {
+      if (!(form.avg_quarterly_revenue_value ?? "").trim()) {
+        setError("Please enter an average quarterly revenue figure for this role.");
+        return;
+      }
+      if (!/^\d+$/.test((form.avg_quarterly_revenue_value ?? "").trim())) {
+        setError("Average quarterly revenue should be numbers only.");
+        return;
+      }
+      if (!form.avg_quarterly_revenue_currency) {
+        setError("Please select a currency for the average quarterly revenue.");
+        return;
+      }
+    }
     setError("");
     const exists = profileEntries.some((e) => e.id === form.id);
     const next = exists ? profileEntries.map((e) => (e.id === form.id ? form : e)) : [...profileEntries, form];
@@ -398,12 +414,22 @@ export default function CareerTimelinePanel({
         )}
 
         <div>
-          <h4 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Confirmed roles</h4>
+          <h4 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Confirmed roles <span className="text-red-500">*</span> <span className="font-normal normal-case text-slate-400">required</span>
+          </h4>
           {profileEntries.length === 0 && (
-            <p className="mb-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
-              A full career timeline is what turns a resume into a story recruiters can actually pitch — add your first
-              role below to get started.
-            </p>
+            <div className="mb-2 rounded-xl border-2 border-blue-300 bg-blue-50 px-4 py-3 shadow-sm">
+              <p className="text-sm font-bold text-blue-900">
+                A complete career timeline is the #1 thing that gets you shortlisted.
+              </p>
+              <p className="mt-1 text-xs font-medium text-blue-800">
+                Recruiters skip past thin profiles. Add every role you've held — most recent first — and give your
+                current role's real numbers. This is the single highest-leverage thing you can do on this form.
+              </p>
+              <p className="mt-2 text-sm font-semibold text-blue-900">
+                Let&apos;s start with your recent job — add it below.
+              </p>
+            </div>
           )}
           <div className="space-y-1.5">
             {[...profileEntries]
@@ -709,9 +735,40 @@ export default function CareerTimelinePanel({
                     : "-- a quick average is fine, exact numbers aren't expected for older roles"}
                 </span>
               </p>
+
+              {!isCurrentRole && isSalesCategory && (
+                <div className="mb-2 rounded-md border border-slate-200 bg-slate-50 p-2.5">
+                  <label className="mb-1 flex items-center justify-between text-xs font-medium text-slate-600">
+                    Average quarterly revenue generated *
+                    <button
+                      type="button"
+                      onClick={() =>
+                        set(
+                          "avg_quarterly_revenue_currency",
+                          (form.avg_quarterly_revenue_currency === "USD" ? "INR" : "USD") as string
+                        )
+                      }
+                      className="text-blue-600"
+                    >
+                      ({form.avg_quarterly_revenue_currency || "INR"})
+                    </button>
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Full quarter average, not monthly -- numbers only"
+                    value={form.avg_quarterly_revenue_value ?? ""}
+                    onChange={(e) => set("avg_quarterly_revenue_value", e.target.value)}
+                  />
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    We don't expect exact target/achievement recall for an old role -- just the average revenue you
+                    brought in per quarter.
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="mb-1 block text-xs text-slate-500">Revenue generated</label>
+                  <label className="mb-1 block text-xs text-slate-500">Revenue generated (total for this role)</label>
                   <Input
                     placeholder="e.g. ₹82 Cr"
                     value={form.revenue_generated ?? ""}
@@ -720,7 +777,7 @@ export default function CareerTimelinePanel({
                 </div>
                 {!isCurrentRole && (
                   <div>
-                    <label className="mb-1 block text-xs text-slate-500">Average quarterly target</label>
+                    <label className="mb-1 block text-xs text-slate-500">Average quarterly target (band)</label>
                     <Select
                       value={form.avg_quarterly_target_band ?? ""}
                       onChange={(e) => set("avg_quarterly_target_band", e.target.value)}
@@ -856,6 +913,19 @@ export default function CareerTimelinePanel({
                   <span className="normal-case font-normal text-slate-400">
                     -- real target vs. achievement is the single most-checked detail on a sales profile
                   </span>
+                </p>
+                <p className="mb-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
+                  {isTeamLead ? (
+                    <>
+                      You told us you lead a team of <strong>{form.team_size}</strong> in this role, so the target
+                      below is your <strong>team&apos;s overall</strong> quarterly number, not just yours.
+                    </>
+                  ) : (
+                    <>
+                      You told us you&apos;re an individual contributor in this role, so the target below is{" "}
+                      <strong>your own</strong> quarterly number.
+                    </>
+                  )}
                 </p>
                 <div>
                   <label className="mb-1 flex items-center justify-between text-xs text-slate-500">

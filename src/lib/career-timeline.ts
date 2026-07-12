@@ -53,6 +53,43 @@ export type ProfileTimelineEntry = {
   lead_source?: string;
   reason_for_leaving?: string;
   avg_quarterly_target_band?: string; // used for roles other than the current one
+  // ---- Historic-role headline number (Round 9): the one figure asked for on
+  // every non-current sales role, since exact target/achievement grids
+  // aren't realistic to recall for an old job. Required for non-current
+  // sales roles. Distinct from `revenue_generated` above, which is a
+  // free-text total for the whole tenure -- this is a structured, currencied,
+  // per-quarter average so it can actually be compared across candidates.
+  avg_quarterly_revenue_value?: string;
+  avg_quarterly_revenue_currency?: string;
+  // ---- Current-role-only performance detail (Round 8 restructure): the
+  // quarterly target/achievement grid and self-assessment reflections used to
+  // live in a separate global "Performance" wizard step, asked once regardless
+  // of which Career Timeline entry was actually current. Moved here so it's
+  // asked exactly once, attached to the specific role it's actually about.
+  // Only ever filled/shown for the entry where end_month === null. Whether
+  // this specific role was IC or leading a team is derived from team_size
+  // above (non-empty = leading a team), same convention as the rest of the app.
+  target_currency?: string;
+  target_q1?: string;
+  target_q2?: string;
+  target_q3?: string;
+  target_q4?: string;
+  achieved_q1?: string;
+  achieved_q2?: string;
+  achieved_q3?: string;
+  achieved_q4?: string;
+  has_ic_target_too?: string; // "Yes"/"No" -- for a Team Lead role, do they also carry an individual number
+  ic_target_currency?: string;
+  ic_target_q1?: string;
+  ic_target_q2?: string;
+  ic_target_q3?: string;
+  ic_target_q4?: string;
+  ic_achieved_q1?: string;
+  ic_achieved_q2?: string;
+  ic_achieved_q3?: string;
+  ic_achieved_q4?: string;
+  best_win?: string;
+  tough_loss?: string;
 };
 
 export type ResumeTimelineEntry = {

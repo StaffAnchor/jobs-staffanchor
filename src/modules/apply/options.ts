@@ -668,13 +668,12 @@ export function searchSkills(query: string, exclude: string[] = [], limit = 8): 
 // ---- Target achievement % bands (used for both IC and team-level quota/target reporting) ----
 export const achievementBandOptions = [
   "Less than 50%",
-  "50-75%",
-  "75-80%",
-  "81-85%",
-  "86-90%",
-  "91-95%",
-  "96-100%",
+  "50-60%",
+  "60-70%",
+  "70-80%",
+  "80-90%",
+  "90-95%",
+  "95-100%",
   "100-110%",
-  "110-120%",
-  "More than 120%",
+  "110% or above",
 ];

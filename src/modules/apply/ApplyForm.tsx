@@ -147,6 +147,10 @@ type FormState = {
   roleLevel: string;
   roleType: string;
   teamSize: string;
+  // "Are you a fresher?" toggle -- gates whether Career Timeline entries and
+  // role-level/role-type/team-size/secondary-specialization fields are asked
+  // at all, since none of those describe someone with no work history yet.
+  isFresher: "Yes" | "No" | "";
   // Deal size/cycle/style/motion/segment/funnel/scope, inside-sales fields,
   // quarterly targets, and best-win/missed-target are now all captured once
   // on the Career Timeline current-role card instead of duplicated here as
@@ -198,6 +202,7 @@ const initialState: FormState = {
   roleLevel: "",
   roleType: "",
   teamSize: "",
+  isFresher: "",
   selectedIndustries: [],
   currentIndustry: "",
   customCurrentIndustry: "",
@@ -219,11 +224,20 @@ const initialState: FormState = {
 // grid + best-win/missed-target reflections) into Career Timeline's
 // current-role card -- asked exactly once, attached to the role it's
 // actually about, instead of duplicated across a global step.
-const STEPS = ["Basic Information", "Career Timeline", "Profile Information", "Preferences & Submit"] as const;
+//
+// Round 9: Profile Information (which is where Function/Domain and
+// specialization live) now comes BEFORE Career Timeline. This fixes two
+// things at once: (1) a candidate's overall specialization is known before
+// we ask them to build out role history, instead of asking a "what's your
+// specialty" question wedged after a career-history step; (2) it's the
+// natural place for the "Are you a fresher?" toggle -- if yes, Career
+// Timeline has nothing to ask (no work history yet), so that whole step
+// becomes a pass-through instead of a dead end.
+const STEPS = ["Basic Information", "Profile Information", "Career Timeline", "Preferences & Submit"] as const;
 
-const STEP_TIME_MINUTES = [1, 2, 1.5, 1];
+const STEP_TIME_MINUTES = [1, 1.5, 2, 1];
 
-const STEP_WEIGHTS = [15, 40, 30, 15];
+const STEP_WEIGHTS = [15, 30, 40, 15];
 
 const STEP_META = [
   {
@@ -233,17 +247,17 @@ const STEP_META = [
     subtext: "Your contact details and resume — how a recruiter actually reaches you.",
   },
   {
+    icon: Target,
+    eyebrow: "Profile Information",
+    heading: "Tell us where you stand today",
+    subtext: "Experience, compensation, and specialization — the context every mandate is filtered by.",
+  },
+  {
     icon: Briefcase,
     eyebrow: "Career Timeline",
     heading: "Walk us through your career",
     subtext:
       "Add every role, most recent first. For your current role we'll also ask about targets, achievement, and specifics — everything else you'll only see once, attached to the right job.",
-  },
-  {
-    icon: Target,
-    eyebrow: "Profile Information",
-    heading: "Tell us where you stand today",
-    subtext: "Experience, compensation, and specialization — the context every mandate is filtered by.",
   },
   {
     icon: Settings2,
@@ -255,8 +269,8 @@ const STEP_META = [
 
 const STEP_TIPS: Record<number, string> = {
   0: "Recruiters reach out fastest when your contact details and resume are on record.",
-  1: "A full career timeline -- with real target vs. achievement on your current role -- is the single biggest thing that turns a resume into a story a recruiter can actually pitch to a client.",
-  2: "Specific specializations get found and comp context lets a recruiter tell whether a mandate is even a fit -- before wasting your time on a call.",
+  1: "Specific specializations get found and comp context lets a recruiter tell whether a mandate is even a fit -- before wasting your time on a call.",
+  2: "A full career timeline -- with real target vs. achievement on your current role -- is the single biggest thing that turns a resume into a story a recruiter can actually pitch to a client.",
   3: "Almost done — skills and industries are how recruiters filter and find you for the right mandate.",
 };
 
@@ -652,12 +666,18 @@ export default function ApplyForm({
     let timelineScore = 0;
     const timelineEntries = values.careerTimeline ?? [];
     const resumeEntries = (existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[];
-    if (timelineEntries.length > 0) timelineScore += 1;
-    const currentEntry = timelineEntries.find((e) => e.end_month === null);
-    const isCurrentSales = currentEntry?.category === "b2b_sales" || currentEntry?.category === "b2c_sales";
-    if (currentEntry && (!isCurrentSales || currentEntry.deal_size_band)) timelineScore += 1;
-    if (!isCurrentSales || (currentEntry && currentEntry.achieved_q4 && (currentEntry.best_win ?? "").length >= 100)) {
-      timelineScore += 1;
+    if (values.isFresher === "Yes") {
+      // Nothing to fill here for a fresher -- don't let an inapplicable
+      // section drag the score down.
+      timelineScore = timelineWeight;
+    } else {
+      if (timelineEntries.length > 0) timelineScore += 1;
+      const currentEntry = timelineEntries.find((e) => e.end_month === null);
+      const isCurrentSales = currentEntry?.category === "b2b_sales" || currentEntry?.category === "b2c_sales";
+      if (currentEntry && (!isCurrentSales || currentEntry.deal_size_band)) timelineScore += 1;
+      if (!isCurrentSales || (currentEntry && currentEntry.achieved_q4 && (currentEntry.best_win ?? "").length >= 100)) {
+        timelineScore += 1;
+      }
     }
     const gaps = computeCareerGaps({
       profileEntries: timelineEntries,
@@ -856,19 +876,7 @@ export default function ApplyForm({
       if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
     }
     if (step === 1) {
-      // Deep, per-role validation (deal size, quarterly targets, best-win/
-      // missed-target, etc.) already happens inside CareerTimelinePanel's own
-      // "Save role" action. Here we just make sure a current role actually
-      // exists before letting the wizard move on -- current-role details are
-      // the single most important thing this whole form is built to capture.
-      if (!values.careerTimeline.length) {
-        return "Please add your current role to your Career Timeline before continuing.";
-      }
-      if (!values.careerTimeline.some((e) => e.end_month === null)) {
-        return "Please add (or mark) your current role in the Career Timeline -- check 'Current role' on the entry that's still ongoing.";
-      }
-    }
-    if (step === 2) {
+      if (!values.isFresher) return "Please let us know if you're a fresher or already have work experience.";
       if (!values.currentEmploymentStatus) return "Employment status is required.";
       if (!values.totalExperienceYears) return "Total experience is required.";
       if (!values.currentFixedCtc) return "Current fixed CTC is required.";
@@ -880,16 +888,38 @@ export default function ApplyForm({
       if (values.highestQualification === "Other" && !values.customQualification.trim()) {
         return "Please specify your qualification.";
       }
-      if (!values.category) return "Please select your function / domain.";
-      if (!values.subDomain) return "Please select your primary specialization.";
+      if (!values.category) return "Please select your preferred / current function-domain.";
+      if (!values.subDomain) return "Please select your preferred / primary specialization.";
       if (values.subDomain === "Other" && !values.customSubDomain.trim()) {
         return "Please specify your primary specialization.";
       }
-      if (!values.roleLevel) return "Please select your role level.";
-      if (!values.roleType) return "Please select whether you are an IC or leading a team.";
-      if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
-      if (isSales && !values.secondarySubDomains.length) {
-        return "Please select at least one option (choose 'None — single specialization only' if not applicable).";
+      // A fresher has no role level, IC-vs-team, team size, or secondary
+      // specializations to speak of yet -- those describe an existing career,
+      // not a preference. Only ask them once there's actual experience.
+      if (values.isFresher === "No") {
+        if (!values.roleLevel) return "Please select your role level.";
+        if (!values.roleType) return "Please select whether you are an IC or leading a team.";
+        if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
+        if (isSales && !values.secondarySubDomains.length) {
+          return "Please select at least one option (choose 'None — single specialization only' if not applicable).";
+        }
+      }
+    }
+    if (step === 2) {
+      // Freshers have no work history yet -- nothing to validate here, the
+      // domain/specialization "preference" was already captured on the
+      // Profile Information step above.
+      if (values.isFresher === "Yes") return null;
+      // Deep, per-role validation (deal size, quarterly targets, best-win/
+      // missed-target, etc.) already happens inside CareerTimelinePanel's own
+      // "Save role" action. Here we just make sure a current role actually
+      // exists before letting the wizard move on -- current-role details are
+      // the single most important thing this whole form is built to capture.
+      if (!values.careerTimeline.length) {
+        return "Please add your current role to your Career Timeline before continuing.";
+      }
+      if (!values.careerTimeline.some((e) => e.end_month === null)) {
+        return "Please add (or mark) your current role in the Career Timeline -- check 'Current role' on the entry that's still ongoing.";
       }
     }
     if (step === 3) {
@@ -1539,16 +1569,40 @@ export default function ApplyForm({
           )}
 
           {step === 1 && (
-            <CareerTimelinePanel
-              entries={values.careerTimeline}
-              onChange={(next) => update("careerTimeline", next)}
-              currentEmployer={values.currentEmployer || null}
-              resumeEntries={(existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[]}
-            />
-          )}
-
-          {step === 2 && (
             <>
+              <FormField label="Are you a fresher, or do you already have work experience?" required>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      update("isFresher", "Yes");
+                      if (values.totalExperienceYears !== "0") update("totalExperienceYears", "0");
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                      values.isFresher === "Yes"
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                    }`}
+                  >
+                    I&apos;m a fresher
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      update("isFresher", "No");
+                      if (values.totalExperienceYears === "0") update("totalExperienceYears", "");
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                      values.isFresher === "No"
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                    }`}
+                  >
+                    I have work experience
+                  </button>
+                </div>
+              </FormField>
+
               {(values.currentEmployer || values.currentJobTitle) && (
                 <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
                   Current role: <span className="font-medium text-slate-700">{values.currentJobTitle || "—"}</span> at{" "}
@@ -1572,7 +1626,11 @@ export default function ApplyForm({
               <FormField label="Total Experience" required>
                 <Select
                   value={values.totalExperienceYears}
-                  onChange={(e) => update("totalExperienceYears", e.target.value)}
+                  onChange={(e) => {
+                    update("totalExperienceYears", e.target.value);
+                    if (e.target.value === "0") update("isFresher", "Yes");
+                    else if (e.target.value) update("isFresher", "No");
+                  }}
                 >
                   <option value="">Select...</option>
                   {experienceOptions.map((o) => (
@@ -1679,11 +1737,7 @@ export default function ApplyForm({
                   />
                 </FormField>
               )}
-            </>
-          )}
 
-          {step === 2 && (
-            <>
               <FormField label="Function / Domain" required>
                 <Select
                   value={values.category}
@@ -1726,77 +1780,107 @@ export default function ApplyForm({
                     )}
                   </FormField>
 
-                  <FormField label="Secondary Specializations" required>
-                    {values.secondarySubDomains.length === 0 && (
-                      <p className="mb-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
-                        Even one extra specialization can open up more mandates you'd be a fit for — pick "None" if you're a
-                        true specialist.
-                      </p>
-                    )}
-                    <div className="grid gap-1.5">
-                      {[...subDomainOptions.filter((o) => o !== values.subDomain), "None — single specialization only"].map(
-                        (o) => (
-                          <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={values.secondarySubDomains.includes(o)}
-                              onChange={() => toggleArrayValue("secondarySubDomains", o)}
-                            />
-                            {o}
-                          </label>
-                        )
+                  {values.isFresher === "Yes" ? (
+                    <p className="rounded-lg border border-dashed border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs font-medium text-emerald-700">
+                      Since you&apos;re just starting out, we&apos;ll skip role level, team size, and career history for
+                      now — you can always come back and add these once you have some experience under your belt.
+                    </p>
+                  ) : (
+                    <>
+                      <FormField label="Secondary Specializations" required>
+                        {values.secondarySubDomains.length === 0 && (
+                          <p className="mb-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
+                            Even one extra specialization can open up more mandates you'd be a fit for — pick "None" if
+                            you're a true specialist.
+                          </p>
+                        )}
+                        <div className="grid gap-1.5">
+                          {[...subDomainOptions.filter((o) => o !== values.subDomain), "None — single specialization only"].map(
+                            (o) => (
+                              <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
+                                <input
+                                  type="checkbox"
+                                  checked={values.secondarySubDomains.includes(o)}
+                                  onChange={() => toggleArrayValue("secondarySubDomains", o)}
+                                />
+                                {o}
+                              </label>
+                            )
+                          )}
+                        </div>
+                      </FormField>
+
+                      <FormField label="Role Level" required>
+                        <Select value={values.roleLevel} onChange={(e) => update("roleLevel", e.target.value)}>
+                          <option value="">Select...</option>
+                          {roleLevelOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+
+                      <FormField label="Current Role Type" required>
+                        <Select
+                          value={values.roleType}
+                          onChange={(e) => {
+                            update("roleType", e.target.value);
+                            if (e.target.value !== "Leading a Team") update("teamSize", "");
+                          }}
+                        >
+                          <option value="">Select...</option>
+                          {roleTypeOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+
+                      {values.roleType === "Leading a Team" && (
+                        <FormField label="Team Size" required>
+                          <Select value={values.teamSize} onChange={(e) => update("teamSize", e.target.value)}>
+                            <option value="">Select...</option>
+                            {teamSizeOptions.map((o) => (
+                              <option key={o} value={o}>
+                                {o}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormField>
                       )}
-                    </div>
-                  </FormField>
 
-                  <FormField label="Role Level" required>
-                    <Select value={values.roleLevel} onChange={(e) => update("roleLevel", e.target.value)}>
-                      <option value="">Select...</option>
-                      {roleLevelOptions.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-
-                  <FormField label="Current Role Type" required>
-                    <Select
-                      value={values.roleType}
-                      onChange={(e) => {
-                        update("roleType", e.target.value);
-                        if (e.target.value !== "Leading a Team") update("teamSize", "");
-                      }}
-                    >
-                      <option value="">Select...</option>
-                      {roleTypeOptions.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-
-                  {values.roleType === "Leading a Team" && (
-                    <FormField label="Team Size" required>
-                      <Select value={values.teamSize} onChange={(e) => update("teamSize", e.target.value)}>
-                        <option value="">Select...</option>
-                        {teamSizeOptions.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
+                      <p className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
+                        Deal size, sales cycle, selling style, sales motion, and other role-specific details are
+                        captured on your current role's Career Timeline entry — you'll find them there, not repeated
+                        here.
+                      </p>
+                    </>
                   )}
-
-                  <p className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
-                    Deal size, sales cycle, selling style, sales motion, and other role-specific details are captured on
-                    your current role's Career Timeline entry — you'll find them there, not repeated here.
-                  </p>
                 </>
               )}
             </>
+          )}
+
+          {step === 2 && (
+            values.isFresher === "Yes" ? (
+              <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
+                <Briefcase className="mx-auto mb-2 h-6 w-6 text-emerald-400" />
+                <p className="text-sm font-semibold text-emerald-800">No work history to add yet — and that's fine.</p>
+                <p className="mt-1 text-xs text-emerald-700">
+                  We've already got your preferred domain and specialization from the previous step. Once you gain
+                  some experience, come back here anytime to build out your Career Timeline.
+                </p>
+              </div>
+            ) : (
+              <CareerTimelinePanel
+                entries={values.careerTimeline}
+                onChange={(next) => update("careerTimeline", next)}
+                currentEmployer={values.currentEmployer || null}
+                resumeEntries={(existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[]}
+              />
+            )
           )}
 
           {step === 3 && (
