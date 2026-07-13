@@ -60,6 +60,32 @@ export async function listOpenJobs(): Promise<JobListing[]> {
   return (data ?? []) as JobListing[];
 }
 
+// Fire-and-forget click beacon for the "Quick Apply" CTAs on a mandate's
+// public listing page -- lets the CRM show a Clicks -> Submitted -> Profile
+// Completed funnel per mandate. Never blocks navigation to the form, and
+// never throws.
+//
+// Recruiters/admins have no login flow on this public site at all (their
+// accounts live in the CRM), so in practice every visitor here is a genuine
+// external candidate. As a defensive check anyway -- e.g. a staff member who
+// happens to also be signed in as a candidate on this device -- we skip
+// logging if the current session's own `profiles` row (readable only via
+// the "read own profile" RLS policy) resolves to a recruiter/admin role.
+export async function logQuickApplyClick(mandateId: string) {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { data: ownProfile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+      if (ownProfile) return; // signed in as staff -- don't count this click
+    }
+    await supabase.from("quick_apply_clicks").insert({ mandate_id: mandateId });
+  } catch {
+    // Best-effort only -- a failed click log should never break the page.
+  }
+}
+
 export async function getOpenJob(mandateId: string): Promise<JobListing | null> {
   const { data, error } = await supabase.rpc("get_open_job_listing", { p_mandate_id: mandateId });
   if (error) throw new Error(error.message);
