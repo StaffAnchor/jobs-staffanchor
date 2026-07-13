@@ -192,6 +192,28 @@ export default function QuickApplyPage() {
     if (!values.category) return "Please select your category.";
     if (!values.subDomain) return "Please select your sub-domain.";
     if (values.subDomain === "Other" && !values.subDomainOther.trim()) return "Please specify your sub-domain.";
+
+    if (isSalesCategory) {
+      if (!values.cycle) return "Please select your sales cycle.";
+      if (!values.style) return "Please select your selling style.";
+      if (!values.dealCurrency) return "Please select a currency for your deal/ticket size.";
+      if (!values.dealSizeBand) return `Please select your typical ${isB2B ? "deal" : "ticket"} size.`;
+      if (isB2B) {
+        if (!values.segment) return "Please select your customer segment.";
+        if (values.motion.length === 0) return "Please select at least one sales motion.";
+      } else {
+        if (!values.funnel) return "Please select your sales motion.";
+        if (!values.scope) return "Please select your geographic scope.";
+      }
+    }
+
+    if (isInsideSales) {
+      if (!values.aht) return "Please select your average handling time.";
+      if (!values.dailyCallTarget) return "Please select your daily call target.";
+      if (!values.dailyTalkTime) return "Please select your daily talk time.";
+      if (values.leadSources.length === 0) return "Please select at least one primary lead source.";
+    }
+
     if (!resumeFile) return "Please upload your resume.";
     if (!values.consent) return "Please confirm you're okay with StaffAnchor contacting you.";
     return null;
@@ -313,24 +335,26 @@ export default function QuickApplyPage() {
         <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-500" />
         <h1 className="text-xl font-semibold text-slate-900">Application received</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Thanks, {values.fullName.split(" ")[0]}. A StaffAnchor recruiter will reach out to complete the rest of
-          your profile and discuss next steps for the {job.role_title ?? "role"} opening.
+          Thanks, {values.fullName.split(" ")[0]}. A StaffAnchor recruiter will be in touch with you to discuss next
+          steps for this role ({job.role_title ?? "role"}), if your profile matches the client&apos;s shortlisting
+          criteria.
         </p>
-        {values.email && (
-          <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-left">
-            <p className="text-sm font-medium text-slate-900">Want to hear about future openings too?</p>
-            <p className="mt-1 text-xs text-slate-500">
-              Create a free candidate account with the same email so we can match you to other roles as they open up
-              -- no password needed, just a sign-in link.
-            </p>
-            <Link
-              href={`/candidate-login?email=${encodeURIComponent(values.email)}`}
-              className="mt-2 inline-block"
-            >
-              <Button className="h-8 px-3 text-xs">Sign up for future openings</Button>
-            </Link>
-          </div>
-        )}
+
+        <div className="mt-6 rounded-xl border-2 border-blue-200 bg-blue-50/60 px-5 py-4 text-left">
+          <p className="text-sm font-semibold text-slate-900">Build your complete profile</p>
+          <p className="mt-1 text-xs text-slate-600">
+            A complete profile noticeably increases your chances of being shortlisted -- it takes just 7-10 minutes.
+            This also creates your free StaffAnchor account automatically, so we can match you to future openings
+            too.
+          </p>
+          <Link
+            href={`/candidate-login?email=${encodeURIComponent(values.email)}`}
+            className="mt-3 inline-block"
+          >
+            <Button className="h-9 px-4 text-sm">Build my profile</Button>
+          </Link>
+        </div>
+
         <Link href="/jobs" className="mt-6 inline-block">
           <Button variant="outline">Browse more roles</Button>
         </Link>
@@ -643,7 +667,7 @@ export default function QuickApplyPage() {
                     shortlisted for this mandate.
                   </p>
                 </div>
-                <FormField label="Sales cycle">
+                <FormField label="Sales cycle" required>
                   <Select value={values.cycle} onChange={(e) => set("cycle", e.target.value)}>
                     <option value="">Select...</option>
                     {salesCycleOptions.map((o) => (
@@ -653,7 +677,7 @@ export default function QuickApplyPage() {
                     ))}
                   </Select>
                 </FormField>
-                <FormField label="Selling style">
+                <FormField label="Selling style" required>
                   <Select value={values.style} onChange={(e) => set("style", e.target.value)}>
                     <option value="">Select...</option>
                     {sellingStyleOptions.map((o) => (
@@ -663,27 +687,20 @@ export default function QuickApplyPage() {
                     ))}
                   </Select>
                 </FormField>
-                <FormField
-                  label={isB2B ? "Typical deal size" : "Typical ticket size"}
-                  className={values.dealCurrency ? "" : ""}
-                >
-                  <div className="mb-1 flex items-center justify-end gap-1 text-xs text-slate-500">
-                    <button
-                      type="button"
-                      onClick={() => set("dealCurrency", values.dealCurrency === "USD" ? "INR" : "USD")}
-                      className="font-medium text-blue-600"
-                    >
-                      ({values.dealCurrency || "INR"})
-                    </button>
-                  </div>
+                <FormField label="Currency" required>
+                  <Select value={values.dealCurrency} onChange={(e) => set("dealCurrency", e.target.value as CurrencyValue)}>
+                    <option value="">Select...</option>
+                    <option value="INR">INR</option>
+                    <option value="USD">USD</option>
+                  </Select>
+                </FormField>
+                <FormField label={isB2B ? "Typical deal size" : "Typical ticket size"} required>
                   <Select
                     value={values.dealSizeBand}
-                    onChange={(e) => {
-                      if (!values.dealCurrency) set("dealCurrency", "INR");
-                      set("dealSizeBand", e.target.value);
-                    }}
+                    onChange={(e) => set("dealSizeBand", e.target.value)}
+                    disabled={!values.dealCurrency}
                   >
-                    <option value="">Select...</option>
+                    <option value="">{values.dealCurrency ? "Select..." : "Select currency first"}</option>
                     {dealBandOptions.map((o) => (
                       <option key={o} value={o}>
                         {o}
@@ -692,7 +709,7 @@ export default function QuickApplyPage() {
                   </Select>
                 </FormField>
                 {isB2B ? (
-                  <FormField label="Customer segment">
+                  <FormField label="Customer segment" required>
                     <Select value={values.segment} onChange={(e) => set("segment", e.target.value)}>
                       <option value="">Select...</option>
                       {customerSegmentOptions.map((o) => (
@@ -704,7 +721,7 @@ export default function QuickApplyPage() {
                   </FormField>
                 ) : (
                   <>
-                    <FormField label="Sales motion">
+                    <FormField label="Sales motion" required>
                       <Select value={values.funnel} onChange={(e) => set("funnel", e.target.value)}>
                         <option value="">Select...</option>
                         {funnelStageOptions.map((o) => (
@@ -714,7 +731,7 @@ export default function QuickApplyPage() {
                         ))}
                       </Select>
                     </FormField>
-                    <FormField label="Geographic scope">
+                    <FormField label="Geographic scope" required>
                       <Select value={values.scope} onChange={(e) => set("scope", e.target.value)}>
                         <option value="">Select...</option>
                         {geographicScopeOptions.map((o) => (
@@ -727,7 +744,7 @@ export default function QuickApplyPage() {
                   </>
                 )}
                 {isB2B && (
-                  <FormField label="Sales motion" className="sm:col-span-2">
+                  <FormField label="Sales motion" required className="sm:col-span-2">
                     <div className="flex flex-wrap gap-2">
                       {salesMotionOptions.map((o) => {
                         const active = values.motion.includes(o);
@@ -752,7 +769,7 @@ export default function QuickApplyPage() {
                 )}
                 {isInsideSales && (
                   <>
-                    <FormField label="Average handling time (AHT)">
+                    <FormField label="Average handling time (AHT)" required>
                       <Select value={values.aht} onChange={(e) => set("aht", e.target.value)}>
                         <option value="">Select...</option>
                         {ahtOptions.map((o) => (
@@ -762,7 +779,7 @@ export default function QuickApplyPage() {
                         ))}
                       </Select>
                     </FormField>
-                    <FormField label="Daily call target">
+                    <FormField label="Daily call target" required>
                       <Select value={values.dailyCallTarget} onChange={(e) => set("dailyCallTarget", e.target.value)}>
                         <option value="">Select...</option>
                         {dailyCallTargetOptions.map((o) => (
@@ -772,7 +789,7 @@ export default function QuickApplyPage() {
                         ))}
                       </Select>
                     </FormField>
-                    <FormField label="Daily talk time">
+                    <FormField label="Daily talk time" required>
                       <Select value={values.dailyTalkTime} onChange={(e) => set("dailyTalkTime", e.target.value)}>
                         <option value="">Select...</option>
                         {dailyTalkTimeOptions.map((o) => (
@@ -782,7 +799,7 @@ export default function QuickApplyPage() {
                         ))}
                       </Select>
                     </FormField>
-                    <FormField label="Primary lead sources" className="sm:col-span-2">
+                    <FormField label="Primary lead sources" required className="sm:col-span-2">
                       <div className="flex flex-wrap gap-2">
                         {leadSourceOptions.map((o) => {
                           const active = values.leadSources.includes(o);
