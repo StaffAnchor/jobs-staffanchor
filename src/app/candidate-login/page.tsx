@@ -28,6 +28,27 @@ export default function CandidateLoginPage() {
     if (!email.trim()) return;
     setSending(true);
     setError(null);
+
+    // Magic-link sign-in has no separate "sign up" step -- Supabase will
+    // happily create a brand-new account for any email typed here. So before
+    // ever sending a link, confirm a candidate record already exists for
+    // this email (from Build Your Profile, Quick Apply, or a
+    // recruiter-created profile). No profile on file -> no account, no
+    // portal access -- just a plain message pointing them at applying first.
+    const { data: exists, error: checkError } = await supabase.rpc("candidate_email_exists", {
+      p_email: email.trim(),
+    });
+    if (checkError) {
+      setSending(false);
+      setError("Something went wrong checking that email. Please try again.");
+      return;
+    }
+    if (!exists) {
+      setSending(false);
+      setError("We don't have a profile on file for this email yet. Apply to an open role first, then come back here to log in.");
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {

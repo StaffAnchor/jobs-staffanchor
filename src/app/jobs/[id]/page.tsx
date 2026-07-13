@@ -865,7 +865,8 @@ export default function QuickApplyPage() {
               onChange={(e) => set("consent", e.target.checked)}
               className="mt-0.5"
             />
-            I agree to be contacted by StaffAnchor about this and other relevant roles.
+            I agree to be contacted by StaffAnchor about this and other relevant roles. This creates my profile with
+            StaffAnchor, and I can log in any time using this email address (no password needed).
           </label>
 
           {errorMsg && <p className="mt-3 text-sm text-red-600">{errorMsg}</p>}

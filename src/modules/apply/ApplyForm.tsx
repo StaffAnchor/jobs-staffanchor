@@ -2092,8 +2092,9 @@ export default function ApplyForm({
                     checked={values.consent}
                     onChange={(e) => update("consent", e.target.checked)}
                   />
-                  I consent to StaffAnchor storing my profile and sharing it, in confidence, with recruiters against
-                  relevant sales mandates.
+                  I consent to StaffAnchor creating my profile with this email and sharing it, in confidence, with
+                  recruiters against relevant sales mandates. I can log in any time using this email address (no
+                  password needed).
                 </label>
               </FormField>
             </>
