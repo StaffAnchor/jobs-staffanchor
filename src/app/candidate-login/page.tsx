@@ -45,7 +45,9 @@ export default function CandidateLoginPage() {
     }
     if (!exists) {
       setSending(false);
-      setError("We don't have a profile on file for this email yet. Apply to an open role first, then come back here to log in.");
+      setError(
+        "We don't have a profile on file for this email yet. Build your profile or apply to an open role first, then come back here to log in."
+      );
       return;
     }
 
@@ -101,9 +103,13 @@ export default function CandidateLoginPage() {
                 </Button>
               </form>
               <p className="mt-4 text-center text-xs text-slate-400">
-                Haven&apos;t applied yet?{" "}
+                No profile yet?{" "}
+                <Link href="/register" className="text-blue-600 hover:underline">
+                  Build your profile
+                </Link>{" "}
+                or{" "}
                 <Link href="/jobs" className="text-blue-600 hover:underline">
-                  Browse open roles
+                  browse open roles
                 </Link>
               </p>
             </>
