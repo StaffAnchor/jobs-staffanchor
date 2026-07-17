@@ -75,6 +75,8 @@ import {
   subDomainsForCategory,
   level1OptionsForProfileType,
   subDomainsForPractice,
+  secondarySpecializationGroups,
+  primaryAsSecondaryLabel,
   languageOptions,
   teamSizeOptions,
   tenderRfpExperienceOptions,
@@ -166,6 +168,13 @@ type FormState = {
   // realistically has at most one "Other B2B" tag whether primary or secondary.
   secondaryOtherB2BSubDomain: string;
   customSecondaryOtherB2BSubDomain: string;
+  // Free-text specify for the disambiguated generic "Other" tail entries in
+  // the combined cross-Profile-Type secondary specialization list (see
+  // options.ts secondarySpecializationGroups) -- a candidate could plausibly
+  // pick both if their background genuinely spans B2C and Non-Sales, so these
+  // are two independent slots, not one shared with the B2B "Other B2B" field.
+  secondaryOtherB2CSpecify: string;
+  secondaryOtherNonSalesSpecify: string;
   roleLevel: string;
   roleType: string;
   customRoleType: string;
@@ -281,6 +290,8 @@ const initialState: FormState = {
   secondarySubDomains: [],
   secondaryOtherB2BSubDomain: "",
   customSecondaryOtherB2BSubDomain: "",
+  secondaryOtherB2CSpecify: "",
+  secondaryOtherNonSalesSpecify: "",
   roleLevel: "",
   roleType: "",
   customRoleType: "",
@@ -685,7 +696,13 @@ export default function ApplyForm({
     if (!hasStage1) return;
     const handle = setTimeout(async () => {
       try {
-        const hasStage2Core = !!(values.currentEmployer && values.currentJobTitle && values.totalExperienceYears);
+        // Freshers never have a currentEmployer/currentJobTitle (there is no
+        // current role yet) -- gate on totalExperienceYears alone for them so
+        // they aren't permanently stuck at "lead" stage.
+        const hasStage2Core =
+          values.isFresher === "Yes"
+            ? !!values.totalExperienceYears
+            : !!(values.currentEmployer && values.currentJobTitle && values.totalExperienceYears);
         const stage = hasStage2Core ? "applicant" : "lead";
         const payload: Record<string, unknown> = {
           full_name: values.fullName.trim(),
@@ -735,6 +752,7 @@ export default function ApplyForm({
     values.currentEmployer,
     values.currentJobTitle,
     values.currentEmploymentStatus,
+    values.isFresher,
     values.totalExperienceYears,
     values.noticePeriod,
     values.highestQualification,
@@ -817,18 +835,29 @@ export default function ApplyForm({
     [values.customSkill, values.selectedSkills]
   );
 
+  // Weighted 65% Stage 1-3 core / 35% Stage 4 optional depth (feedback: the
+  // profile shouldn't be able to read 90%+ "Excellent" while Stage 4 -- the
+  // whole "boost your shortlisting odds" section -- is completely untouched;
+  // that only happened before because Stage 4 barely moved the number at
+  // all). Each half is its own applicable/filled fraction so a candidate for
+  // whom a given Stage 4 cluster genuinely doesn't apply (e.g. "B2B Extra
+  // Depth" for a B2C candidate) is never penalized for leaving it blank.
   const profileStrength = useMemo(() => {
+    // ---- Core: Stage 1A/1B/2/3 -------------------------------------------
     const applicableFields: (keyof FormState)[] = [...STRENGTH_FIELDS_BASE];
-    const filled = applicableFields.filter((k) => {
+    const filledCore = applicableFields.filter((k) => {
       const v = values[k];
       return Array.isArray(v) ? v.length > 0 : String(v).trim() !== "";
     }).length;
+    const coreFraction = applicableFields.length ? filledCore / applicableFields.length : 0;
 
-    // Career Timeline is its own step (values.careerTimeline). Its weight is
-    // higher than a plain field now that deal size, quarterly targets, and
-    // best-win/missed-target all live on the current-role entry instead of
-    // as separate global fields (Round 8 restructure).
-    let timelineWeight = 3;
+    // ---- Stage 4: optional post-submit depth -----------------------------
+    let stage4Applicable = 0;
+    let stage4Filled = 0;
+
+    // Career Timeline -- several sub-questions in one, so weighted like 3
+    // plain fields rather than 1 (unchanged from the pre-existing scoring).
+    const timelineWeight = 3;
     let timelineScore = 0;
     const timelineEntries = values.careerTimeline ?? [];
     const resumeEntries = (existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[];
@@ -845,6 +874,32 @@ export default function ApplyForm({
         timelineScore += 1;
       }
     }
+    stage4Applicable += timelineWeight;
+    stage4Filled += timelineScore;
+
+    // Promotion history -- only a meaningful question once there's an actual
+    // career to have been promoted within.
+    if (values.isFresher !== "Yes") {
+      stage4Applicable += 1;
+      if (values.promotionHistory) stage4Filled += 1;
+    }
+
+    // B2B Extra Depth cluster (CRM tools / PLG-vs-Sales-Led / customer segment).
+    if (isB2B) {
+      stage4Applicable += 3;
+      if (values.crmTools.length > 0 || values.customCrmTool.trim()) stage4Filled += 1;
+      if (values.motionType) stage4Filled += 1;
+      if (values.customerSegmentSold.length > 0) stage4Filled += 1;
+    }
+
+    // Industrial & Infrastructure Extra Depth cluster.
+    if (isIndustrialPractice) {
+      stage4Applicable += 1;
+      if (values.productLinesBrands.trim() || values.technicalCertifications.trim() || values.tenderRfpExperience) {
+        stage4Filled += 1;
+      }
+    }
+
     const gaps = computeCareerGaps({
       profileEntries: timelineEntries,
       resumeEntries,
@@ -852,10 +907,11 @@ export default function ApplyForm({
     });
     void gaps; // computed for future use (unresolved-resume-flag surfacing); not yet folded into the score
 
-    const totalUnits = applicableFields.length + timelineWeight;
-    const filledUnits = filled + timelineScore;
-    return Math.round((filledUnits / totalUnits) * 100);
-  }, [values, existingProfile]);
+    const stage4Fraction = stage4Applicable ? stage4Filled / stage4Applicable : 1;
+    const CORE_WEIGHT = 0.65;
+    const STAGE4_WEIGHT = 0.35;
+    return Math.round((coreFraction * CORE_WEIGHT + stage4Fraction * STAGE4_WEIGHT) * 100);
+  }, [values, existingProfile, isB2B, isIndustrialPractice]);
 
   const minutesLeft = useMemo(
     () => stepSequence.slice(step).reduce((a, i) => a + STAGE_TIME_MINUTES[i], 0),
@@ -1114,8 +1170,19 @@ export default function ApplyForm({
 
     // Stage 1B -- Extended Core (mandatory, identical regardless of Profile Type)
     if (stageIndex === 1) {
-      if (!values.currentEmployer.trim()) return "Current employer is required.";
-      if (!values.currentJobTitle.trim()) return "Current job title is required.";
+      // A fresher has no current employer/job title -- there is no "current
+      // role" yet, that's the whole point of being a fresher. Employment
+      // Status is auto-set to "First Job Seeker" the moment the fresher toggle
+      // is chosen (see the button handlers below), so it's still required but
+      // never actually blocks a fresher. Current CTC is likewise inapplicable
+      // (nothing to have been paid yet) and is auto-zeroed the same way --
+      // only Expected CTC (what they're looking for) makes sense to ask them.
+      if (values.isFresher !== "Yes") {
+        if (!values.currentEmployer.trim()) return "Current employer is required.";
+        if (!values.currentJobTitle.trim()) return "Current job title is required.";
+        if (!values.currentFixedCtc) return "Current fixed CTC is required.";
+        if (!values.currentVariableCtc) return "Current variable CTC is required (select 0 LPA if none).";
+      }
       if (!values.currentEmploymentStatus) return "Employment status is required.";
       if (!values.currentIndustry) return "Please select your current industry.";
       if (values.currentIndustry === "Other" && !values.customCurrentIndustry.trim()) {
@@ -1126,8 +1193,6 @@ export default function ApplyForm({
       }
       if (!values.isFresher) return "Please let us know if you're a fresher or already have work experience.";
       if (!values.totalExperienceYears) return "Total experience is required.";
-      if (!values.currentFixedCtc) return "Current fixed CTC is required.";
-      if (!values.currentVariableCtc) return "Current variable CTC is required (select 0 LPA if none).";
       if (!values.expectedFixedCtc) return "Expected fixed CTC is required.";
       if (!values.expectedVariableCtc) return "Expected variable CTC is required (select 0 LPA if none).";
       if (!values.noticePeriod) return "Please let us know how many days you'd need to join.";
@@ -1162,6 +1227,12 @@ export default function ApplyForm({
           if (values.secondaryOtherB2BSubDomain === "Other" && !values.customSecondaryOtherB2BSubDomain.trim()) {
             return "Please specify your secondary B2B specialization.";
           }
+        }
+        if (values.secondarySubDomains.includes("Other (B2C)") && !values.secondaryOtherB2CSpecify.trim()) {
+          return "Please specify your secondary B2C specialization.";
+        }
+        if (values.secondarySubDomains.includes("Other (Non-Sales)") && !values.secondaryOtherNonSalesSpecify.trim()) {
+          return "Please specify your secondary Non-Sales specialization.";
         }
       } else {
         if (!values.hasInternship) return "Please let us know if you've done an internship.";
@@ -1344,6 +1415,14 @@ export default function ApplyForm({
           values.secondaryOtherB2BSubDomain === "Other"
             ? values.customSecondaryOtherB2BSubDomain.trim()
             : values.secondaryOtherB2BSubDomain;
+      }
+      // Generic "Other" specify for the disambiguated B2C / Non-Sales tail
+      // entries in the cross-Profile-Type Secondary Specialization list.
+      if (values.secondarySubDomains.includes("Other (B2C)") && values.secondaryOtherB2CSpecify.trim()) {
+        segmentData.secondary_other_b2c_specify = values.secondaryOtherB2CSpecify.trim();
+      }
+      if (values.secondarySubDomains.includes("Other (Non-Sales)") && values.secondaryOtherNonSalesSpecify.trim()) {
+        segmentData.secondary_other_non_sales_specify = values.secondaryOtherNonSalesSpecify.trim();
       }
 
       // Fresher internship gate -- replaces Career Timeline/Sales Motion/
@@ -2030,6 +2109,15 @@ export default function ApplyForm({
                     onClick={() => {
                       update("isFresher", "Yes");
                       if (values.totalExperienceYears !== "0") update("totalExperienceYears", "0");
+                      // No current role to speak of yet -- clear/auto-fill
+                      // the fields that only make sense once you've had one,
+                      // and mark Employment Status accordingly rather than
+                      // leaving it for the candidate to guess at.
+                      update("currentEmployer", "");
+                      update("currentJobTitle", "");
+                      update("currentFixedCtc", "0");
+                      update("currentVariableCtc", "0");
+                      update("currentEmploymentStatus", "First Job Seeker");
                     }}
                     className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
                       values.isFresher === "Yes"
@@ -2044,6 +2132,7 @@ export default function ApplyForm({
                     onClick={() => {
                       update("isFresher", "No");
                       if (values.totalExperienceYears === "0") update("totalExperienceYears", "");
+                      if (values.currentEmploymentStatus === "First Job Seeker") update("currentEmploymentStatus", "");
                     }}
                     className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
                       values.isFresher === "No"
@@ -2056,32 +2145,55 @@ export default function ApplyForm({
                 </div>
               </FormField>
 
-              <FormField label="Current Employer" required>
-                <Input value={values.currentEmployer} onChange={(e) => update("currentEmployer", e.target.value)} />
-              </FormField>
-              <FormField label="Current Job Title" required>
-                <Input value={values.currentJobTitle} onChange={(e) => update("currentJobTitle", e.target.value)} />
-              </FormField>
-              <FormField label="Employment Status" required>
-                <Select
-                  value={values.currentEmploymentStatus}
-                  onChange={(e) => update("currentEmploymentStatus", e.target.value)}
-                >
-                  <option value="">Select...</option>
-                  {employmentStatusOptions.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+              {values.isFresher !== "Yes" && (
+                <>
+                  <FormField label="Current Employer" required>
+                    <Input value={values.currentEmployer} onChange={(e) => update("currentEmployer", e.target.value)} />
+                  </FormField>
+                  <FormField label="Current Job Title" required>
+                    <Input value={values.currentJobTitle} onChange={(e) => update("currentJobTitle", e.target.value)} />
+                  </FormField>
+                </>
+              )}
+              {values.isFresher === "Yes" ? (
+                <FormField label="Employment Status">
+                  <p className="rounded-lg border border-dashed border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-700">
+                    First Job Seeker
+                  </p>
+                </FormField>
+              ) : (
+                <FormField label="Employment Status" required>
+                  <Select
+                    value={values.currentEmploymentStatus}
+                    onChange={(e) => update("currentEmploymentStatus", e.target.value)}
+                  >
+                    <option value="">Select...</option>
+                    {employmentStatusOptions
+                      .filter((o) => o !== "First Job Seeker")
+                      .map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                  </Select>
+                </FormField>
+              )}
               <FormField label="Total Experience" required>
                 <Select
                   value={values.totalExperienceYears}
                   onChange={(e) => {
                     update("totalExperienceYears", e.target.value);
-                    if (e.target.value === "0") update("isFresher", "Yes");
-                    else if (e.target.value) update("isFresher", "No");
+                    if (e.target.value === "0") {
+                      update("isFresher", "Yes");
+                      update("currentEmployer", "");
+                      update("currentJobTitle", "");
+                      update("currentFixedCtc", "0");
+                      update("currentVariableCtc", "0");
+                      update("currentEmploymentStatus", "First Job Seeker");
+                    } else if (e.target.value) {
+                      update("isFresher", "No");
+                      if (values.currentEmploymentStatus === "First Job Seeker") update("currentEmploymentStatus", "");
+                    }
                   }}
                 >
                   <option value="">Select...</option>
@@ -2092,34 +2204,36 @@ export default function ApplyForm({
                   ))}
                 </Select>
               </FormField>
-              <div className="grid grid-cols-2 gap-3">
-                <FormField label="Current Fixed CTC" required>
-                  <Select
-                    value={values.currentFixedCtc}
-                    onChange={(e) => update("currentFixedCtc", e.target.value)}
-                  >
-                    <option value="">Select...</option>
-                    {ctcOptions.map((o) => (
-                      <option key={o.label} value={o.value ?? ""}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-                <FormField label="Current Variable CTC" required>
-                  <Select
-                    value={values.currentVariableCtc}
-                    onChange={(e) => update("currentVariableCtc", e.target.value)}
-                  >
-                    <option value="">Select... (0 LPA if none)</option>
-                    {ctcOptions.map((o) => (
-                      <option key={o.label} value={o.value ?? ""}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              </div>
+              {values.isFresher !== "Yes" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField label="Current Fixed CTC" required>
+                    <Select
+                      value={values.currentFixedCtc}
+                      onChange={(e) => update("currentFixedCtc", e.target.value)}
+                    >
+                      <option value="">Select...</option>
+                      {ctcOptions.map((o) => (
+                        <option key={o.label} value={o.value ?? ""}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField label="Current Variable CTC" required>
+                    <Select
+                      value={values.currentVariableCtc}
+                      onChange={(e) => update("currentVariableCtc", e.target.value)}
+                    >
+                      <option value="">Select... (0 LPA if none)</option>
+                      {ctcOptions.map((o) => (
+                        <option key={o.label} value={o.value ?? ""}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                </div>
+              )}
               <FormField label="ESOPs Held">
                 <label className="flex items-center gap-2 text-sm text-slate-700">
                   <input
@@ -2399,23 +2513,45 @@ export default function ApplyForm({
                       <FormField label="Secondary Specializations" required>
                         {values.secondarySubDomains.length === 0 && (
                           <p className="mb-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
-                            Even one extra specialization can open up more mandates you'd be a fit for — pick "None" if
-                            you're a true specialist.
+                            Even one extra specialization can open up more mandates you'd be a fit for -- and if
+                            you've worked across B2B and B2C (or moved between sales and a non-sales function), pick
+                            all that genuinely apply, not just from your primary type. Choose "None" if you're a true
+                            specialist.
                           </p>
                         )}
-                        <div className="grid gap-1.5">
-                          {[...subDomainOptions.filter((o) => o !== values.subDomain), "None — single specialization only"].map(
-                            (o) => (
-                              <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
-                                <input
-                                  type="checkbox"
-                                  checked={values.secondarySubDomains.includes(o)}
-                                  onChange={() => toggleArrayValue("secondarySubDomains", o)}
-                                />
-                                {o}
-                              </label>
-                            )
-                          )}
+                        <div className="space-y-3">
+                          {secondarySpecializationGroups().map(({ group, options }) => {
+                            const excludeLabel = primaryAsSecondaryLabel(values.category || null, values.subDomain);
+                            const visibleOptions = options.filter((o) => o !== excludeLabel);
+                            if (!visibleOptions.length) return null;
+                            return (
+                              <div key={group}>
+                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                  {group}
+                                </p>
+                                <div className="grid gap-1.5">
+                                  {visibleOptions.map((o) => (
+                                    <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
+                                      <input
+                                        type="checkbox"
+                                        checked={values.secondarySubDomains.includes(o)}
+                                        onChange={() => toggleArrayValue("secondarySubDomains", o)}
+                                      />
+                                      {o}
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <label className="flex items-center gap-2 text-sm text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={values.secondarySubDomains.includes("None — single specialization only")}
+                              onChange={() => toggleArrayValue("secondarySubDomains", "None — single specialization only")}
+                            />
+                            None — single specialization only
+                          </label>
                         </div>
                         {values.secondarySubDomains.includes("Other B2B") && (
                           <div className="mt-2 space-y-2 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
@@ -2440,6 +2576,30 @@ export default function ApplyForm({
                                 placeholder="Please specify"
                               />
                             )}
+                          </div>
+                        )}
+                        {values.secondarySubDomains.includes("Other (B2C)") && (
+                          <div className="mt-2 space-y-2 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
+                            <p className="text-xs text-slate-500">
+                              You flagged "Other" B2C as a secondary specialization — tell us a bit more.
+                            </p>
+                            <Input
+                              value={values.secondaryOtherB2CSpecify}
+                              onChange={(e) => update("secondaryOtherB2CSpecify", e.target.value)}
+                              placeholder="Please specify"
+                            />
+                          </div>
+                        )}
+                        {values.secondarySubDomains.includes("Other (Non-Sales)") && (
+                          <div className="mt-2 space-y-2 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
+                            <p className="text-xs text-slate-500">
+                              You flagged "Other" Non-Sales as a secondary specialization — tell us a bit more.
+                            </p>
+                            <Input
+                              value={values.secondaryOtherNonSalesSpecify}
+                              onChange={(e) => update("secondaryOtherNonSalesSpecify", e.target.value)}
+                              placeholder="Please specify"
+                            />
                           </div>
                         )}
                       </FormField>
@@ -2958,7 +3118,14 @@ export default function ApplyForm({
               </div>
               <ul className="space-y-2 border-t border-slate-100 pt-3">
                 {ALL_STAGES.map((label, i) => {
-                  const isSkipped = (i === 2 || i === 3) && !isSalesCategory;
+                  // Only strike Stage 2/3 through as "Not applicable" once we
+                  // actually know they don't apply -- i.e. Profile Type has
+                  // been chosen AND it resolved to Non-Sales. Before Profile
+                  // Type is picked, values.category is "" so isSalesCategory
+                  // is (incorrectly) false, which used to strike these out
+                  // from the very first screen, before there was any way to
+                  // know yet. Show them as plain "Pending" until then.
+                  const isSkipped = !!values.category && (i === 2 || i === 3) && !isSalesCategory;
                   const posInSequence = stepSequence.indexOf(i);
                   const isCurrent = posInSequence === step;
                   const isDone = posInSequence >= 0 && posInSequence < step;
@@ -3074,33 +3241,38 @@ export default function ApplyForm({
                     resumeEntries={(existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[]}
                   />
                 )}
-                <FormField label="Were you promoted during your time at any of these companies? If so, briefly describe.">
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["Yes", "No"] as const).map((o) => (
-                      <button
-                        key={o}
-                        type="button"
-                        onClick={() => update("promotionHistory", o)}
-                        className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                          values.promotionHistory === o
-                            ? "border-slate-900 bg-slate-900 text-white"
-                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
-                        }`}
-                      >
-                        {o}
-                      </button>
-                    ))}
-                  </div>
-                  {values.promotionHistory === "Yes" && (
-                    <textarea
-                      className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-                      rows={2}
-                      value={values.promotionDescription}
-                      onChange={(e) => update("promotionDescription", e.target.value)}
-                      placeholder="Briefly describe the promotion(s)..."
-                    />
-                  )}
-                </FormField>
+                {values.isFresher !== "Yes" && (
+                  <FormField label="Were you promoted during your time at any of these companies? If so, briefly describe.">
+                    {/* Deliberately understated relative to "Add a role" above --
+                        this is a nice-to-have footnote on an already-optional
+                        Stage 4 section, not the primary action on this screen. */}
+                    <div className="flex gap-1.5">
+                      {(["Yes", "No"] as const).map((o) => (
+                        <button
+                          key={o}
+                          type="button"
+                          onClick={() => update("promotionHistory", o)}
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                            values.promotionHistory === o
+                              ? "border-slate-400 bg-slate-100 text-slate-700"
+                              : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                          }`}
+                        >
+                          {o}
+                        </button>
+                      ))}
+                    </div>
+                    {values.promotionHistory === "Yes" && (
+                      <textarea
+                        className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                        rows={2}
+                        value={values.promotionDescription}
+                        onChange={(e) => update("promotionDescription", e.target.value)}
+                        placeholder="Briefly describe the promotion(s)..."
+                      />
+                    )}
+                  </FormField>
+                )}
               </div>
 
               {/* Cluster: Profile & Documents -- LinkedIn + skills (everyone) */}

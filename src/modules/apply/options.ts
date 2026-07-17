@@ -539,6 +539,44 @@ export function level1OptionsForProfileType(profileType: CategoryValue | null): 
   return [];
 }
 
+// ---- Secondary Specialization: cross-Profile-Type combined list ----
+// Candidates often have real experience outside their own primary Profile
+// Type -- a B2B AE who also did a B2C stint, or vice versa -- and that was
+// previously invisible because Secondary Specialization only offered the
+// SAME list as the primary Practice/Vertical/Function. This combines all
+// three taxonomies (B2B practices + B2C verticals + Non-Sales functions) into
+// one grouped multi-select so any mix of background can be captured, however
+// niche it is by count of candidates today. Plain "Other" collides between
+// b2cVerticals and nonSalesFunctions (both end their list with "Other"), so
+// each group's generic tail entry is disambiguated here purely for this
+// combined list -- the underlying per-type lists used for the PRIMARY
+// Practice/Vertical/Function selector are untouched.
+export type SecondarySpecializationGroup = {
+  group: "B2B Sales" | "B2C Sales" | "Non-Sales / Other";
+  options: string[];
+};
+
+export function secondarySpecializationGroups(): SecondarySpecializationGroup[] {
+  return [
+    { group: "B2B Sales", options: [...b2bPractices] },
+    { group: "B2C Sales", options: b2cVerticals.map((o) => (o === "Other" ? "Other (B2C)" : o)) },
+    { group: "Non-Sales / Other", options: nonSalesFunctions.map((o) => (o === "Other" ? "Other (Non-Sales)" : o)) },
+  ];
+}
+
+// The exact string a candidate's PRIMARY Practice/Vertical/Function would
+// take on if it also appeared in the combined Secondary Specialization list
+// above -- used purely to exclude "pick your own primary as your secondary"
+// from the checkbox list (accounts for the "Other" -> "Other (B2C)" /
+// "Other (Non-Sales)" disambiguation so the exclusion actually matches).
+export function primaryAsSecondaryLabel(profileType: CategoryValue | null, subDomain: string): string {
+  if (subDomain === "Other") {
+    if (profileType === "b2c_sales") return "Other (B2C)";
+    if (profileType === "non_sales") return "Other (Non-Sales)";
+  }
+  return subDomain;
+}
+
 // B2C sales-motion options -- distinct from the existing B2B `salesMotionOptions`
 // (Outbound-Hunting/Inbound/Account-based/etc., which assumes a B2B buying
 // process). B2C motions describe how the sale physically happens.

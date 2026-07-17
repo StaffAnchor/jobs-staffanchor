@@ -60,7 +60,8 @@ export default function QuickApplyPage() {
   const jobSubDomains = job.sub_domains?.length ? job.sub_domains : job.sub_domain ? [job.sub_domain] : [];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <>
+    <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
       <Link href="/jobs" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to open roles
       </Link>
@@ -180,12 +181,20 @@ export default function QuickApplyPage() {
           </div>
         </div>
       </div>
+    </div>
 
+    {/* Quick Apply intentionally breaks out of the max-w-6xl wrapper above --
+        ApplyForm's own internal 3-column grid wants ~1280px and was getting
+        cramped inside the narrower page container (feedback: "this middle
+        part... is very narrow"). Its own max-w keeps it from ever looking
+        too wide on huge screens. */}
+    <div className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
       <Card id="apply-form" className="mt-6 scroll-mt-24">
         <CardContent className="p-5 sm:p-6">
           <ApplyForm source="quick_apply" mandateId={mandateId} mandateTitle={job.role_title ?? undefined} />
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

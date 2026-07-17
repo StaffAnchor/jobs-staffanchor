@@ -399,12 +399,9 @@ export default function CareerTimelinePanel({
         {error && <p className="text-xs text-red-600">{error}</p>}
 
         {!form ? (
-          <button
-            onClick={() => startAdd()}
-            className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
-          >
-            <Plus className="h-3.5 w-3.5" /> Add a role
-          </button>
+          <Button type="button" variant="outline" onClick={() => startAdd()} className="w-full sm:w-auto">
+            <Plus className="mr-1.5 h-4 w-4" /> Add a role
+          </Button>
         ) : (
           <div className="space-y-2.5 rounded-lg border border-slate-200 p-3">
             <div className="grid grid-cols-2 gap-2">
