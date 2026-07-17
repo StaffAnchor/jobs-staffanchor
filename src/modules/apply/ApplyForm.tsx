@@ -2944,7 +2944,9 @@ export default function ApplyForm({
                 <FormField label="Please specify your current industry" required>
                   <Input
                     value={values.customCurrentIndustry}
-                    onChange={(e) => update("customCurrentIndustry", e.target.value)}
+                    onChange={(e) => update("customCurrentIndustry", e.target.value.slice(0, 60))}
+                    maxLength={60}
+                    placeholder="e.g. EdTech, Fintech, Insurance"
                   />
                 </FormField>
               )}
