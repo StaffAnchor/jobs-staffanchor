@@ -31,11 +31,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { FormField } from "@/components/forms/form-field";
+import { FormField, CollapsibleFormField } from "@/components/forms/form-field";
 import {
   achievementBandOptions,
-  ahtOptions,
-  b2bSalesMotionTypeOptions,
+  b2bSalesMotionTypeGroups,
   b2bSubDomains,
   b2cSalesMotionOptions,
   b2cSubDomains,
@@ -47,8 +46,6 @@ import {
   ctcOptions,
   currencyOptions,
   customerSegmentOptions,
-  dailyCallTargetOptions,
-  dailyTalkTimeOptions,
   dealSizeBandsFor,
   defaultNoticePeriods,
   employmentStatusOptions,
@@ -57,7 +54,6 @@ import {
   geographicScopeOptions,
   highestQualificationOptions,
   industryOptions,
-  leadSourceOptions,
   motionTypeOptions,
   nonSalesSubDomains,
   promotionHistoryOptions,
@@ -743,20 +739,12 @@ function Stage2Summary({ v, isB2B, isB2C }: { v: FormState; isB2B: boolean; isB2
     return (
       <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
         <ProfileRow label="Sales Motion" value={v.b2bSalesMotionType} />
-        {(v.b2bSalesMotionType === "Field / Enterprise AE" || v.b2bSalesMotionType === "Inside Sales / SDR") && (
+        {!!v.b2bSalesMotionType && (
           <>
             <ProfileRow label="Selling Style" value={v.aeSellingStyle} />
             <ProfileRow label="Avg. Deal Size" value={v.aeDealSizeBand ? `${v.aeDealSizeCurrency} ${v.aeDealSizeBand}` : ""} />
             <ProfileRow label="Sales Cycle" value={v.aeSalesCycle} />
             <ProfileRow label="Buyer Persona" value={v.aeBuyerPersona} />
-          </>
-        )}
-        {v.b2bSalesMotionType === "Inside Sales / SDR" && (
-          <>
-            <ProfileRow label="Avg. Handle Time" value={v.sdrAht} />
-            <ProfileRow label="Daily Call Target" value={v.sdrDailyCallTarget} />
-            <ProfileRow label="Daily Talk Time" value={v.sdrDailyTalkTime} />
-            <ProfileRow label="Primary Lead Source" value={v.sdrLeadSource} />
           </>
         )}
       </div>
@@ -1114,7 +1102,11 @@ export default function ApplyForm({
   const isB2C = values.category === "b2c_sales";
   const isIndustrialPractice = isB2B && values.subDomain === "Industrial & Infrastructure";
   const stepSequence = isSalesCategory ? [0, 1, 2, 3] : [0, 1];
-  const stageIndex = stepSequence[Math.min(step, stepSequence.length - 1)];
+  const stageIndexFromStep = stepSequence[Math.min(step, stepSequence.length - 1)];
+  // Kept as `stageIndex` everywhere else in this component (JSX conditionals,
+  // isStageComplete, etc.) -- only validateStep() needs to distinguish "the
+  // wizard's current step" from "the stage a caller explicitly asks about".
+  const stageIndex = stageIndexFromStep;
   const isLastStage = step >= stepSequence.length - 1;
 
   const suggestedSkills = useMemo(() => skillSuggestionsFor(values.subDomain || null), [values.subDomain]);
@@ -1430,7 +1422,14 @@ export default function ApplyForm({
     });
   }
 
-  function validateStep(): string | null {
+  function validateStep(stageOverride?: number): string | null {
+    // In the step-by-step wizard this always validates the current step
+    // (the closure `stageIndex`). My Profile edit mode's per-section Save
+    // passes the specific stage index of whichever section is actually open
+    // (see saveSection() below), since `stageIndex` itself never advances in
+    // edit mode -- without this override, a section-level Save had no way to
+    // check the right stage's required fields at all.
+    const stageIndex = stageOverride ?? stageIndexFromStep;
     const isSales = isSalesCategory;
 
     // Stage 1A -- Critical Core
@@ -1536,23 +1535,13 @@ export default function ApplyForm({
       if (values.isFresher === "Yes") return null;
       if (isB2B) {
         if (!values.b2bSalesMotionType) return "Please select your Sales Motion.";
-        // Both B2B motions are still sales -- Hunter/Farmer, deal size, sales
-        // cycle, and buyer persona apply either way. Inside Sales/SDR asks
-        // these PLUS its own AHT/call-target/talk-time/lead-source fields,
-        // rather than instead of them.
-        if (values.b2bSalesMotionType === "Field / Enterprise AE" || values.b2bSalesMotionType === "Inside Sales / SDR") {
-          if (!values.aeSellingStyle) return "Please select Hunter, Farmer, or Hybrid.";
-          if (!values.aeDealSizeCurrency) return "Please select a currency for your average deal size.";
-          if (!values.aeDealSizeBand) return "Please select your average deal size.";
-          if (!values.aeSalesCycle) return "Please select your typical sales cycle length.";
-          if (!values.aeBuyerPersona) return "Please select your primary buyer persona.";
-        }
-        if (values.b2bSalesMotionType === "Inside Sales / SDR") {
-          if (!values.sdrAht) return "Please select your average handle time (AHT).";
-          if (!values.sdrDailyCallTarget) return "Please select your daily call target.";
-          if (!values.sdrDailyTalkTime) return "Please select your daily talk time.";
-          if (!values.sdrLeadSource) return "Please select your primary lead source.";
-        }
+        // Every B2B Sales Motion gets the same field set -- Hunter/Farmer,
+        // deal size, sales cycle, and buyer persona.
+        if (!values.aeSellingStyle) return "Please select Hunter, Farmer, or Hybrid.";
+        if (!values.aeDealSizeCurrency) return "Please select a currency for your average deal size.";
+        if (!values.aeDealSizeBand) return "Please select your average deal size.";
+        if (!values.aeSalesCycle) return "Please select your typical sales cycle length.";
+        if (!values.aeBuyerPersona) return "Please select your primary buyer persona.";
       } else if (isB2C) {
         if (!values.b2cSalesMotion) return "Please select your Sales Motion.";
         if (!values.b2cTicketCurrency) return "Please select a currency for your average ticket size.";
@@ -1664,19 +1653,11 @@ export default function ApplyForm({
       if (values.isFresher === "Yes") return true;
       if (isB2B) {
         if (!values.b2bSalesMotionType) return false;
-        if (values.b2bSalesMotionType === "Field / Enterprise AE" || values.b2bSalesMotionType === "Inside Sales / SDR") {
-          if (!values.aeSellingStyle) return false;
-          if (!values.aeDealSizeCurrency) return false;
-          if (!values.aeDealSizeBand) return false;
-          if (!values.aeSalesCycle) return false;
-          if (!values.aeBuyerPersona) return false;
-        }
-        if (values.b2bSalesMotionType === "Inside Sales / SDR") {
-          if (!values.sdrAht) return false;
-          if (!values.sdrDailyCallTarget) return false;
-          if (!values.sdrDailyTalkTime) return false;
-          if (!values.sdrLeadSource) return false;
-        }
+        if (!values.aeSellingStyle) return false;
+        if (!values.aeDealSizeCurrency) return false;
+        if (!values.aeDealSizeBand) return false;
+        if (!values.aeSalesCycle) return false;
+        if (!values.aeBuyerPersona) return false;
       } else if (isB2C) {
         if (!values.b2cSalesMotion) return false;
         if (!values.b2cTicketCurrency) return false;
@@ -1849,26 +1830,15 @@ export default function ApplyForm({
       // ---- Stage 2: Profile-Type-Specific ----
       if (isB2B) {
         segmentData.b2b_sales_motion_type = values.b2bSalesMotionType || undefined;
-        // Inside Sales/SDR is still sales -- it gets the same Hunter/Farmer,
-        // deal size, sales cycle, and buyer persona fields as Field/Enterprise
-        // AE, PLUS its own AHT/call-target/talk-time/lead-source fields below.
-        if (values.b2bSalesMotionType === "Field / Enterprise AE" || values.b2bSalesMotionType === "Inside Sales / SDR") {
-          Object.assign(segmentData, {
-            style: values.aeSellingStyle || undefined,
-            deal_size: values.aeDealSizeBand || undefined,
-            deal_size_currency: values.aeDealSizeCurrency || undefined,
-            cycle: values.aeSalesCycle || undefined,
-            buyer_persona: values.aeBuyerPersona || undefined,
-          });
-        }
-        if (values.b2bSalesMotionType === "Inside Sales / SDR") {
-          Object.assign(segmentData, {
-            aht: values.sdrAht || undefined,
-            daily_call_target: values.sdrDailyCallTarget || undefined,
-            daily_talk_time: values.sdrDailyTalkTime || undefined,
-            lead_sources: values.sdrLeadSource ? [values.sdrLeadSource] : undefined,
-          });
-        }
+        // Every B2B Sales Motion gets the same Hunter/Farmer, deal size, sales
+        // cycle, and buyer persona fields.
+        Object.assign(segmentData, {
+          style: values.aeSellingStyle || undefined,
+          deal_size: values.aeDealSizeBand || undefined,
+          deal_size_currency: values.aeDealSizeCurrency || undefined,
+          cycle: values.aeSalesCycle || undefined,
+          buyer_persona: values.aeBuyerPersona || undefined,
+        });
       } else if (isB2C) {
         Object.assign(segmentData, {
           motion: values.b2cSalesMotion || undefined,
@@ -2079,7 +2049,22 @@ export default function ApplyForm({
   // save"); everything else on the page renders as a read-only summary.
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [savingSection, setSavingSection] = useState(false);
+  const SECTION_STAGE_INDEX: Record<string, number> = { "1A": 0, "1B": 1, "2": 2, "3": 3 };
   async function saveSection() {
+    // handleSubmit({ silent: true }) skips validateStep() entirely (silent
+    // mode exists for Stage 4's autosave, where fields are optional) -- a
+    // section-level Save must not reuse that path unchecked, or required
+    // fields silently get persisted blank. Validate the specific section
+    // that's actually open before saving anything.
+    const idx = openSection ? SECTION_STAGE_INDEX[openSection] : undefined;
+    if (idx !== undefined) {
+      const err = validateStep(idx);
+      if (err) {
+        setErrorMsg(err);
+        return;
+      }
+    }
+    setErrorMsg(null);
     setSavingSection(true);
     try {
       await handleSubmit({ silent: true });
@@ -2165,9 +2150,17 @@ export default function ApplyForm({
         </div>
 
         {!(submitted && !isEditMode) && (
-        <div className="grid gap-6 lg:grid-cols-[260px_1fr_320px] lg:items-start">
-          <aside className="space-y-4 lg:sticky lg:top-6">
-            <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
+        <div
+          className={
+            isEditMode
+              ? "grid gap-4 lg:grid-cols-5 lg:items-start"
+              : "grid gap-6 lg:grid-cols-[260px_1fr_320px] lg:items-start"
+          }
+        >
+          <aside className={isEditMode ? "contents" : "space-y-4 lg:sticky lg:top-6"}>
+            <Card
+              className={`${isEditMode ? "order-1 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+            >
               <CardContent className="space-y-4 py-5">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-slate-900">Passport Readiness</p>
@@ -2270,7 +2263,9 @@ export default function ApplyForm({
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
+            <Card
+              className={`${isEditMode ? "order-2 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+            >
               <CardContent className="space-y-3 py-5 text-center">
                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                   <HelpCircle className="h-5 w-5" />
@@ -2288,7 +2283,9 @@ export default function ApplyForm({
             </Card>
           </aside>
 
-        <Card className="w-full rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
+        <Card
+          className={`w-full${isEditMode ? " order-6 lg:col-span-5" : ""} rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+        >
           <CardContent className="space-y-5 p-6">
             {isEditMode ? (
               // My Profile: one continuous page (all stages stacked below),
@@ -2939,7 +2936,7 @@ export default function ApplyForm({
                   />
                 </FormField>
               )}
-              <FormField label="Other Industries Previously Worked In (multi-select)" required>
+              <CollapsibleFormField label="Other Industries Previously Worked In (multi-select)" required>
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
                     <input
@@ -2981,7 +2978,7 @@ export default function ApplyForm({
                     </div>
                   )}
                 </div>
-              </FormField>
+              </CollapsibleFormField>
 
               <FormField label="Work Mode Preference" required>
                 <Select value={values.workMode} onChange={(e) => update("workMode", e.target.value)}>
@@ -3004,7 +3001,7 @@ export default function ApplyForm({
                 </Select>
               </FormField>
               {values.openToRelocation === "Yes" && (
-                <FormField label="Preferred Cities to Relocate To" required>
+                <CollapsibleFormField label="Preferred Cities to Relocate To" required>
                   <div className="flex flex-wrap gap-2">
                     {cityOptions
                       .filter((c) => c !== "Other")
@@ -3033,7 +3030,7 @@ export default function ApplyForm({
                     value={values.customRelocationCity}
                     onChange={(e) => update("customRelocationCity", e.target.value)}
                   />
-                </FormField>
+                </CollapsibleFormField>
               )}
               <FormField label="Willingness to Travel" required>
                 <Select value={values.travelPreference} onChange={(e) => update("travelPreference", e.target.value)}>
@@ -3127,7 +3124,7 @@ export default function ApplyForm({
                     </>
                   ) : (
                     <>
-                      <FormField label="Secondary Specializations" required>
+                      <CollapsibleFormField label="Secondary Specializations" required>
                         {values.secondarySubDomains.length === 0 && (
                           <p className="mb-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
                             Even one extra specialization can open up more mandates you'd be a fit for -- and if
@@ -3220,7 +3217,7 @@ export default function ApplyForm({
                             />
                           </div>
                         )}
-                      </FormField>
+                      </CollapsibleFormField>
 
                       <FormField label="Role Level" required>
                         <Select value={values.roleLevel} onChange={(e) => update("roleLevel", e.target.value)}>
@@ -3312,21 +3309,20 @@ export default function ApplyForm({
                 <FormField label="Sales Motion" required>
                   <Select value={values.b2bSalesMotionType} onChange={(e) => update("b2bSalesMotionType", e.target.value)}>
                     <option value="">Select...</option>
-                    {b2bSalesMotionTypeOptions.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
+                    {b2bSalesMotionTypeGroups.map(({ group, options }) => (
+                      <optgroup key={group} label={group}>
+                        {options.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </Select>
                 </FormField>
 
-                {(values.b2bSalesMotionType === "Field / Enterprise AE" ||
-                  values.b2bSalesMotionType === "Inside Sales / SDR") && (
+                {!!values.b2bSalesMotionType && (
                   <>
-                    {/* Inside Sales/SDR is still a sales role -- it gets these same
-                        fields (hunter/farmer, deal size, cycle, buyer persona) in
-                        addition to its own AHT/call-target/talk-time/lead-source
-                        fields below, not instead of them. */}
                     <FormField label="Hunter or Farmer" required>
                       <Select value={values.aeSellingStyle} onChange={(e) => update("aeSellingStyle", e.target.value)}>
                         <option value="">Select...</option>
@@ -3379,51 +3375,6 @@ export default function ApplyForm({
                       <Select value={values.aeBuyerPersona} onChange={(e) => update("aeBuyerPersona", e.target.value)}>
                         <option value="">Select...</option>
                         {clientProfileOptions.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
-                  </>
-                )}
-
-                {values.b2bSalesMotionType === "Inside Sales / SDR" && (
-                  <>
-                    <FormField label="Average Handle Time (AHT)" required>
-                      <Select value={values.sdrAht} onChange={(e) => update("sdrAht", e.target.value)}>
-                        <option value="">Select...</option>
-                        {ahtOptions.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
-                    <FormField label="Daily Call Target" required>
-                      <Select value={values.sdrDailyCallTarget} onChange={(e) => update("sdrDailyCallTarget", e.target.value)}>
-                        <option value="">Select...</option>
-                        {dailyCallTargetOptions.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
-                    <FormField label="Daily Talk Time" required>
-                      <Select value={values.sdrDailyTalkTime} onChange={(e) => update("sdrDailyTalkTime", e.target.value)}>
-                        <option value="">Select...</option>
-                        {dailyTalkTimeOptions.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
-                    <FormField label="Primary Lead Source" required>
-                      <Select value={values.sdrLeadSource} onChange={(e) => update("sdrLeadSource", e.target.value)}>
-                        <option value="">Select...</option>
-                        {leadSourceOptions.map((o) => (
                           <option key={o} value={o}>
                             {o}
                           </option>
@@ -3712,8 +3663,10 @@ export default function ApplyForm({
         </CardContent>
         </Card>
 
-        <aside className="space-y-4 lg:sticky lg:top-6">
-          <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
+        <aside className={isEditMode ? "contents" : "space-y-4 lg:sticky lg:top-6"}>
+          <Card
+            className={`${isEditMode ? "order-3 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+          >
             <CardContent className="space-y-3 py-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-900">Your Profile Preview</p>
@@ -3742,7 +3695,9 @@ export default function ApplyForm({
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
+          <Card
+            className={`${isEditMode ? "order-4 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+          >
             <CardContent className="space-y-4 py-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-900">Score</p>
@@ -3801,7 +3756,9 @@ export default function ApplyForm({
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
+          <Card
+            className={`${isEditMode ? "order-5 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+          >
             <CardContent className="space-y-2 py-5">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-blue-600" />

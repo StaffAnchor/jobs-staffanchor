@@ -916,18 +916,48 @@ export const achievementBandOptions = [
 // ---------------------------------------------------------------------------
 
 // ---- Stage 2: B2B Sales Motion (the PRIMARY branch for B2B, asked before
-// any sub-domain-specific fields -- Field/Enterprise AE vs Inside Sales/SDR) ----
-export const b2bSalesMotionTypeOptions = ["Field / Enterprise AE", "Inside Sales / SDR"] as const;
-export type B2BSalesMotionType = (typeof b2bSalesMotionTypeOptions)[number];
+// any sub-domain-specific fields). Grouped into three bands so senior/
+// leadership-track motions (Enterprise) sit apart from high-velocity/inside
+// motions and from traditional/industrial field sales -- every option in
+// every group gets the same field set below (Selling Style, Deal Size,
+// Sales Cycle, Buyer Persona); there's no separate AHT/call-volume branch
+// any more, since that distinction didn't hold up across this wider list.
+export const b2bSalesMotionTypeGroups = [
+  {
+    group: "Enterprise Sales Motions (High ACV & Strategic)",
+    options: [
+      "Outbound Enterprise (Account-Based Marketing / ABM)",
+      "Inbound Enterprise (Marketing-Led)",
+      "Strategic / Named Accounts (Enterprise Expansion)",
+      "Partner / Channel-Led Enterprise Sales",
+    ],
+  },
+  {
+    group: "Inside Sales / High-Velocity Motions",
+    options: [
+      "Inbound Transactional Sales (High-Velocity Inbound)",
+      "Outbound Inside Sales (Volume Prospecting / SDR / BDR)",
+      "Product-Led Sales (PLS / Active User Conversion)",
+      "Inside Channel & Remote Partner Management",
+    ],
+  },
+  {
+    group: "Traditional & Industrial Sales Motions",
+    options: [
+      "Direct Field Engineering Sales (Consultative B2B)",
+      "Distributor-Led Commercial Sales (Indirect Channel)",
+    ],
+  },
+] as const;
 
-// ---- Stage 2: AE (Account Executive) fields -- Hunter vs Farmer already
-// exists as `sellingStyleOptions`; sales cycle already exists as
-// `salesCycleOptions`; buyer persona already exists as `clientProfileOptions`.
-// Average deal size (ACV, banded) reuses `dealSizeBandsFor` + `currencyOptions`.
+export const b2bSalesMotionTypeOptions = b2bSalesMotionTypeGroups.flatMap((g) => [...g.options]);
+export type B2BSalesMotionType = string;
 
-// ---- Stage 2: SDR fields -- AHT/daily call target/daily talk time/lead
-// sources already exist (`ahtOptions`, `dailyCallTargetOptions`,
-// `dailyTalkTimeOptions`, `leadSourceOptions`).
+// ---- Stage 2: fields shared by every B2B Sales Motion above -- Hunter vs
+// Farmer already exists as `sellingStyleOptions`; sales cycle already exists
+// as `salesCycleOptions`; buyer persona already exists as
+// `clientProfileOptions`. Average deal size (ACV, banded) reuses
+// `dealSizeBandsFor` + `currencyOptions`.
 
 // ---- Stage 3: Revenue Snapshot -- period toggle + banded target + achievement.
 export const revenuePeriodOptions = ["Quarterly", "Annual"] as const;
