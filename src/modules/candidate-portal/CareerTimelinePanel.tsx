@@ -301,48 +301,57 @@ export default function CareerTimelinePanel({
         {void stabilityLabel}
         {void domainScore}
 
-        {gaps.length > 0 && (
+        {/* Genuine mismatches/discrepancies (title or dates disagree between
+            resume and confirmed profile, or the flat current_employer field
+            doesn't match) still get an amber flag -- those actually need the
+            candidate's attention. "Not yet added to profile" is just a
+            suggestion, not a warning, so it's handled separately below in one
+            calm, non-duplicated list instead of showing twice. */}
+        {gaps.filter((g) => g.type !== "resume_not_in_profile").length > 0 && (
           <div className="space-y-1.5">
-            {gaps.map((gap, i) => (
-              <div key={i} className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-                <p className="flex-1 text-xs text-amber-800">{gap.message}</p>
-                {gap.type === "resume_not_in_profile" && (
-                  <button
-                    onClick={() =>
-                      startAdd({
-                        company: gap.resumeEntry.company,
-                        title: gap.resumeEntry.title,
-                        start_month: gap.resumeEntry.start_month || "",
-                        end_month: gap.resumeEntry.end_month,
-                      })
-                    }
-                    className="shrink-0 text-xs font-medium text-amber-700 underline hover:text-amber-900"
-                  >
-                    Confirm &amp; add
-                  </button>
-                )}
-              </div>
-            ))}
+            {gaps
+              .filter((g) => g.type !== "resume_not_in_profile")
+              .map((gap, i) => (
+                <div key={i} className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+                  <p className="flex-1 text-xs text-amber-800">{gap.message}</p>
+                </div>
+              ))}
           </div>
         )}
 
         {resumeEntries.length > 0 && (
           <div>
             <h4 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              From your resume <span className="font-normal normal-case text-slate-400">(unconfirmed)</span>
+              From your resume <span className="font-normal normal-case text-slate-400">(not yet added)</span>
             </h4>
             <div className="space-y-1.5">
               {resumeEntries.map((e) => (
-                <div key={e.id} className="rounded-lg border border-dashed border-slate-200 px-3 py-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-slate-700">
+                <div
+                  key={e.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-blue-100 bg-blue-50/50 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-700">
                       {e.title || "Role"} <span className="font-normal text-slate-400">at {e.company}</span>
                     </p>
                     <p className="text-xs text-slate-400">
                       {monthLabel(e.start_month)} – {monthLabel(e.end_month)}
                     </p>
                   </div>
+                  <button
+                    onClick={() =>
+                      startAdd({
+                        company: e.company,
+                        title: e.title,
+                        start_month: e.start_month || "",
+                        end_month: e.end_month,
+                      })
+                    }
+                    className="shrink-0 rounded-full border border-blue-200 bg-white px-2.5 py-1 text-xs font-medium text-blue-700 hover:border-blue-300 hover:bg-blue-50"
+                  >
+                    Add to profile
+                  </button>
                 </div>
               ))}
             </div>

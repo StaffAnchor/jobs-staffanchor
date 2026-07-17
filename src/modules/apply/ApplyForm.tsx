@@ -549,6 +549,9 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
     subDomain: knownSubDomain ? (p.sub_domain as string) : p.sub_domain ? "Other" : "",
     customSubDomain: !knownSubDomain && p.sub_domain ? p.sub_domain : "",
     secondarySubDomains: p.secondary_sub_domains ?? [],
+    secondaryOtherB2BSubDomain: seg(sd, "secondary_other_b2b_subdomain"),
+    secondaryOtherB2CSpecify: seg(sd, "secondary_other_b2c_specify"),
+    secondaryOtherNonSalesSpecify: seg(sd, "secondary_other_non_sales_specify"),
     roleLevel: seg(sd, "role_level"),
     roleType: roleTypeRaw === "Team Lead" ? "Leading a Team" : roleTypeRaw === "IC" ? "Individual Contributor (IC)" : "",
     teamSize: seg(sd, "team_size"),
@@ -624,6 +627,18 @@ export default function ApplyForm({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Quick Apply "already registered?" check -- see the real-time email lookup
+  // effect below. Deliberately Quick-Apply-only: Build Your Profile and
+  // Recruiter Created have no reason to short-circuit, they're already the
+  // "fill everything" / "edit everything" paths respectively.
+  const [existingCheck, setExistingCheck] = useState<{
+    exists: boolean;
+    firstName: string | null;
+    alreadyApplied: boolean;
+  } | null>(null);
+  const [existingCheckDismissed, setExistingCheckDismissed] = useState(false);
+  const [fastApplying, setFastApplying] = useState(false);
+  const [fastApplied, setFastApplied] = useState(false);
   const [quotes, setQuotes] = useState<string[]>(FALLBACK_QUOTES);
   const [noticePeriods, setNoticePeriods] = useState<string[]>(defaultNoticePeriods);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -759,6 +774,66 @@ export default function ApplyForm({
     values.currentIndustry,
     values.selectedSkills,
   ]);
+
+  // Quick Apply real-time "you're already registered" check -- fires once the
+  // email looks valid, Quick-Apply-only. Lets a returning candidate apply with
+  // their existing profile instead of re-filling Stage 1B/2/3 from scratch
+  // (feedback: "why do I have to redo everything"). Deliberately debounced and
+  // best-effort -- a failed lookup just means the candidate falls through to
+  // the normal full form, never blocks it.
+  useEffect(() => {
+    if (source !== "quick_apply" || isEditMode) return;
+    if (fastApplied || existingCheckDismissed) return;
+    if (!/^\S+@\S+\.\S+$/.test(values.email)) {
+      setExistingCheck(null);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/candidate-lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: values.email.trim(), mandateId }),
+        });
+        const json = await res.json().catch(() => ({ exists: false }));
+        setExistingCheck(
+          json.exists ? { exists: true, firstName: json.firstName ?? null, alreadyApplied: !!json.alreadyApplied } : null
+        );
+      } catch {
+        // best-effort only
+      }
+    }, 700);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.email, source, isEditMode, mandateId, fastApplied, existingCheckDismissed]);
+
+  // "Use my existing profile" fast path -- calls the exact same
+  // candidate-submit -> quick_apply RPC route the full form uses, but with a
+  // minimal { email } payload. quick_apply's own SQL coalesces every field
+  // against the existing row (see options.ts / hand-off notes), so this can
+  // never blank out anything already on file -- it only inserts the new
+  // candidate_mandate_links row for this job.
+  async function handleFastApply() {
+    setFastApplying(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch("/api/candidate-submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload: { email: values.email.trim() }, mandateId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? "Something went wrong. Please try again.");
+      setFastApplied(true);
+      toast.success("You're all set -- your existing profile has been submitted for this role.");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Something went wrong. Please try again.";
+      setErrorMsg(message);
+      toast.error(message);
+    } finally {
+      setFastApplying(false);
+    }
+  }
 
   // Round 8: currentEmployer/currentJobTitle are no longer entered directly
   // in this wizard -- they're sourced from whichever Career Timeline entry
@@ -1155,7 +1230,7 @@ export default function ApplyForm({
         return "Please enter both city and state.";
       }
       if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
-      if (!values.category) return "Please select your Profile Type.";
+      if (!values.category) return "Please select your Current Profile Type.";
       if (!values.subDomain) return "Please select your Practice / Vertical / Function.";
       if (values.subDomain === "Other" && !values.customSubDomain.trim()) {
         return "Please specify your Practice / Vertical / Function.";
@@ -1222,11 +1297,8 @@ export default function ApplyForm({
         if (isSales && !values.secondarySubDomains.length) {
           return "Please select at least one option (choose 'None — single specialization only' if not applicable).";
         }
-        if (values.secondarySubDomains.includes("Other B2B")) {
-          if (!values.secondaryOtherB2BSubDomain) return "Please tell us more about your secondary Other B2B specialization.";
-          if (values.secondaryOtherB2BSubDomain === "Other" && !values.customSecondaryOtherB2BSubDomain.trim()) {
-            return "Please specify your secondary B2B specialization.";
-          }
+        if (values.secondarySubDomains.includes("Other (B2B)") && !values.secondaryOtherB2BSubDomain.trim()) {
+          return "Please specify your secondary B2B specialization.";
         }
         if (values.secondarySubDomains.includes("Other (B2C)") && !values.secondaryOtherB2CSpecify.trim()) {
           return "Please specify your secondary B2C specialization.";
@@ -1410,11 +1482,8 @@ export default function ApplyForm({
         segmentData.other_b2b_subdomain =
           values.otherB2BSubDomain === "Other" ? values.customOtherB2BSubDomain.trim() : values.otherB2BSubDomain;
       }
-      if (values.secondarySubDomains.includes("Other B2B") && values.secondaryOtherB2BSubDomain) {
-        segmentData.secondary_other_b2b_subdomain =
-          values.secondaryOtherB2BSubDomain === "Other"
-            ? values.customSecondaryOtherB2BSubDomain.trim()
-            : values.secondaryOtherB2BSubDomain;
+      if (values.secondarySubDomains.includes("Other (B2B)") && values.secondaryOtherB2BSubDomain.trim()) {
+        segmentData.secondary_other_b2b_subdomain = values.secondaryOtherB2BSubDomain.trim();
       }
       // Generic "Other" specify for the disambiguated B2C / Non-Sales tail
       // entries in the cross-Profile-Type Secondary Specialization list.
@@ -1654,6 +1723,19 @@ export default function ApplyForm({
   // full payload builder in `silent` mode instead of a second save path.
   const showStage4 = submitted || isEditMode;
 
+  // My Profile only: Stage 4 is optional/post-submit depth, so on the
+  // one-page profile it should read as empty (collapsed) until the candidate
+  // has actually filled something in it, then open by default so they can
+  // see what's already there. Fresh submits (!isEditMode) always show it
+  // fully expanded, unchanged from before -- this collapse only applies to
+  // the one-page My Profile view.
+  const hasStage4Data =
+    values.careerTimeline.some((e) => e.end_month !== null || (e.best_win ?? "").trim() || (e.tough_loss ?? "").trim()) ||
+    !!values.promotionHistory ||
+    !!values.revenuePeriod ||
+    !!values.linkedinUrl.trim();
+  const [stage4Open, setStage4Open] = useState(hasStage4Data);
+
   useEffect(() => {
     if (!showStage4) return;
     const handle = setTimeout(() => {
@@ -1679,6 +1761,28 @@ export default function ApplyForm({
   ]);
 
   const StepIcon = STAGE_META[stageIndex].icon;
+
+  // Fast-apply success: a returning candidate chose "use my existing
+  // profile" instead of re-filling Stage 1B/2/3 -- short-circuit straight to
+  // a clean confirmation instead of rendering the full wizard chrome.
+  if (fastApplied) {
+    return (
+      <div className="mx-auto max-w-lg rounded-2xl border border-emerald-200 bg-emerald-50/60 px-6 py-10 text-center">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+          ✓
+        </div>
+        <h2 className="text-xl font-bold text-slate-950">
+          {existingCheck?.firstName ? `Thanks, ${existingCheck.firstName}` : "Thank you"} — you&apos;re all set
+          {mandateTitle ? ` for ${mandateTitle}` : ""}.
+        </h2>
+        <p className="mt-3 text-sm text-slate-600">
+          We applied your existing profile to this role. A StaffAnchor recruiter will review it and reach out if
+          there&apos;s a fit. If anything about your profile has changed, head to My Profile in your candidate
+          portal any time to update it.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -1811,25 +1915,63 @@ export default function ApplyForm({
 
         <Card className="w-full rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
           <CardContent className="space-y-5 p-6">
-            <div className="flex items-start gap-3.5 pb-1">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 text-blue-600 ring-1 ring-blue-100">
-                <StepIcon className="h-5.5 w-5.5" />
+            {isEditMode ? (
+              // My Profile: one continuous page (all stages stacked below),
+              // not a stage-by-stage wizard replay -- so the header here is a
+              // single overview with the profile score up top, not a
+              // per-stage eyebrow/heading that would repeat once per section.
+              <div className="flex items-center justify-between gap-4 pb-1">
+                <div className="flex items-center gap-3.5">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 text-blue-600 ring-1 ring-blue-100">
+                    <StepIcon className="h-5.5 w-5.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Your Profile</h2>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-500">
+                      Everything you&apos;ve told us, all on one page. Edit any field directly.
+                    </p>
+                  </div>
+                </div>
+                <div className="hidden shrink-0 items-center gap-3 sm:flex">
+                  <div
+                    className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-500"
+                    style={{ background: `conic-gradient(${readinessMeta.ring} ${profileStrength * 3.6}deg, #e2e8f0 0deg)` }}
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-xs font-bold text-slate-900">
+                      {profileStrength}%
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
-                  {STAGE_META[stageIndex].eyebrow}
-                </p>
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{STAGE_META[stageIndex].heading}</h2>
-                <p className="mt-1 text-sm leading-relaxed text-slate-500">{STAGE_META[stageIndex].subtext}</p>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="flex items-start gap-3.5 pb-1">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 text-blue-600 ring-1 ring-blue-100">
+                    <StepIcon className="h-5.5 w-5.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
+                      {STAGE_META[stageIndex].eyebrow}
+                    </p>
+                    <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{STAGE_META[stageIndex].heading}</h2>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-500">{STAGE_META[stageIndex].subtext}</p>
+                  </div>
+                </div>
 
-            <div className="flex items-start gap-2.5 rounded-xl bg-blue-50/70 px-3.5 py-3 text-sm text-blue-900 ring-1 ring-blue-100/80">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
-              <span className="leading-relaxed">{STAGE_TIPS[stageIndex]}</span>
-            </div>
-            <p className="text-xs italic leading-relaxed text-slate-400">&ldquo;{quote}&rdquo;</p>
-          {stageIndex === 0 && (
+                <div className="flex items-start gap-2.5 rounded-xl bg-blue-50/70 px-3.5 py-3 text-sm text-blue-900 ring-1 ring-blue-100/80">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+                  <span className="leading-relaxed">{STAGE_TIPS[stageIndex]}</span>
+                </div>
+                <p className="text-xs italic leading-relaxed text-slate-400">&ldquo;{quote}&rdquo;</p>
+              </>
+            )}
+
+          {isEditMode && (
+            <p className="border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Stage 1 — Core Details
+            </p>
+          )}
+          {(stageIndex === 0 || isEditMode) && (
             <>
               <FormField label="Full Name" required>
                 <Input value={values.fullName} onChange={(e) => update("fullName", e.target.value)} />
@@ -1848,6 +1990,58 @@ export default function ApplyForm({
                   </p>
                 )}
               </FormField>
+
+              {existingCheck?.exists && !existingCheckDismissed && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4">
+                  {existingCheck.alreadyApplied ? (
+                    <>
+                      <p className="text-sm font-semibold text-blue-900">
+                        You&apos;ve already applied to this role{existingCheck.firstName ? `, ${existingCheck.firstName}` : ""}.
+                      </p>
+                      <p className="mt-1 text-xs text-blue-800">
+                        No need to apply again -- a recruiter already has this application on file. If something
+                        about your profile has changed, update it any time from My Profile in your candidate
+                        portal.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setExistingCheckDismissed(true)}
+                        className="mt-2 text-xs font-medium text-blue-700 underline hover:text-blue-900"
+                      >
+                        Fill this out as a new application anyway
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-blue-900">
+                        Looks like you&apos;re already registered with us{existingCheck.firstName ? `, ${existingCheck.firstName}` : ""}!
+                      </p>
+                      <p className="mt-1 text-xs text-blue-800">
+                        Want to apply for this role with your existing profile, or update your profile first?
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button type="button" onClick={handleFastApply} disabled={fastApplying} className="text-xs">
+                          {fastApplying ? "Applying..." : "Use my existing profile — apply now"}
+                        </Button>
+                        <a
+                          href="/candidate-login"
+                          className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-slate-400"
+                        >
+                          Update my profile first
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setExistingCheckDismissed(true)}
+                          className="text-xs font-medium text-blue-700 underline hover:text-blue-900"
+                        >
+                          No, fill out a fresh form
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               <FormField label="Phone (10-digit mobile number)" required>
                 <Input
                   inputMode="numeric"
@@ -2011,7 +2205,7 @@ export default function ApplyForm({
                 </div>
               )}
 
-              <FormField label="Profile Type" required>
+              <FormField label="Current Profile Type" required>
                 <Select
                   value={values.category}
                   onChange={(e) => {
@@ -2033,13 +2227,7 @@ export default function ApplyForm({
 
               {values.category && (
                 <FormField
-                  label={
-                    values.category === "b2b_sales"
-                      ? "Practice"
-                      : values.category === "b2c_sales"
-                        ? "Vertical"
-                        : "Function"
-                  }
+                  label="Primary Specialization"
                   required
                 >
                   <Select
@@ -2100,7 +2288,12 @@ export default function ApplyForm({
             </>
           )}
 
-          {stageIndex === 1 && (
+          {isEditMode && (
+            <p className="border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Stage 1B — Extended Core
+            </p>
+          )}
+          {(stageIndex === 1 || isEditMode) && (
             <>
               <FormField label="Are you a fresher, or do you already have work experience?" required>
                 <div className="grid grid-cols-2 gap-2">
@@ -2526,56 +2719,57 @@ export default function ApplyForm({
                             if (!visibleOptions.length) return null;
                             return (
                               <div key={group}>
-                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                                   {group}
                                 </p>
-                                <div className="grid gap-1.5">
-                                  {visibleOptions.map((o) => (
-                                    <label key={o} className="flex items-center gap-2 text-sm text-slate-700">
-                                      <input
-                                        type="checkbox"
-                                        checked={values.secondarySubDomains.includes(o)}
-                                        onChange={() => toggleArrayValue("secondarySubDomains", o)}
-                                      />
-                                      {o}
-                                    </label>
-                                  ))}
+                                <div className="flex flex-wrap gap-1.5">
+                                  {visibleOptions.map((o) => {
+                                    const checked = values.secondarySubDomains.includes(o);
+                                    return (
+                                      <button
+                                        type="button"
+                                        key={o}
+                                        onClick={() => toggleArrayValue("secondarySubDomains", o)}
+                                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                                          checked
+                                            ? "border-blue-600 bg-blue-600 text-white"
+                                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                                        }`}
+                                      >
+                                        {o}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             );
                           })}
-                          <label className="flex items-center gap-2 text-sm text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={values.secondarySubDomains.includes("None — single specialization only")}
-                              onChange={() => toggleArrayValue("secondarySubDomains", "None — single specialization only")}
-                            />
-                            None — single specialization only
-                          </label>
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleArrayValue("secondarySubDomains", "None — single specialization only")
+                              }
+                              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                                values.secondarySubDomains.includes("None — single specialization only")
+                                  ? "border-slate-700 bg-slate-700 text-white"
+                                  : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              None — single specialization only
+                            </button>
+                          </div>
                         </div>
-                        {values.secondarySubDomains.includes("Other B2B") && (
+                        {values.secondarySubDomains.includes("Other (B2B)") && (
                           <div className="mt-2 space-y-2 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
                             <p className="text-xs text-slate-500">
-                              You flagged "Other B2B" as a secondary specialization — tell us a bit more.
+                              You flagged "Other (B2B)" as a secondary specialization — tell us a bit more.
                             </p>
-                            <Select
+                            <Input
                               value={values.secondaryOtherB2BSubDomain}
                               onChange={(e) => update("secondaryOtherB2BSubDomain", e.target.value)}
-                            >
-                              <option value="">Select...</option>
-                              {subDomainsForPractice("Other B2B").map((o) => (
-                                <option key={o} value={o}>
-                                  {o}
-                                </option>
-                              ))}
-                            </Select>
-                            {values.secondaryOtherB2BSubDomain === "Other" && (
-                              <Input
-                                value={values.customSecondaryOtherB2BSubDomain}
-                                onChange={(e) => update("customSecondaryOtherB2BSubDomain", e.target.value)}
-                                placeholder="Please specify"
-                              />
-                            )}
+                              placeholder="Please specify"
+                            />
                           </div>
                         )}
                         {values.secondarySubDomains.includes("Other (B2C)") && (
@@ -2668,7 +2862,12 @@ export default function ApplyForm({
             </>
           )}
 
-          {stageIndex === 2 && isSalesCategory && (
+          {isEditMode && isSalesCategory && (
+            <p className="border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Stage 2 — Profile-Type-Specific
+            </p>
+          )}
+          {(stageIndex === 2 || isEditMode) && isSalesCategory && (
             values.isFresher === "Yes" ? (
               <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
                 <Briefcase className="mx-auto mb-2 h-6 w-6 text-emerald-400" />
@@ -2848,7 +3047,12 @@ export default function ApplyForm({
             )
           )}
 
-          {stageIndex === 3 && isSalesCategory && (
+          {isEditMode && isSalesCategory && (
+            <p className="border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Stage 3 — Revenue Snapshot
+            </p>
+          )}
+          {(stageIndex === 3 || isEditMode) && isSalesCategory && (
             values.isFresher === "Yes" ? (
               <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
                 <BarChart3 className="mx-auto mb-2 h-6 w-6 text-emerald-400" />
@@ -3033,35 +3237,51 @@ export default function ApplyForm({
 
           {errorMsg && <p className="text-sm text-red-600">{errorMsg}</p>}
 
-          <div className="flex items-center justify-between border-t border-slate-100 pt-5">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={goBack}
-              disabled={step === 0 || submitting}
-              className="rounded-xl"
-            >
-              ← Previous
-            </Button>
-            {!isLastStage ? (
-              <Button
-                type="button"
-                onClick={goNext}
-                className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
-              >
-                Continue →
-              </Button>
-            ) : (
+          {isEditMode ? (
+            // One continuous page, no stage-by-stage stepper -- a single
+            // always-available Save, since every field above is already
+            // visible and editable in place.
+            <div className="flex items-center justify-end border-t border-slate-100 pt-5">
               <Button
                 type="button"
                 onClick={() => handleSubmit()}
                 disabled={submitting}
                 className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
               >
-                {submitting ? "Submitting..." : isEditMode ? "Save Profile" : submitButtonLabel}
+                {submitting ? "Saving..." : "Save Changes"}
               </Button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between border-t border-slate-100 pt-5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={goBack}
+                disabled={step === 0 || submitting}
+                className="rounded-xl"
+              >
+                ← Previous
+              </Button>
+              {!isLastStage ? (
+                <Button
+                  type="button"
+                  onClick={goNext}
+                  className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
+                >
+                  Continue →
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => handleSubmit()}
+                  disabled={submitting}
+                  className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
+                >
+                  {submitting ? "Submitting..." : submitButtonLabel}
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
         </Card>
 
@@ -3202,23 +3422,36 @@ export default function ApplyForm({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">Stage 4 — Optional</p>
-                  <h3 className="text-lg font-semibold text-slate-900">A few more things that boost your shortlisting odds</h3>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    {isEditMode ? "Career depth & optional details" : "A few more things that boost your shortlisting odds"}
+                  </h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    No pressure -- this all autosaves as you go, and you can come back anytime.
+                    {isEditMode
+                      ? hasStage4Data
+                        ? "Autosaves as you go."
+                        : "Not filled in yet -- this is optional, but it's the single biggest lever on your Passport Readiness score."
+                      : "No pressure -- this all autosaves as you go, and you can come back anytime."}
                   </p>
                 </div>
-                <div className="hidden shrink-0 items-center gap-3 sm:flex">
+                <div className="flex shrink-0 items-center gap-3">
                   <div
-                    className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-500"
+                    className="relative hidden h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-500 sm:flex"
                     style={{ background: `conic-gradient(${readinessMeta.ring} ${profileStrength * 3.6}deg, #e2e8f0 0deg)` }}
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-xs font-bold text-slate-900">
                       {profileStrength}%
                     </div>
                   </div>
+                  {isEditMode && (
+                    <Button type="button" variant="outline" onClick={() => setStage4Open((v) => !v)} className="rounded-xl">
+                      {stage4Open ? "Show less" : "Show more"}
+                    </Button>
+                  )}
                 </div>
               </div>
 
+              {(!isEditMode || stage4Open) && (
+                <>
               {/* Cluster: Career History -- historic roles + revenue per role +
                   reason for leaving + promotion history. This is the existing
                   CareerTimelinePanel, minus the quarterly target/achievement
@@ -3487,8 +3720,10 @@ export default function ApplyForm({
                   </FormField>
                 </div>
               )}
+                </>
+              )}
 
-              {isEditMode && (
+              {isEditMode && stage4Open && (
                 <div className="flex justify-end border-t border-slate-100 pt-4">
                   <Button type="button" onClick={() => handleSubmit()} disabled={submitting} className="rounded-xl bg-blue-600 px-6">
                     {submitting ? "Saving..." : "Save Profile"}

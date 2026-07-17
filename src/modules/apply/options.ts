@@ -67,6 +67,7 @@ export const roleLevelOptions = [
   "IC – Sales Development",
   "IC – Account Executive",
   "IC",
+  "Team Lead / Asst. Manager",
   "Manager",
   "Senior Manager",
   "Director",
@@ -544,33 +545,113 @@ export function level1OptionsForProfileType(profileType: CategoryValue | null): 
 // Type -- a B2B AE who also did a B2C stint, or vice versa -- and that was
 // previously invisible because Secondary Specialization only offered the
 // SAME list as the primary Practice/Vertical/Function. This combines all
-// three taxonomies (B2B practices + B2C verticals + Non-Sales functions) into
-// one grouped multi-select so any mix of background can be captured, however
-// niche it is by count of candidates today. Plain "Other" collides between
-// b2cVerticals and nonSalesFunctions (both end their list with "Other"), so
-// each group's generic tail entry is disambiguated here purely for this
-// combined list -- the underlying per-type lists used for the PRIMARY
-// Practice/Vertical/Function selector are untouched.
+// three taxonomies into one grouped multi-select so any mix of background
+// can be captured, however niche it is by count of candidates today.
+//
+// This list is deliberately GRANULAR (named specializations, not broad
+// top-level buckets) -- feedback was that B2B in particular only offered 2-3
+// broad "practices" once your own primary was excluded, while B2C/Non-Sales
+// looked fuller only because their top-level list happened to already be
+// named categories. For B2B specifically this flattens the existing Level-2
+// sub-domain lists (enterpriseTechSubDomains + industrialSubDomains +
+// otherB2BSubDomains) instead of using the 3 broad b2bPractices, so it lines
+// up 1:1 with the granularity candidates actually pick at Level 2. B2C and
+// Non-Sales get their own expanded, granular, secondary-only lists (kept
+// separate from b2cVerticals/nonSalesFunctions so the PRIMARY selector is
+// untouched). Plain "Other" collides across groups, so each group's generic
+// tail entry is disambiguated here purely for this combined list.
 export type SecondarySpecializationGroup = {
   group: "B2B Sales" | "B2C Sales" | "Non-Sales / Other";
   options: string[];
 };
 
+// B2B: flatten all three Level-2 sub-domain lists into one granular set,
+// deduping the generic "Other" tail from otherB2BSubDomains.
+const secondaryB2BOptions = [
+  ...enterpriseTechSubDomains,
+  ...industrialSubDomains,
+  ...otherB2BSubDomains.filter((o) => o !== "Other"),
+  "Other (B2B)",
+];
+
+// B2C: granular retail/consumer specializations -- broader than the 10
+// verticals on the primary selector.
+const secondaryB2COptions = [
+  "Retail (Offline / In-store)",
+  "E-commerce / D2C",
+  "Insurance (Life)",
+  "Insurance (Health / General)",
+  "Loans & Lending (Personal / Consumer)",
+  "Loans & Lending (Home / Auto)",
+  "Mutual Funds / Wealth Advisory (B2C)",
+  "EdTech",
+  "Real Estate (Residential)",
+  "Automobile (Two-wheeler)",
+  "Automobile (Four-wheeler)",
+  "Telecom",
+  "Healthcare & Wellness",
+  "Fitness / Gym Memberships",
+  "Travel & Hospitality",
+  "OTT / Media Subscriptions",
+  "FMCG / Consumer Durables (Retail)",
+  "Jewellery / Luxury Retail",
+  "Other (B2C)",
+];
+
+// Non-Sales: granular named roles instead of broad function buckets.
+const secondaryNonSalesOptions = [
+  "Performance Marketing",
+  "Content Marketing",
+  "Brand Marketing",
+  "Growth Marketing",
+  "Marketing Analytics",
+  "Finance & Accounts",
+  "FP&A",
+  "Treasury",
+  "HR Business Partner",
+  "HR Recruiter / Talent Acquisition",
+  "Learning & Development (L&D)",
+  "Compensation & Benefits",
+  "HR Operations",
+  "Operations Management",
+  "Process Excellence",
+  "Customer Support / Service",
+  "Customer Success",
+  "Software Engineering / Development",
+  "Quality Assurance (QA) / Testing",
+  "DevOps / Site Reliability",
+  "Data Science / Machine Learning",
+  "Data & Analytics / BI",
+  "IT Support / Infrastructure",
+  "Cybersecurity / InfoSec",
+  "Product Management",
+  "Product Design (UI/UX)",
+  "Legal & Compliance",
+  "Supply Chain & Procurement",
+  "Logistics",
+  "Administration / Facilities",
+  "Other (Non-Sales)",
+];
+
 export function secondarySpecializationGroups(): SecondarySpecializationGroup[] {
   return [
-    { group: "B2B Sales", options: [...b2bPractices] },
-    { group: "B2C Sales", options: b2cVerticals.map((o) => (o === "Other" ? "Other (B2C)" : o)) },
-    { group: "Non-Sales / Other", options: nonSalesFunctions.map((o) => (o === "Other" ? "Other (Non-Sales)" : o)) },
+    { group: "B2B Sales", options: secondaryB2BOptions },
+    { group: "B2C Sales", options: secondaryB2COptions },
+    { group: "Non-Sales / Other", options: secondaryNonSalesOptions },
   ];
 }
 
 // The exact string a candidate's PRIMARY Practice/Vertical/Function would
 // take on if it also appeared in the combined Secondary Specialization list
 // above -- used purely to exclude "pick your own primary as your secondary"
-// from the checkbox list (accounts for the "Other" -> "Other (B2C)" /
-// "Other (Non-Sales)" disambiguation so the exclusion actually matches).
+// from the checkbox list (accounts for the "Other" -> "Other (B2B)" /
+// "Other (B2C)" / "Other (Non-Sales)" disambiguation so the exclusion
+// actually matches). B2B's subDomain is already Level-2 granular (e.g. "SaaS",
+// "Industrial Automation"), which lines up 1:1 with the flattened granular
+// B2B secondary list, including its own "Other" -> "Other (B2B)" collision.
 export function primaryAsSecondaryLabel(profileType: CategoryValue | null, subDomain: string): string {
   if (subDomain === "Other") {
+    if (profileType === "b2b_sales") return "Other (B2B)";
     if (profileType === "b2c_sales") return "Other (B2C)";
     if (profileType === "non_sales") return "Other (Non-Sales)";
   }
