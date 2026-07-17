@@ -355,13 +355,34 @@ export const reasonForLeavingOptions = [
 // revenue/quota number, not a one-time deal.
 export const avgQuarterlyTargetBandOptions = [
   "<5L / quarter",
-  "5L-15L / quarter",
-  "15L-30L / quarter",
-  "30L-50L / quarter",
-  "50L-1Cr / quarter",
-  "1Cr-2Cr / quarter",
-  "2Cr-5Cr / quarter",
+  "5L-10L / quarter",
+  "10L-15L / quarter",
+  "15L-20L / quarter",
+  "20L-30L / quarter",
+  "30L-40L / quarter",
+  "40L-50L / quarter",
+  "50L-75L / quarter",
+  "75L-1Cr / quarter",
+  "1Cr-1.5Cr / quarter",
+  "1.5Cr-2Cr / quarter",
+  "2Cr-3Cr / quarter",
+  "3Cr-5Cr / quarter",
   "5Cr+ / quarter",
+];
+
+// USD equivalent, kept as its own real ladder (not the INR text re-labeled) --
+// genuinely denominated in USD $K/$M rather than lakhs/crores, per feedback
+// that selecting USD currency was showing INR-style band text.
+export const avgQuarterlyTargetBandOptionsUSD = [
+  "<$10K / quarter",
+  "$10K-$25K / quarter",
+  "$25K-$50K / quarter",
+  "$50K-$100K / quarter",
+  "$100K-$250K / quarter",
+  "$250K-$500K / quarter",
+  "$500K-$1M / quarter",
+  "$1M-$2M / quarter",
+  "$2M+ / quarter",
 ];
 
 export const highestQualificationOptions = [
@@ -379,6 +400,24 @@ export const highestQualificationOptions = [
   "LLB / Law Degree",
   "MBBS / Medical Degree",
   "Doctorate (PhD)",
+  "Other",
+];
+
+// ---- Languages known (Stage 1B, mandatory multi-select) ----
+export const languageOptions = [
+  "English",
+  "Hindi",
+  "Bengali",
+  "Marathi",
+  "Telugu",
+  "Tamil",
+  "Gujarati",
+  "Urdu",
+  "Kannada",
+  "Odia",
+  "Malayalam",
+  "Punjabi",
+  "Assamese",
   "Other",
 ];
 
@@ -779,19 +818,46 @@ export type RevenuePeriodValue = (typeof revenuePeriodOptions)[number];
 // agnostic flat-band style (candidates rarely recall an exact figure).
 export const avgAnnualTargetBandOptions = [
   "<20L / annum",
-  "20L-60L / annum",
-  "60L-1.2Cr / annum",
-  "1.2Cr-2Cr / annum",
-  "2Cr-4Cr / annum",
-  "4Cr-8Cr / annum",
-  "8Cr-20Cr / annum",
+  "20L-40L / annum",
+  "40L-60L / annum",
+  "60L-80L / annum",
+  "80L-1Cr / annum",
+  "1Cr-1.5Cr / annum",
+  "1.5Cr-2Cr / annum",
+  "2Cr-3Cr / annum",
+  "3Cr-4Cr / annum",
+  "4Cr-6Cr / annum",
+  "6Cr-8Cr / annum",
+  "8Cr-12Cr / annum",
+  "12Cr-20Cr / annum",
   "20Cr+ / annum",
 ];
 
-export function revenueTargetBandOptionsFor(period: RevenuePeriodValue | ""): string[] {
-  if (period === "Annual") return avgAnnualTargetBandOptions;
-  if (period === "Quarterly") return avgQuarterlyTargetBandOptions;
-  return [];
+// USD equivalent -- see note on the quarterly USD ladder above.
+export const avgAnnualTargetBandOptionsUSD = [
+  "<$50K / annum",
+  "$50K-$100K / annum",
+  "$100K-$250K / annum",
+  "$250K-$500K / annum",
+  "$500K-$1M / annum",
+  "$1M-$2M / annum",
+  "$2M-$4M / annum",
+  "$4M-$8M / annum",
+  "$8M+ / annum",
+];
+
+// Currency-aware -- returns [] until BOTH period and currency are chosen, so
+// the UI can distinguish "haven't picked period yet" from "haven't picked
+// currency yet" and prompt for whichever is actually missing.
+export function revenueTargetBandOptionsFor(
+  period: RevenuePeriodValue | "",
+  currency: CurrencyValue | ""
+): string[] {
+  if (!period || !currency) return [];
+  if (currency === "USD") {
+    return period === "Annual" ? avgAnnualTargetBandOptionsUSD : avgQuarterlyTargetBandOptionsUSD;
+  }
+  return period === "Annual" ? avgAnnualTargetBandOptions : avgQuarterlyTargetBandOptions;
 }
 
 // ---- Stage 4: Career History cluster -- "Were you promoted?" ----

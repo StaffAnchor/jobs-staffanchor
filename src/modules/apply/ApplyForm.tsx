@@ -74,6 +74,8 @@ import {
   skillSuggestionsFor,
   subDomainsForCategory,
   level1OptionsForProfileType,
+  subDomainsForPractice,
+  languageOptions,
   teamSizeOptions,
   tenderRfpExperienceOptions,
   travelPreferenceOptions,
@@ -154,7 +156,16 @@ type FormState = {
   category: CategoryValue | "";
   subDomain: string;
   customSubDomain: string;
+  // Level-2 refinement, only asked when subDomain === "Other B2B" -- purely
+  // for internal taxonomy-building (see options.ts otherB2BSubDomains comment).
+  otherB2BSubDomain: string;
+  customOtherB2BSubDomain: string;
   secondarySubDomains: string[];
+  // Same Level-2 refinement, but for whichever secondary specialization entry
+  // is itself "Other B2B" -- one free-text slot is enough since a candidate
+  // realistically has at most one "Other B2B" tag whether primary or secondary.
+  secondaryOtherB2BSubDomain: string;
+  customSecondaryOtherB2BSubDomain: string;
   roleLevel: string;
   roleType: string;
   customRoleType: string;
@@ -163,6 +174,16 @@ type FormState = {
   // role-level/role-type/team-size/secondary-specialization fields are asked
   // at all, since none of those describe someone with no work history yet.
   isFresher: "Yes" | "No" | "";
+  // Freshers get a lightweight internship question instead of Career Timeline
+  // / Sales Motion / Revenue Snapshot, which all describe an actual job.
+  hasInternship: "Yes" | "No" | "";
+  internshipCompany: string;
+  internshipRole: string;
+  internshipDuration: string;
+  internshipDescription: string;
+  // Stage 1B -- Languages Known (mandatory multi-select, every candidate).
+  languagesKnown: string[];
+  customLanguage: string;
   // Stage 1B item 19 -- "Open to relocation (Yes/No -> preferred cities if Yes)".
   relocationPreferredCities: string[];
   customRelocationCity: string;
@@ -255,12 +276,23 @@ const initialState: FormState = {
   category: "",
   subDomain: "",
   customSubDomain: "",
+  otherB2BSubDomain: "",
+  customOtherB2BSubDomain: "",
   secondarySubDomains: [],
+  secondaryOtherB2BSubDomain: "",
+  customSecondaryOtherB2BSubDomain: "",
   roleLevel: "",
   roleType: "",
   customRoleType: "",
   teamSize: "",
   isFresher: "",
+  hasInternship: "",
+  internshipCompany: "",
+  internshipRole: "",
+  internshipDuration: "",
+  internshipDescription: "",
+  languagesKnown: [],
+  customLanguage: "",
   relocationPreferredCities: [],
   customRelocationCity: "",
   b2bSalesMotionType: "",
@@ -1043,7 +1075,8 @@ export default function ApplyForm({
       | "selectedIndustries"
       | "relocationPreferredCities"
       | "crmTools"
-      | "customerSegmentSold",
+      | "customerSegmentSold"
+      | "languagesKnown",
     value: string
   ) {
     setValues((prev) => {
@@ -1070,6 +1103,12 @@ export default function ApplyForm({
       if (!values.subDomain) return "Please select your Practice / Vertical / Function.";
       if (values.subDomain === "Other" && !values.customSubDomain.trim()) {
         return "Please specify your Practice / Vertical / Function.";
+      }
+      if (values.subDomain === "Other B2B") {
+        if (!values.otherB2BSubDomain) return "Please tell us more about your B2B specialization.";
+        if (values.otherB2BSubDomain === "Other" && !values.customOtherB2BSubDomain.trim()) {
+          return "Please specify your B2B specialization.";
+        }
       }
     }
 
@@ -1102,9 +1141,14 @@ export default function ApplyForm({
         return "Please select at least one preferred city to relocate to.";
       }
       if (!values.travelPreference) return "Please select your travel preference.";
+      if (!values.languagesKnown.length) return "Please select at least one language you know.";
+      if (values.languagesKnown.includes("Other") && !values.customLanguage.trim()) {
+        return "Please specify the other language(s) you know.";
+      }
       // A fresher has no role level, IC-vs-team, team size, or secondary
       // specializations to speak of yet -- those describe an existing career,
-      // not a preference. Only ask them once there's actual experience.
+      // not a preference. Only ask them once there's actual experience --
+      // instead, a fresher gets one lightweight internship question.
       if (values.isFresher === "No") {
         if (!values.roleLevel) return "Please select your role level.";
         if (!values.roleType) return "Please select whether you are an IC or leading a team.";
@@ -1112,6 +1156,20 @@ export default function ApplyForm({
         if (values.roleType === "Other" && !values.customRoleType.trim()) return "Please describe your role type.";
         if (isSales && !values.secondarySubDomains.length) {
           return "Please select at least one option (choose 'None — single specialization only' if not applicable).";
+        }
+        if (values.secondarySubDomains.includes("Other B2B")) {
+          if (!values.secondaryOtherB2BSubDomain) return "Please tell us more about your secondary Other B2B specialization.";
+          if (values.secondaryOtherB2BSubDomain === "Other" && !values.customSecondaryOtherB2BSubDomain.trim()) {
+            return "Please specify your secondary B2B specialization.";
+          }
+        }
+      } else {
+        if (!values.hasInternship) return "Please let us know if you've done an internship.";
+        if (values.hasInternship === "Yes") {
+          if (!values.internshipCompany.trim()) return "Please enter the company you interned at.";
+          if (!values.internshipRole.trim()) return "Please enter your internship role/title.";
+          if (!values.internshipDuration.trim()) return "Please enter how long your internship was.";
+          if (!values.internshipDescription.trim()) return "Please add one line on what you did during the internship.";
         }
       }
       if (!values.consent) return "Please confirm consent to continue.";
@@ -1122,13 +1180,18 @@ export default function ApplyForm({
       if (values.isFresher === "Yes") return null;
       if (isB2B) {
         if (!values.b2bSalesMotionType) return "Please select your Sales Motion.";
-        if (values.b2bSalesMotionType === "Field / Enterprise AE") {
+        // Both B2B motions are still sales -- Hunter/Farmer, deal size, sales
+        // cycle, and buyer persona apply either way. Inside Sales/SDR asks
+        // these PLUS its own AHT/call-target/talk-time/lead-source fields,
+        // rather than instead of them.
+        if (values.b2bSalesMotionType === "Field / Enterprise AE" || values.b2bSalesMotionType === "Inside Sales / SDR") {
           if (!values.aeSellingStyle) return "Please select Hunter, Farmer, or Hybrid.";
           if (!values.aeDealSizeCurrency) return "Please select a currency for your average deal size.";
           if (!values.aeDealSizeBand) return "Please select your average deal size.";
           if (!values.aeSalesCycle) return "Please select your typical sales cycle length.";
           if (!values.aeBuyerPersona) return "Please select your primary buyer persona.";
-        } else if (values.b2bSalesMotionType === "Inside Sales / SDR") {
+        }
+        if (values.b2bSalesMotionType === "Inside Sales / SDR") {
           if (!values.sdrAht) return "Please select your average handle time (AHT).";
           if (!values.sdrDailyCallTarget) return "Please select your daily call target.";
           if (!values.sdrDailyTalkTime) return "Please select your daily talk time.";
@@ -1210,7 +1273,16 @@ export default function ApplyForm({
       // genuinely new file picked by the candidate triggers a fresh upload.
       let resumeFileUrl: string | null = uploadedResumeRef.current.path;
       if (resumeFile && uploadedResumeRef.current.file !== resumeFile) {
-        const path = `${crypto.randomUUID()}-${resumeFile.name}`;
+        // Supabase Storage object keys reject several characters real resume
+        // filenames commonly contain (square brackets from "Naukri_Name[3y_6m].pdf"
+        // being the one that surfaced this, but parentheses/braces/backslashes
+        // and non-ASCII characters can also fail) -- sanitize to a safe charset
+        // instead of passing the raw filename straight into the object key.
+        const safeName = resumeFile.name
+          .normalize("NFKD")
+          .replace(/[^\w.\-]+/g, "_")
+          .replace(/_+/g, "_");
+        const path = `${crypto.randomUUID()}-${safeName}`;
         const { error: uploadError } = await supabase.storage.from("resumes").upload(path, resumeFile, {
           contentType: resumeFile.type || undefined,
         });
@@ -1249,10 +1321,52 @@ export default function ApplyForm({
         if (preferredCities.length) segmentData.relocation_preferred_cities = preferredCities;
       }
 
+      // Languages known -- mandatory, every candidate regardless of category.
+      const languages = Array.from(
+        new Set(
+          values.languagesKnown
+            .filter((l) => l !== "Other")
+            .concat(values.languagesKnown.includes("Other") ? [values.customLanguage.trim()] : [])
+            .filter(Boolean)
+        )
+      );
+      if (languages.length) segmentData.languages_known = languages;
+
+      // "Other B2B" Level-2 specify -- primary Practice and/or Secondary
+      // Specialization, purely for internal taxonomy-building (see
+      // options.ts otherB2BSubDomains).
+      if (values.subDomain === "Other B2B" && values.otherB2BSubDomain) {
+        segmentData.other_b2b_subdomain =
+          values.otherB2BSubDomain === "Other" ? values.customOtherB2BSubDomain.trim() : values.otherB2BSubDomain;
+      }
+      if (values.secondarySubDomains.includes("Other B2B") && values.secondaryOtherB2BSubDomain) {
+        segmentData.secondary_other_b2b_subdomain =
+          values.secondaryOtherB2BSubDomain === "Other"
+            ? values.customSecondaryOtherB2BSubDomain.trim()
+            : values.secondaryOtherB2BSubDomain;
+      }
+
+      // Fresher internship gate -- replaces Career Timeline/Sales Motion/
+      // Revenue Snapshot for candidates with no work experience yet.
+      if (values.isFresher === "Yes" && values.hasInternship) {
+        segmentData.has_internship = values.hasInternship;
+        if (values.hasInternship === "Yes") {
+          segmentData.internship = {
+            company: values.internshipCompany.trim() || undefined,
+            role: values.internshipRole.trim() || undefined,
+            duration: values.internshipDuration.trim() || undefined,
+            description: values.internshipDescription.trim() || undefined,
+          };
+        }
+      }
+
       // ---- Stage 2: Profile-Type-Specific ----
       if (isB2B) {
         segmentData.b2b_sales_motion_type = values.b2bSalesMotionType || undefined;
-        if (values.b2bSalesMotionType === "Field / Enterprise AE") {
+        // Inside Sales/SDR is still sales -- it gets the same Hunter/Farmer,
+        // deal size, sales cycle, and buyer persona fields as Field/Enterprise
+        // AE, PLUS its own AHT/call-target/talk-time/lead-source fields below.
+        if (values.b2bSalesMotionType === "Field / Enterprise AE" || values.b2bSalesMotionType === "Inside Sales / SDR") {
           Object.assign(segmentData, {
             style: values.aeSellingStyle || undefined,
             deal_size: values.aeDealSizeBand || undefined,
@@ -1260,7 +1374,8 @@ export default function ApplyForm({
             cycle: values.aeSalesCycle || undefined,
             buyer_persona: values.aeBuyerPersona || undefined,
           });
-        } else if (values.b2bSalesMotionType === "Inside Sales / SDR") {
+        }
+        if (values.b2bSalesMotionType === "Inside Sales / SDR") {
           Object.assign(segmentData, {
             aht: values.sdrAht || undefined,
             daily_call_target: values.sdrDailyCallTarget || undefined,
@@ -1848,14 +1963,24 @@ export default function ApplyForm({
                   }
                   required
                 >
-                  <Select value={values.subDomain} onChange={(e) => update("subDomain", e.target.value)}>
+                  <Select
+                    value={values.subDomain}
+                    onChange={(e) => {
+                      update("subDomain", e.target.value);
+                      update("otherB2BSubDomain", "");
+                      update("customOtherB2BSubDomain", "");
+                    }}
+                  >
                     <option value="">Select...</option>
+                    {/* subDomainOptions already ends in its own "Other" for B2C
+                        Verticals and Non-Sales Functions -- no extra hardcoded
+                        option appended here (that used to render two "Other"
+                        entries). B2B Practices end in "Other B2B" instead. */}
                     {subDomainOptions.map((o) => (
                       <option key={o} value={o}>
                         {o}
                       </option>
                     ))}
-                    <option value="Other">Other</option>
                   </Select>
                   {values.subDomain === "Other" && (
                     <Input
@@ -1864,6 +1989,32 @@ export default function ApplyForm({
                       onChange={(e) => update("customSubDomain", e.target.value)}
                       placeholder="Please specify"
                     />
+                  )}
+                  {values.subDomain === "Other B2B" && (
+                    <div className="mt-2 space-y-2">
+                      <p className="text-xs text-slate-500">
+                        We actively focus on Enterprise Tech and Industrial & Infrastructure, but want to place great
+                        candidates from every B2B background — tell us a bit more so we can match you well.
+                      </p>
+                      <Select
+                        value={values.otherB2BSubDomain}
+                        onChange={(e) => update("otherB2BSubDomain", e.target.value)}
+                      >
+                        <option value="">Select...</option>
+                        {subDomainsForPractice("Other B2B").map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                      {values.otherB2BSubDomain === "Other" && (
+                        <Input
+                          value={values.customOtherB2BSubDomain}
+                          onChange={(e) => update("customOtherB2BSubDomain", e.target.value)}
+                          placeholder="Please specify"
+                        />
+                      )}
+                    </div>
                   )}
                 </FormField>
               )}
@@ -2164,13 +2315,85 @@ export default function ApplyForm({
                 </Select>
               </FormField>
 
+              <FormField label="Languages Known" required>
+                <div className="flex flex-wrap gap-2">
+                  {languageOptions.map((lang) => {
+                    const active = values.languagesKnown.includes(lang);
+                    return (
+                      <button
+                        type="button"
+                        key={lang}
+                        onClick={() => toggleArrayValue("languagesKnown", lang)}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                          active
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                        }`}
+                      >
+                        {active ? "✓ " : "+ "}
+                        {lang}
+                      </button>
+                    );
+                  })}
+                </div>
+                {values.languagesKnown.includes("Other") && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Please specify other language(s)"
+                    value={values.customLanguage}
+                    onChange={(e) => update("customLanguage", e.target.value)}
+                  />
+                )}
+              </FormField>
+
               {values.category && (
                 <>
                   {values.isFresher === "Yes" ? (
-                    <p className="rounded-lg border border-dashed border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs font-medium text-emerald-700">
-                      Since you&apos;re just starting out, we&apos;ll skip role level, team size, and career history for
-                      now — you can always come back and add these once you have some experience under your belt.
-                    </p>
+                    <>
+                      <p className="rounded-lg border border-dashed border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs font-medium text-emerald-700">
+                        Since you&apos;re just starting out, we&apos;ll skip role level, team size, and career history for
+                        now — you can always come back and add these once you have some experience under your belt.
+                      </p>
+                      <FormField label="Have you done an internship?" required>
+                        <Select
+                          value={values.hasInternship}
+                          onChange={(e) => update("hasInternship", e.target.value as "" | "Yes" | "No")}
+                        >
+                          <option value="">Select...</option>
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </Select>
+                      </FormField>
+                      {values.hasInternship === "Yes" && (
+                        <>
+                          <FormField label="Internship Company" required>
+                            <Input
+                              value={values.internshipCompany}
+                              onChange={(e) => update("internshipCompany", e.target.value)}
+                            />
+                          </FormField>
+                          <FormField label="Internship Role / Title" required>
+                            <Input
+                              value={values.internshipRole}
+                              onChange={(e) => update("internshipRole", e.target.value)}
+                            />
+                          </FormField>
+                          <FormField label="Duration" required>
+                            <Input
+                              placeholder="e.g. 3 months"
+                              value={values.internshipDuration}
+                              onChange={(e) => update("internshipDuration", e.target.value)}
+                            />
+                          </FormField>
+                          <FormField label="What did you do? (one line)" required>
+                            <Input
+                              value={values.internshipDescription}
+                              onChange={(e) => update("internshipDescription", e.target.value)}
+                            />
+                          </FormField>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <>
                       <FormField label="Secondary Specializations" required>
@@ -2194,6 +2417,31 @@ export default function ApplyForm({
                             )
                           )}
                         </div>
+                        {values.secondarySubDomains.includes("Other B2B") && (
+                          <div className="mt-2 space-y-2 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
+                            <p className="text-xs text-slate-500">
+                              You flagged "Other B2B" as a secondary specialization — tell us a bit more.
+                            </p>
+                            <Select
+                              value={values.secondaryOtherB2BSubDomain}
+                              onChange={(e) => update("secondaryOtherB2BSubDomain", e.target.value)}
+                            >
+                              <option value="">Select...</option>
+                              {subDomainsForPractice("Other B2B").map((o) => (
+                                <option key={o} value={o}>
+                                  {o}
+                                </option>
+                              ))}
+                            </Select>
+                            {values.secondaryOtherB2BSubDomain === "Other" && (
+                              <Input
+                                value={values.customSecondaryOtherB2BSubDomain}
+                                onChange={(e) => update("customSecondaryOtherB2BSubDomain", e.target.value)}
+                                placeholder="Please specify"
+                              />
+                            )}
+                          </div>
+                        )}
                       </FormField>
 
                       <FormField label="Role Level" required>
@@ -2283,8 +2531,13 @@ export default function ApplyForm({
                   </Select>
                 </FormField>
 
-                {values.b2bSalesMotionType === "Field / Enterprise AE" && (
+                {(values.b2bSalesMotionType === "Field / Enterprise AE" ||
+                  values.b2bSalesMotionType === "Inside Sales / SDR") && (
                   <>
+                    {/* Inside Sales/SDR is still a sales role -- it gets these same
+                        fields (hunter/farmer, deal size, cycle, buyer persona) in
+                        addition to its own AHT/call-target/talk-time/lead-source
+                        fields below, not instead of them. */}
                     <FormField label="Hunter or Farmer" required>
                       <Select value={values.aeSellingStyle} onChange={(e) => update("aeSellingStyle", e.target.value)}>
                         <option value="">Select...</option>
@@ -2498,9 +2751,19 @@ export default function ApplyForm({
                     </Select>
                   </FormField>
                   <FormField label={values.roleType === "Leading a Team" ? "Team Target" : "Your Target"} required>
-                    <Select value={values.revenueTarget} onChange={(e) => update("revenueTarget", e.target.value)}>
-                      <option value="">Select...</option>
-                      {revenueTargetBandOptionsFor(values.revenuePeriod).map((o) => (
+                    <Select
+                      value={values.revenueTarget}
+                      disabled={!values.revenuePeriod || !values.revenueTargetCurrency}
+                      onChange={(e) => update("revenueTarget", e.target.value)}
+                    >
+                      <option value="">
+                        {!values.revenuePeriod
+                          ? "Please select Reporting Period first"
+                          : !values.revenueTargetCurrency
+                            ? "Please select currency first"
+                            : "Select..."}
+                      </option>
+                      {revenueTargetBandOptionsFor(values.revenuePeriod, values.revenueTargetCurrency).map((o) => (
                         <option key={o} value={o}>
                           {o}
                         </option>
@@ -2561,9 +2824,19 @@ export default function ApplyForm({
                         </Select>
                       </FormField>
                       <FormField label="Individual Target" required>
-                        <Select value={values.individualTarget} onChange={(e) => update("individualTarget", e.target.value)}>
-                          <option value="">Select...</option>
-                          {revenueTargetBandOptionsFor(values.revenuePeriod).map((o) => (
+                        <Select
+                          value={values.individualTarget}
+                          disabled={!values.revenuePeriod || !values.individualTargetCurrency}
+                          onChange={(e) => update("individualTarget", e.target.value)}
+                        >
+                          <option value="">
+                            {!values.revenuePeriod
+                              ? "Please select Reporting Period first"
+                              : !values.individualTargetCurrency
+                                ? "Please select currency first"
+                                : "Select..."}
+                          </option>
+                          {revenueTargetBandOptionsFor(values.revenuePeriod, values.individualTargetCurrency).map((o) => (
                             <option key={o} value={o}>
                               {o}
                             </option>
