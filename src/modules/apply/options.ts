@@ -127,7 +127,10 @@ export function dealSizeBandsFor(category: CategoryValue | null, currency: Curre
 }
 
 // ---- Role type / team size ----
-export const roleTypeOptions = ["Individual Contributor (IC)", "Leading a Team"] as const;
+// "Other" (with free text) added for the Unified Candidate Intake restructure
+// (Stage 1B item 21) -- covers roles that are genuinely neither a
+// straightforward IC nor a people-manager (e.g. "player-coach").
+export const roleTypeOptions = ["Individual Contributor (IC)", "Leading a Team", "Other"] as const;
 
 export const teamSizeOptions = [
   "1-5",
@@ -745,3 +748,76 @@ export const achievementBandOptions = [
   "100-110%",
   "110% or above",
 ];
+
+// ---------------------------------------------------------------------------
+// Unified Candidate Intake -- Stage 2 (Profile-Type-Specific) / Stage 3
+// (Revenue Snapshot) / Stage 4 (optional post-submit depth) option lists.
+// Added for the Stage 1A/1B/2/3/Submit/Stage 4 restructure -- kept in the
+// same banded-dropdown / multi-select / toggle style as everything above
+// rather than introducing free text wherever a real option list makes sense.
+// ---------------------------------------------------------------------------
+
+// ---- Stage 2: B2B Sales Motion (the PRIMARY branch for B2B, asked before
+// any sub-domain-specific fields -- Field/Enterprise AE vs Inside Sales/SDR) ----
+export const b2bSalesMotionTypeOptions = ["Field / Enterprise AE", "Inside Sales / SDR"] as const;
+export type B2BSalesMotionType = (typeof b2bSalesMotionTypeOptions)[number];
+
+// ---- Stage 2: AE (Account Executive) fields -- Hunter vs Farmer already
+// exists as `sellingStyleOptions`; sales cycle already exists as
+// `salesCycleOptions`; buyer persona already exists as `clientProfileOptions`.
+// Average deal size (ACV, banded) reuses `dealSizeBandsFor` + `currencyOptions`.
+
+// ---- Stage 2: SDR fields -- AHT/daily call target/daily talk time/lead
+// sources already exist (`ahtOptions`, `dailyCallTargetOptions`,
+// `dailyTalkTimeOptions`, `leadSourceOptions`).
+
+// ---- Stage 3: Revenue Snapshot -- period toggle + banded target + achievement.
+export const revenuePeriodOptions = ["Quarterly", "Annual"] as const;
+export type RevenuePeriodValue = (typeof revenuePeriodOptions)[number];
+
+// Annual equivalent of `avgQuarterlyTargetBandOptions` above, same currency-
+// agnostic flat-band style (candidates rarely recall an exact figure).
+export const avgAnnualTargetBandOptions = [
+  "<20L / annum",
+  "20L-60L / annum",
+  "60L-1.2Cr / annum",
+  "1.2Cr-2Cr / annum",
+  "2Cr-4Cr / annum",
+  "4Cr-8Cr / annum",
+  "8Cr-20Cr / annum",
+  "20Cr+ / annum",
+];
+
+export function revenueTargetBandOptionsFor(period: RevenuePeriodValue | ""): string[] {
+  if (period === "Annual") return avgAnnualTargetBandOptions;
+  if (period === "Quarterly") return avgQuarterlyTargetBandOptions;
+  return [];
+}
+
+// ---- Stage 4: Career History cluster -- "Were you promoted?" ----
+export const promotionHistoryOptions = ["Yes", "No"] as const;
+
+// ---- Stage 4: B2B extra depth ----
+export const crmToolOptions = [
+  "Salesforce",
+  "HubSpot",
+  "Zoho CRM",
+  "LeadSquared",
+  "Freshsales",
+  "Pipedrive",
+  "MS Dynamics 365",
+  "SAP CRM",
+  "Oracle Sales Cloud",
+  "Other",
+];
+
+export const motionTypeOptions = ["Product-Led Growth (PLG)", "Sales-Led", "Hybrid"] as const;
+
+// customerSegmentOptions (SMB/Mid-Market/Enterprise/MNC/Startup/Government)
+// already exists above and is reused as-is for "customer segment sold to".
+
+// ---- Stage 4: Industrial & Infrastructure (Practice 2) extra depth ----
+// Product lines/brands and technical certifications are free text per spec
+// (no clean fixed vocabulary across every industrial vertical); tender/RFP
+// experience is Yes/No + optional free-text description.
+export const tenderRfpExperienceOptions = ["Yes", "No"] as const;

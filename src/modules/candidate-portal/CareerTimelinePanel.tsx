@@ -35,7 +35,6 @@ import {
   geographicScopeOptions,
   reasonForLeavingOptions,
   avgQuarterlyTargetBandOptions,
-  achievementBandOptions,
   currencyOptions,
   level1OptionsForProfileType,
   industrialSubDomains,
@@ -152,58 +151,6 @@ function emptyEntry(): ProfileTimelineEntry {
   };
 }
 
-// Compact quarter-target-vs-achievement input, reused for both the team and
-// individual grids on the current-role card -- same widget the old global
-// "Performance" wizard step used, just now attached to the specific role
-// it's actually about instead of asked once for the whole profile.
-function QuarterField({
-  label,
-  targetValue,
-  onTarget,
-  achievementValue,
-  onAchievement,
-  currencyLabel,
-}: {
-  label: string;
-  targetValue: string;
-  onTarget: (v: string) => void;
-  achievementValue: string;
-  onAchievement: (v: string) => void;
-  currencyLabel?: string;
-}) {
-  return (
-    <div className="space-y-2 rounded-md border border-slate-200 p-2.5">
-      <p className="text-[11px] font-semibold text-slate-500">{label}</p>
-      <div>
-        <label className="mb-1 block text-xs text-slate-500">
-          Quarterly Target{currencyLabel ? ` (${currencyLabel})` : ""}
-        </label>
-        <Input type="number" placeholder="Full quarter, not monthly" value={targetValue} onChange={(e) => onTarget(e.target.value)} />
-      </div>
-      <div>
-        <label className="mb-1 block text-xs text-slate-500">Achieved %</label>
-        <div className="flex flex-wrap gap-1">
-          {achievementBandOptions.map((o) => {
-            const active = achievementValue === o;
-            return (
-              <button
-                type="button"
-                key={o}
-                onClick={() => onAchievement(o)}
-                className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition ${
-                  active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
-                }`}
-              >
-                {o}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function monthLabel(m: string | null): string {
   if (!m) return "Present";
   const [y, mo] = m.split("-");
@@ -258,38 +205,13 @@ export default function CareerTimelinePanel({
     }
     const isCurrent = form.end_month === null;
     const isSales = form.category === "b2b_sales" || form.category === "b2c_sales";
-    const isTeamLead = !!form.team_size;
+    // Quarterly target/achievement + "do you also carry an individual quota"
+    // used to be validated here, but that whole grid moved off the per-role
+    // Career Timeline entry and into the profile-level Stage 3 "Revenue
+    // Snapshot" step in ApplyForm.tsx (Unified Candidate Intake restructure)
+    // -- it's no longer collected on this entry at all, so there's nothing
+    // left to validate for it here.
     if (isCurrent && isSales) {
-      const quarters4 = (a: (string | undefined)[]) => a.every((v) => (v ?? "").trim() !== "");
-      if (!form.target_currency) {
-        setError(`Please select a currency for your ${isTeamLead ? "team's" : ""} quarterly target.`);
-        return false;
-      }
-      if (!quarters4([form.target_q1, form.target_q2, form.target_q3, form.target_q4, form.achieved_q1, form.achieved_q2, form.achieved_q3, form.achieved_q4])) {
-        setError(`Please fill in ${isTeamLead ? "the team's" : "your"} target and achievement % for all 4 quarters.`);
-        return false;
-      }
-      if (isTeamLead && form.has_ic_target_too === "Yes") {
-        if (!form.ic_target_currency) {
-          setError("Please select a currency for your individual target.");
-          return false;
-        }
-        if (
-          !quarters4([
-            form.ic_target_q1,
-            form.ic_target_q2,
-            form.ic_target_q3,
-            form.ic_target_q4,
-            form.ic_achieved_q1,
-            form.ic_achieved_q2,
-            form.ic_achieved_q3,
-            form.ic_achieved_q4,
-          ])
-        ) {
-          setError("Please fill in your individual target and achievement % for all 4 quarters.");
-          return false;
-        }
-      }
       if ((form.best_win ?? "").trim().length < 100) {
         setError("Your best win needs at least 100 characters — specific numbers help recruiters most.");
         return false;
@@ -969,136 +891,11 @@ export default function CareerTimelinePanel({
             {isCurrentRole && isSalesCategory && (
               <div className="border-t border-slate-200 pt-3 mt-1">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Performance{" "}
+                  Reflections{" "}
                   <span className="normal-case font-normal text-slate-400">
-                    -- real target vs. achievement is the single most-checked detail on a sales profile
+                    -- target vs. achievement numbers now live in the Revenue Snapshot step; this is just the story behind them
                   </span>
                 </p>
-                <p className="mb-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
-                  {isTeamLead ? (
-                    <>
-                      You told us you lead a team of <strong>{form.team_size}</strong> in this role, so the target
-                      below is your <strong>team&apos;s overall</strong> quarterly number, not just yours.
-                    </>
-                  ) : (
-                    <>
-                      You told us you&apos;re an individual contributor in this role, so the target below is{" "}
-                      <strong>your own</strong> quarterly number.
-                    </>
-                  )}
-                </p>
-                <div>
-                  <label className="mb-1 flex items-center justify-between text-xs text-slate-500">
-                    {isTeamLead ? "Team target currency" : "Target currency"}
-                  </label>
-                  <Select value={form.target_currency ?? ""} onChange={(e) => set("target_currency", e.target.value)}>
-                    <option value="">Select...</option>
-                    {currencyOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <QuarterField
-                    label="4 quarters ago"
-                    targetValue={form.target_q1 ?? ""}
-                    onTarget={(v) => set("target_q1", v)}
-                    achievementValue={form.achieved_q1 ?? ""}
-                    onAchievement={(v) => set("achieved_q1", v)}
-                    currencyLabel={form.target_currency}
-                  />
-                  <QuarterField
-                    label="3 quarters ago"
-                    targetValue={form.target_q2 ?? ""}
-                    onTarget={(v) => set("target_q2", v)}
-                    achievementValue={form.achieved_q2 ?? ""}
-                    onAchievement={(v) => set("achieved_q2", v)}
-                    currencyLabel={form.target_currency}
-                  />
-                  <QuarterField
-                    label="2 quarters ago"
-                    targetValue={form.target_q3 ?? ""}
-                    onTarget={(v) => set("target_q3", v)}
-                    achievementValue={form.achieved_q3 ?? ""}
-                    onAchievement={(v) => set("achieved_q3", v)}
-                    currencyLabel={form.target_currency}
-                  />
-                  <QuarterField
-                    label="Most recent completed quarter"
-                    targetValue={form.target_q4 ?? ""}
-                    onTarget={(v) => set("target_q4", v)}
-                    achievementValue={form.achieved_q4 ?? ""}
-                    onAchievement={(v) => set("achieved_q4", v)}
-                    currencyLabel={form.target_currency}
-                  />
-                </div>
-
-                {isTeamLead && (
-                  <div className="mt-3">
-                    <label className="mb-1 block text-xs text-slate-500">Do you also carry an individual sales target?</label>
-                    <Select value={form.has_ic_target_too ?? ""} onChange={(e) => set("has_ic_target_too", e.target.value)}>
-                      <option value="">Select...</option>
-                      <option value="Yes">Yes</option>
-                      <option value="No">No</option>
-                    </Select>
-                  </div>
-                )}
-
-                {isTeamLead && form.has_ic_target_too === "Yes" && (
-                  <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                      Your individual target (in addition to the team number)
-                    </p>
-                    <div>
-                      <label className="mb-1 block text-xs text-slate-500">Individual target currency</label>
-                      <Select value={form.ic_target_currency ?? ""} onChange={(e) => set("ic_target_currency", e.target.value)}>
-                        <option value="">Select...</option>
-                        {currencyOptions.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <QuarterField
-                        label="4 quarters ago"
-                        targetValue={form.ic_target_q1 ?? ""}
-                        onTarget={(v) => set("ic_target_q1", v)}
-                        achievementValue={form.ic_achieved_q1 ?? ""}
-                        onAchievement={(v) => set("ic_achieved_q1", v)}
-                        currencyLabel={form.ic_target_currency}
-                      />
-                      <QuarterField
-                        label="3 quarters ago"
-                        targetValue={form.ic_target_q2 ?? ""}
-                        onTarget={(v) => set("ic_target_q2", v)}
-                        achievementValue={form.ic_achieved_q2 ?? ""}
-                        onAchievement={(v) => set("ic_achieved_q2", v)}
-                        currencyLabel={form.ic_target_currency}
-                      />
-                      <QuarterField
-                        label="2 quarters ago"
-                        targetValue={form.ic_target_q3 ?? ""}
-                        onTarget={(v) => set("ic_target_q3", v)}
-                        achievementValue={form.ic_achieved_q3 ?? ""}
-                        onAchievement={(v) => set("ic_achieved_q3", v)}
-                        currencyLabel={form.ic_target_currency}
-                      />
-                      <QuarterField
-                        label="Most recent completed quarter"
-                        targetValue={form.ic_target_q4 ?? ""}
-                        onTarget={(v) => set("ic_target_q4", v)}
-                        achievementValue={form.ic_achieved_q4 ?? ""}
-                        onAchievement={(v) => set("ic_achieved_q4", v)}
-                        currencyLabel={form.ic_target_currency}
-                      />
-                    </div>
-                  </div>
-                )}
-
                 <div className="mt-3">
                   <label className="mb-1 block text-xs text-slate-500">Tell us about a target you crushed, and how you did it *</label>
                   <textarea

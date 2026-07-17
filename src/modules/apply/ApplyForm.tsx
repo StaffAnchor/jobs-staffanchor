@@ -35,11 +35,15 @@ import { FormField } from "@/components/forms/form-field";
 import {
   achievementBandOptions,
   ahtOptions,
+  b2bSalesMotionTypeOptions,
   b2bSubDomains,
+  b2cSalesMotionOptions,
   b2cSubDomains,
   categoryOptions,
   cityOptions,
   cityStateMap,
+  clientProfileOptions,
+  crmToolOptions,
   ctcOptions,
   currencyOptions,
   customerSegmentOptions,
@@ -53,10 +57,13 @@ import {
   geographicScopeOptions,
   highestQualificationOptions,
   industryOptions,
-  insideSalesSubDomains,
   leadSourceOptions,
+  motionTypeOptions,
   nonSalesSubDomains,
+  promotionHistoryOptions,
   relocationOptions,
+  revenuePeriodOptions,
+  revenueTargetBandOptionsFor,
   roleLevelOptions,
   roleTypeOptions,
   salesCycleOptions,
@@ -68,10 +75,12 @@ import {
   subDomainsForCategory,
   level1OptionsForProfileType,
   teamSizeOptions,
+  tenderRfpExperienceOptions,
   travelPreferenceOptions,
   workModeOptions,
   type CategoryValue,
   type CurrencyValue,
+  type RevenuePeriodValue,
 } from "@/modules/apply/options";
 
 // Live parse-on-upload: the "magical triage checklist" shown while
@@ -148,11 +157,57 @@ type FormState = {
   secondarySubDomains: string[];
   roleLevel: string;
   roleType: string;
+  customRoleType: string;
   teamSize: string;
   // "Are you a fresher?" toggle -- gates whether Career Timeline entries and
   // role-level/role-type/team-size/secondary-specialization fields are asked
   // at all, since none of those describe someone with no work history yet.
   isFresher: "Yes" | "No" | "";
+  // Stage 1B item 19 -- "Open to relocation (Yes/No -> preferred cities if Yes)".
+  relocationPreferredCities: string[];
+  customRelocationCity: string;
+
+  // ---- Stage 2: Profile-Type-Specific block ----
+  // B2B: Sales Motion is the PRIMARY branch (asked before AE/SDR sub-fields).
+  b2bSalesMotionType: string;
+  aeSellingStyle: string; // Hunter / Farmer / Hybrid
+  aeDealSizeBand: string;
+  aeDealSizeCurrency: CurrencyValue | "";
+  aeSalesCycle: string;
+  aeBuyerPersona: string;
+  sdrAht: string;
+  sdrDailyCallTarget: string;
+  sdrDailyTalkTime: string;
+  sdrLeadSource: string;
+  // B2C
+  b2cSalesMotion: string;
+  b2cTicketBand: string;
+  b2cTicketCurrency: CurrencyValue | "";
+
+  // ---- Stage 3: Revenue Snapshot (profile-level; supersedes the old
+  // per-role quarterly grid that used to live on the Career Timeline's
+  // current-role card -- see CareerTimelinePanel.tsx) ----
+  revenuePeriod: RevenuePeriodValue | "";
+  revenueTarget: string;
+  revenueTargetCurrency: CurrencyValue | "";
+  revenueAchievement: string;
+  hasIndividualQuota: "Yes" | "No" | "";
+  individualTarget: string;
+  individualTargetCurrency: CurrencyValue | "";
+  individualAchievement: string;
+
+  // ---- Stage 4 (optional, post-submit): Career History extras + Profile &
+  // Documents + B2B extra depth + Industrial extra depth ----
+  promotionHistory: "Yes" | "No" | "";
+  promotionDescription: string;
+  crmTools: string[];
+  customCrmTool: string;
+  motionType: string;
+  customerSegmentSold: string[];
+  productLinesBrands: string;
+  technicalCertifications: string;
+  tenderRfpExperience: "Yes" | "No" | "";
+  tenderRfpDescription: string;
   // Deal size/cycle/style/motion/segment/funnel/scope, inside-sales fields,
   // quarterly targets, and best-win/missed-target are now all captured once
   // on the Career Timeline current-role card instead of duplicated here as
@@ -203,8 +258,42 @@ const initialState: FormState = {
   secondarySubDomains: [],
   roleLevel: "",
   roleType: "",
+  customRoleType: "",
   teamSize: "",
   isFresher: "",
+  relocationPreferredCities: [],
+  customRelocationCity: "",
+  b2bSalesMotionType: "",
+  aeSellingStyle: "",
+  aeDealSizeBand: "",
+  aeDealSizeCurrency: "",
+  aeSalesCycle: "",
+  aeBuyerPersona: "",
+  sdrAht: "",
+  sdrDailyCallTarget: "",
+  sdrDailyTalkTime: "",
+  sdrLeadSource: "",
+  b2cSalesMotion: "",
+  b2cTicketBand: "",
+  b2cTicketCurrency: "",
+  revenuePeriod: "",
+  revenueTarget: "",
+  revenueTargetCurrency: "",
+  revenueAchievement: "",
+  hasIndividualQuota: "",
+  individualTarget: "",
+  individualTargetCurrency: "",
+  individualAchievement: "",
+  promotionHistory: "",
+  promotionDescription: "",
+  crmTools: [],
+  customCrmTool: "",
+  motionType: "",
+  customerSegmentSold: [],
+  productLinesBrands: "",
+  technicalCertifications: "",
+  tenderRfpExperience: "",
+  tenderRfpDescription: "",
   selectedIndustries: [],
   currentIndustry: "",
   customCurrentIndustry: "",
@@ -227,53 +316,55 @@ const initialState: FormState = {
 // current-role card -- asked exactly once, attached to the role it's
 // actually about, instead of duplicated across a global step.
 //
-// Round 9: Profile Information (which is where Function/Domain and
-// specialization live) now comes BEFORE Career Timeline. This fixes two
-// things at once: (1) a candidate's overall specialization is known before
-// we ask them to build out role history, instead of asking a "what's your
-// specialty" question wedged after a career-history step; (2) it's the
-// natural place for the "Are you a fresher?" toggle -- if yes, Career
-// Timeline has nothing to ask (no work history yet), so that whole step
-// becomes a pass-through instead of a dead end.
-const STEPS = ["Basic Information", "Profile Information", "Career Timeline", "Preferences & Submit"] as const;
+// Unified Candidate Intake restructure (frozen spec): the wizard is now
+// staged as 1A (Critical Core) / 1B (Extended Core) / 2 (Profile-Type-
+// Specific) / 3 (Revenue Snapshot) -> Submit -> Stage 4 (optional, post-
+// submit, same screen). `source` (quick_apply / recruiter_created /
+// build_profile) never changes which fields render -- only submit-button
+// copy and success copy, per spec section 0. Stage 2 and Stage 3 are
+// entirely skipped for `category === "non_sales"` (spec section 6):
+// Non-Sales candidates go Stage 1 (1A+1B) straight to Submit.
+// `ALL_STAGES` is indexed 0=1A, 1=1B, 2=Stage 2, 3=Stage 3. `step` (React
+// state) holds a position WITHIN the visible sequence for the candidate's
+// category, not a raw index into ALL_STAGES -- see `stepSequence` below.
+const ALL_STAGES = ["1A", "1B", "2", "3"] as const;
 
-const STEP_TIME_MINUTES = [1, 1.5, 2, 1];
+const STAGE_TIME_MINUTES = [1, 1.5, 1.5, 1];
 
-const STEP_WEIGHTS = [15, 30, 40, 15];
+const STAGE_WEIGHTS = [15, 35, 30, 20];
 
-const STEP_META = [
+const STAGE_META = [
   {
     icon: User,
-    eyebrow: "Basic Information",
+    eyebrow: "Stage 1A — Critical Core",
     heading: "Let's start with the basics",
-    subtext: "Your contact details and resume — how a recruiter actually reaches you.",
+    subtext: "Your contact details, resume, and what you do — how a recruiter actually reaches and places you.",
   },
   {
     icon: Target,
-    eyebrow: "Profile Information",
+    eyebrow: "Stage 1B — Extended Core",
     heading: "Tell us where you stand today",
-    subtext: "Experience, compensation, and specialization — the context every mandate is filtered by.",
+    subtext: "Employment, compensation, qualifications, and preferences — the context every mandate is filtered by.",
   },
   {
     icon: Briefcase,
-    eyebrow: "Career Timeline",
-    heading: "Walk us through your career",
-    subtext:
-      "Add every role, most recent first. For your current role we'll also ask about targets, achievement, and specifics — everything else you'll only see once, attached to the right job.",
+    eyebrow: "Stage 2 — Specialization",
+    heading: "How you actually sell",
+    subtext: "The specifics of your motion, deal size, and buyers — this is what makes a mandate match precise.",
   },
   {
     icon: Settings2,
-    eyebrow: "Preferences & Submit",
-    heading: "Almost there",
-    subtext: "Skills, industries, and preferences — the last details before you're on record.",
+    eyebrow: "Stage 3 — Revenue Snapshot",
+    heading: "Your current-role numbers",
+    subtext: "Target vs. achievement on your current role — the single most-checked detail on a sales profile.",
   },
 ] as const;
 
-const STEP_TIPS: Record<number, string> = {
-  0: "Recruiters reach out fastest when your contact details and resume are on record.",
-  1: "Specific specializations get found and comp context lets a recruiter tell whether a mandate is even a fit -- before wasting your time on a call.",
-  2: "A full career timeline -- with real target vs. achievement on your current role -- is the single biggest thing that turns a resume into a story a recruiter can actually pitch to a client.",
-  3: "Almost done — skills and industries are how recruiters filter and find you for the right mandate.",
+const STAGE_TIPS: Record<number, string> = {
+  0: "Recruiters reach out fastest when your contact details, resume, and specialty are on record.",
+  1: "Comp and qualification context lets a recruiter tell whether a mandate is even a fit -- before wasting your time on a call.",
+  2: "Specific motion, deal size, and buyer details are how recruiters match you to the right kind of mandate, not just the right domain.",
+  3: "Real target vs. achievement is the single biggest thing that turns a resume into a story a recruiter can actually pitch to a client.",
 };
 
 const DRAFT_STORAGE_KEY = "sa_candidate_draft_v1";
@@ -446,12 +537,27 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
   };
 }
 
+// Entry point this component was opened from -- recorded as a `source` tag
+// for attribution/analytics only. Per the frozen spec (section 0), the form
+// varies ONLY by Profile Type / Practice / Vertical, never by entry point --
+// `source` purely drives submit-button copy and success-screen copy below.
+// Wiring the other two callers (Quick Apply, Recruiter Created) is explicitly
+// someone else's follow-up work; this component just needs to accept and
+// correctly react to the prop today.
+export type ApplyFormSource = "quick_apply" | "recruiter_created" | "build_profile";
+
 export default function ApplyForm({
   existingProfile,
   onSaved,
+  source = "build_profile",
+  mandateTitle,
+  mandateId,
 }: {
   existingProfile?: ExistingProfile;
   onSaved?: () => void;
+  source?: ApplyFormSource;
+  mandateTitle?: string;
+  mandateId?: string;
 } = {}) {
   const router = useRouter();
   const isEditMode = !!existingProfile;
@@ -481,6 +587,10 @@ export default function ApplyForm({
   const [savedLabel, setSavedLabel] = useState<string>("");
   const [stepJustCompleted, setStepJustCompleted] = useState(false);
   const [earlySaveCandidateId, setEarlySaveCandidateId] = useState<string | null>(null);
+  // Tracks the last File object actually uploaded to storage + the resulting
+  // path, so Stage 4's post-submit autosave (which re-runs the same
+  // handleSubmit) never re-uploads the identical resume on every tick.
+  const uploadedResumeRef = useRef<{ file: File | null; path: string | null }>({ file: null, path: null });
 
   // Restore a draft from localStorage on first load (resume upload can't be
   // restored — the browser doesn't let us persist raw File objects — so the
@@ -653,6 +763,22 @@ export default function ApplyForm({
   // is kept only for the mandate-creation form and for reverse-mapping an
   // existing candidate's pre-migration sub_domain value in edit mode above.
   const subDomainOptions = level1OptionsForProfileType(values.category || null);
+
+  // Non-Sales candidates skip Stage 2 (Profile-Type-Specific) and Stage 3
+  // (Revenue Snapshot) entirely (spec section 6) -- `stepSequence` is the
+  // list of ALL_STAGES indices actually visible to this candidate; `step`
+  // (React state) is a position WITHIN this sequence, not a raw ALL_STAGES
+  // index, so the wizard is genuinely shorter (not just visually skipped)
+  // for Non-Sales. `stageIndex` below is the raw ALL_STAGES index for
+  // whatever `step` currently points at.
+  const isSalesCategory = values.category === "b2b_sales" || values.category === "b2c_sales";
+  const isB2B = values.category === "b2b_sales";
+  const isB2C = values.category === "b2c_sales";
+  const isIndustrialPractice = isB2B && values.subDomain === "Industrial & Infrastructure";
+  const stepSequence = isSalesCategory ? [0, 1, 2, 3] : [0, 1];
+  const stageIndex = stepSequence[Math.min(step, stepSequence.length - 1)];
+  const isLastStage = step >= stepSequence.length - 1;
+
   const suggestedSkills = useMemo(() => skillSuggestionsFor(values.subDomain || null), [values.subDomain]);
   const skillSearchResults = useMemo(
     () => searchSkills(values.customSkill, values.selectedSkills),
@@ -700,8 +826,8 @@ export default function ApplyForm({
   }, [values, existingProfile]);
 
   const minutesLeft = useMemo(
-    () => STEP_TIME_MINUTES.slice(step).reduce((a, b) => a + b, 0),
-    [step]
+    () => stepSequence.slice(step).reduce((a, i) => a + STAGE_TIME_MINUTES[i], 0),
+    [step, stepSequence]
   );
 
   const initials = useMemo(() => {
@@ -733,7 +859,13 @@ export default function ApplyForm({
   // fewer/worse recruiter matches later, and it's cheap to remind them
   // they're close (progressive save already means nothing is lost, but the
   // fields still need to actually get filled in for matching to work well).
-  const isIncomplete = !submitted && profileStrength < 100;
+  // Pre-submit (Stage 1-3 not yet committed) this gates the existing "you may
+  // not get matched" warning; post-submit (now in Stage 4, which is purely
+  // optional) the same flag instead gates a softer nudge -- the record is
+  // already committed either way, so leaving is never actually risky post-
+  // submit, just leaves some optional upside on the table. See the modal copy
+  // below, which branches on `submitted`.
+  const isIncomplete = profileStrength < 100;
   const [showLeaveWarning, setShowLeaveWarning] = useState(false);
   const pendingHrefRef = useRef<string | null>(null);
 
@@ -905,7 +1037,13 @@ export default function ApplyForm({
   }
 
   function toggleArrayValue(
-    key: "secondarySubDomains" | "selectedSkills" | "selectedIndustries",
+    key:
+      | "secondarySubDomains"
+      | "selectedSkills"
+      | "selectedIndustries"
+      | "relocationPreferredCities"
+      | "crmTools"
+      | "customerSegmentSold",
     value: string
   ) {
     setValues((prev) => {
@@ -916,9 +1054,10 @@ export default function ApplyForm({
   }
 
   function validateStep(): string | null {
-    const isSales = values.category === "b2b_sales" || values.category === "b2c_sales";
+    const isSales = isSalesCategory;
 
-    if (step === 0) {
+    // Stage 1A -- Critical Core
+    if (stageIndex === 0) {
       if (!values.fullName.trim()) return "Full name is required.";
       if (!/^\S+@\S+\.\S+$/.test(values.email)) return "A valid email is required.";
       if (values.phone.length !== 10) return "Please enter a valid 10-digit phone number.";
@@ -926,58 +1065,19 @@ export default function ApplyForm({
       if (values.cityChoice === "Other" && (!values.customCity.trim() || !values.customState.trim())) {
         return "Please enter both city and state.";
       }
-      if (!values.linkedinUrl.trim()) return "LinkedIn profile URL is required.";
       if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
-    }
-    if (step === 1) {
-      if (!values.isFresher) return "Please let us know if you're a fresher or already have work experience.";
-      if (!values.currentEmploymentStatus) return "Employment status is required.";
-      if (!values.totalExperienceYears) return "Total experience is required.";
-      if (!values.currentFixedCtc) return "Current fixed CTC is required.";
-      if (!values.currentVariableCtc) return "Current variable CTC is required (select 0 LPA if none).";
-      if (!values.noticePeriod) return "Please let us know how many days you'd need to join.";
-      if (!values.expectedFixedCtc) return "Expected fixed CTC is required.";
-      if (!values.expectedVariableCtc) return "Expected variable CTC is required (select 0 LPA if none).";
-      if (!values.highestQualification) return "Highest qualification is required.";
-      if (values.highestQualification === "Other" && !values.customQualification.trim()) {
-        return "Please specify your qualification.";
-      }
-      if (!values.category) return "Please select your preferred / current function-domain.";
-      if (!values.subDomain) return "Please select your preferred / primary specialization.";
+      if (!values.category) return "Please select your Profile Type.";
+      if (!values.subDomain) return "Please select your Practice / Vertical / Function.";
       if (values.subDomain === "Other" && !values.customSubDomain.trim()) {
-        return "Please specify your primary specialization.";
-      }
-      // A fresher has no role level, IC-vs-team, team size, or secondary
-      // specializations to speak of yet -- those describe an existing career,
-      // not a preference. Only ask them once there's actual experience.
-      if (values.isFresher === "No") {
-        if (!values.roleLevel) return "Please select your role level.";
-        if (!values.roleType) return "Please select whether you are an IC or leading a team.";
-        if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
-        if (isSales && !values.secondarySubDomains.length) {
-          return "Please select at least one option (choose 'None — single specialization only' if not applicable).";
-        }
+        return "Please specify your Practice / Vertical / Function.";
       }
     }
-    if (step === 2) {
-      // Freshers have no work history yet -- nothing to validate here, the
-      // domain/specialization "preference" was already captured on the
-      // Profile Information step above.
-      if (values.isFresher === "Yes") return null;
-      // Deep, per-role validation (deal size, quarterly targets, best-win/
-      // missed-target, etc.) already happens inside CareerTimelinePanel's own
-      // "Save role" action. Here we just make sure a current role actually
-      // exists before letting the wizard move on -- current-role details are
-      // the single most important thing this whole form is built to capture.
-      if (!values.careerTimeline.length) {
-        return "Please add your current role to your Career Timeline before continuing.";
-      }
-      if (!values.careerTimeline.some((e) => e.end_month === null)) {
-        return "Please add (or mark) your current role in the Career Timeline -- check 'Current role' on the entry that's still ongoing.";
-      }
-    }
-    if (step === 3) {
-      if (!values.selectedSkills.length) return "Please add at least one skill.";
+
+    // Stage 1B -- Extended Core (mandatory, identical regardless of Profile Type)
+    if (stageIndex === 1) {
+      if (!values.currentEmployer.trim()) return "Current employer is required.";
+      if (!values.currentJobTitle.trim()) return "Current job title is required.";
+      if (!values.currentEmploymentStatus) return "Employment status is required.";
       if (!values.currentIndustry) return "Please select your current industry.";
       if (values.currentIndustry === "Other" && !values.customCurrentIndustry.trim()) {
         return "Please specify your current industry.";
@@ -985,15 +1085,80 @@ export default function ApplyForm({
       if (!values.noOtherIndustries && !values.selectedIndustries.length) {
         return "Please select at least one previous industry, or check 'No other industries'.";
       }
+      if (!values.isFresher) return "Please let us know if you're a fresher or already have work experience.";
+      if (!values.totalExperienceYears) return "Total experience is required.";
+      if (!values.currentFixedCtc) return "Current fixed CTC is required.";
+      if (!values.currentVariableCtc) return "Current variable CTC is required (select 0 LPA if none).";
+      if (!values.expectedFixedCtc) return "Expected fixed CTC is required.";
+      if (!values.expectedVariableCtc) return "Expected variable CTC is required (select 0 LPA if none).";
+      if (!values.noticePeriod) return "Please let us know how many days you'd need to join.";
+      if (!values.highestQualification) return "Highest qualification is required.";
+      if (values.highestQualification === "Other" && !values.customQualification.trim()) {
+        return "Please specify your qualification.";
+      }
       if (!values.workMode) return "Please select a work mode preference.";
       if (!values.openToRelocation) return "Please select your relocation preference.";
+      if (values.openToRelocation === "Yes" && !values.relocationPreferredCities.length && !values.customRelocationCity.trim()) {
+        return "Please select at least one preferred city to relocate to.";
+      }
       if (!values.travelPreference) return "Please select your travel preference.";
+      // A fresher has no role level, IC-vs-team, team size, or secondary
+      // specializations to speak of yet -- those describe an existing career,
+      // not a preference. Only ask them once there's actual experience.
+      if (values.isFresher === "No") {
+        if (!values.roleLevel) return "Please select your role level.";
+        if (!values.roleType) return "Please select whether you are an IC or leading a team.";
+        if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
+        if (values.roleType === "Other" && !values.customRoleType.trim()) return "Please describe your role type.";
+        if (isSales && !values.secondarySubDomains.length) {
+          return "Please select at least one option (choose 'None — single specialization only' if not applicable).";
+        }
+      }
       if (!values.consent) return "Please confirm consent to continue.";
+    }
+
+    // Stage 2 -- Profile-Type-Specific (B2B / B2C only; skipped for Non-Sales)
+    if (stageIndex === 2 && isSales) {
+      if (values.isFresher === "Yes") return null;
+      if (isB2B) {
+        if (!values.b2bSalesMotionType) return "Please select your Sales Motion.";
+        if (values.b2bSalesMotionType === "Field / Enterprise AE") {
+          if (!values.aeSellingStyle) return "Please select Hunter, Farmer, or Hybrid.";
+          if (!values.aeDealSizeCurrency) return "Please select a currency for your average deal size.";
+          if (!values.aeDealSizeBand) return "Please select your average deal size.";
+          if (!values.aeSalesCycle) return "Please select your typical sales cycle length.";
+          if (!values.aeBuyerPersona) return "Please select your primary buyer persona.";
+        } else if (values.b2bSalesMotionType === "Inside Sales / SDR") {
+          if (!values.sdrAht) return "Please select your average handle time (AHT).";
+          if (!values.sdrDailyCallTarget) return "Please select your daily call target.";
+          if (!values.sdrDailyTalkTime) return "Please select your daily talk time.";
+          if (!values.sdrLeadSource) return "Please select your primary lead source.";
+        }
+      } else if (isB2C) {
+        if (!values.b2cSalesMotion) return "Please select your Sales Motion.";
+        if (!values.b2cTicketCurrency) return "Please select a currency for your average ticket size.";
+        if (!values.b2cTicketBand) return "Please select your average ticket size.";
+      }
+    }
+
+    // Stage 3 -- Revenue Snapshot (B2B / B2C only; skipped for Non-Sales)
+    if (stageIndex === 3 && isSales) {
+      if (values.isFresher === "Yes") return null;
+      if (!values.revenuePeriod) return "Please select Quarterly or Annual.";
+      if (!values.revenueTargetCurrency) return "Please select a currency for your target.";
+      if (!values.revenueTarget) return `Please select ${values.roleType === "Leading a Team" ? "your team's" : "your"} target.`;
+      if (!values.revenueAchievement) return "Please select your achievement %.";
+      if (values.roleType === "Leading a Team") {
+        if (!values.hasIndividualQuota) return "Please let us know if you also carry an individual quota.";
+        if (values.hasIndividualQuota === "Yes") {
+          if (!values.individualTargetCurrency) return "Please select a currency for your individual target.";
+          if (!values.individualTarget) return "Please select your individual target.";
+          if (!values.individualAchievement) return "Please select your individual achievement %.";
+        }
+      }
     }
     return null;
   }
-
-  const isSalesCategory = values.category === "b2b_sales" || values.category === "b2c_sales";
 
   function goNext() {
     const err = validateStep();
@@ -1002,11 +1167,11 @@ export default function ApplyForm({
       return;
     }
     setErrorMsg(null);
-    const completedLabel = STEPS[step];
+    const completedLabel = `Stage ${ALL_STAGES[stageIndex]}`;
     toast.success(`${completedLabel} completed — profile strength ${profileStrength}%`);
     setStepJustCompleted(true);
     setTimeout(() => setStepJustCompleted(false), 1200);
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep((s) => Math.min(s + 1, stepSequence.length - 1));
   }
 
   function goBack() {
@@ -1014,25 +1179,37 @@ export default function ApplyForm({
     setStep((s) => Math.max(s - 1, 0));
   }
 
-  async function handleSubmit() {
-    const err = validateStep();
-    if (err) {
-      setErrorMsg(err);
-      return;
+  // `opts.silent` is used exclusively by Stage 4's post-submit autosave effect
+  // below -- same save path as the real Submit button, just without the
+  // spinner/toast/step-jump side effects that make sense for an explicit,
+  // user-initiated submit but would be noisy/disruptive fired automatically
+  // every time an optional Stage 4 field changes.
+  async function handleSubmit(opts?: { silent?: boolean }) {
+    const silent = !!opts?.silent;
+    if (!silent) {
+      const err = validateStep();
+      if (err) {
+        setErrorMsg(err);
+        return;
+      }
+      // Belt-and-suspenders: resume is only checked by validateStep() on Stage
+      // 1A, but a restored draft (or any future step-reordering) could
+      // otherwise reach this point with no resume attached. Never let that submit.
+      if (!resumeFile && !hasExistingResume) {
+        setErrorMsg("Please upload your resume before submitting.");
+        setStep(0);
+        return;
+      }
+      setSubmitting(true);
+      setErrorMsg(null);
     }
-    // Belt-and-suspenders: resume is only checked by validateStep() on step 0,
-    // but a restored draft (or any future step-reordering) could otherwise reach
-    // this point on a later step with no resume attached. Never let that submit.
-    if (!resumeFile && !hasExistingResume) {
-      setErrorMsg("Please upload your resume before submitting.");
-      setStep(0);
-      return;
-    }
-    setSubmitting(true);
-    setErrorMsg(null);
     try {
-      let resumeFileUrl: string | null = null;
-      if (resumeFile) {
+      // Guarded so Stage 4's post-submit autosave (which calls this same
+      // handleSubmit again whenever a Stage 4 field changes) never re-uploads
+      // the identical resume File object on every autosave tick -- only a
+      // genuinely new file picked by the candidate triggers a fresh upload.
+      let resumeFileUrl: string | null = uploadedResumeRef.current.path;
+      if (resumeFile && uploadedResumeRef.current.file !== resumeFile) {
         const path = `${crypto.randomUUID()}-${resumeFile.name}`;
         const { error: uploadError } = await supabase.storage.from("resumes").upload(path, resumeFile, {
           contentType: resumeFile.type || undefined,
@@ -1042,20 +1219,22 @@ export default function ApplyForm({
         // prefix) so it matches storage.objects.name and can be resolved later
         // via supabase.storage.from('resumes').createSignedUrl(resumeFileUrl, ...).
         resumeFileUrl = path;
+        uploadedResumeRef.current = { file: resumeFile, path };
       }
 
-      // Round 8: deal size, sales cycle, selling style, motion, segment, scope,
-      // inside-sales detail, and quarterly target/achievement all now live on
-      // the current Career Timeline entry (the one with end_month === null)
-      // instead of as separate global wizard fields -- derive segment_data
-      // from it here so existing CRM filters/matching (which read these exact
-      // top-level segment_data keys) keep working unchanged.
+      // Unified Candidate Intake restructure: Stage 2 (Profile-Type-Specific)
+      // and Stage 3 (Revenue Snapshot) are now profile-level FormState fields
+      // (not derived from the Career Timeline's current-role entry the way
+      // deal size/motion/quarterly targets used to be pre-restructure) --
+      // assembled into segment_data here. `currentTimelineEntry` is kept only
+      // for the best-win/missed-target self_assessment reflections, which
+      // still live on the Career Timeline current-role entry (now Stage 4).
       const currentTimelineEntry = values.careerTimeline.find((e) => e.end_month === null);
-      const isCurrentTeamLead = !!currentTimelineEntry?.team_size;
 
       const segmentData: Record<string, unknown> = {
-        role_level: values.roleLevel,
-        role_type: values.roleType === "Leading a Team" ? "Team Lead" : "IC",
+        role_level: values.roleLevel || undefined,
+        role_type:
+          values.roleType === "Leading a Team" ? "Team Lead" : values.roleType === "Other" ? values.customRoleType || "Other" : "IC",
         travel_preference: values.travelPreference || undefined,
       };
 
@@ -1063,88 +1242,87 @@ export default function ApplyForm({
         segmentData.team_size = values.teamSize;
       }
 
-      if (currentTimelineEntry) {
-        // Quarterly targets & achievement (current role only). A team lead
-        // always reports the team's own target + achievement; if they also
-        // carry an individual number, that's reported separately and summed
-        // into a computed total per quarter.
-        const teamTargets = [
-          currentTimelineEntry.target_q1,
-          currentTimelineEntry.target_q2,
-          currentTimelineEntry.target_q3,
-          currentTimelineEntry.target_q4,
-        ]
-          .filter((v): v is string => !!v && v.trim() !== "")
-          .map((v) => Number(v));
-        const teamAchievement = [
-          currentTimelineEntry.achieved_q1,
-          currentTimelineEntry.achieved_q2,
-          currentTimelineEntry.achieved_q3,
-          currentTimelineEntry.achieved_q4,
-        ].filter((v): v is string => !!v && v.trim() !== "");
-        const icTargets = [
-          currentTimelineEntry.ic_target_q1,
-          currentTimelineEntry.ic_target_q2,
-          currentTimelineEntry.ic_target_q3,
-          currentTimelineEntry.ic_target_q4,
-        ]
-          .filter((v): v is string => !!v && v.trim() !== "")
-          .map((v) => Number(v));
-        const icAchievement = [
-          currentTimelineEntry.ic_achieved_q1,
-          currentTimelineEntry.ic_achieved_q2,
-          currentTimelineEntry.ic_achieved_q3,
-          currentTimelineEntry.ic_achieved_q4,
-        ].filter((v): v is string => !!v && v.trim() !== "");
+      if (values.openToRelocation === "Yes") {
+        const preferredCities = Array.from(
+          new Set([...values.relocationPreferredCities, values.customRelocationCity.trim()].filter(Boolean))
+        );
+        if (preferredCities.length) segmentData.relocation_preferred_cities = preferredCities;
+      }
 
-        if (isCurrentTeamLead) {
-          if (teamTargets.length) segmentData.team_targets = teamTargets;
-          if (teamAchievement.length) segmentData.team_quota = teamAchievement;
-          if (currentTimelineEntry.target_currency) segmentData.team_target_currency = currentTimelineEntry.target_currency;
-          if (currentTimelineEntry.has_ic_target_too === "Yes") {
-            if (icTargets.length) segmentData.ic_targets = icTargets;
-            if (icAchievement.length) segmentData.quota = icAchievement;
-            if (currentTimelineEntry.ic_target_currency) segmentData.ic_target_currency = currentTimelineEntry.ic_target_currency;
-            if (
-              icTargets.length === 4 &&
-              teamTargets.length === 4 &&
-              currentTimelineEntry.ic_target_currency &&
-              currentTimelineEntry.ic_target_currency === currentTimelineEntry.target_currency
-            ) {
-              segmentData.total_targets = teamTargets.map((t, i) => t + icTargets[i]);
-            }
-          }
+      // ---- Stage 2: Profile-Type-Specific ----
+      if (isB2B) {
+        segmentData.b2b_sales_motion_type = values.b2bSalesMotionType || undefined;
+        if (values.b2bSalesMotionType === "Field / Enterprise AE") {
+          Object.assign(segmentData, {
+            style: values.aeSellingStyle || undefined,
+            deal_size: values.aeDealSizeBand || undefined,
+            deal_size_currency: values.aeDealSizeCurrency || undefined,
+            cycle: values.aeSalesCycle || undefined,
+            buyer_persona: values.aeBuyerPersona || undefined,
+          });
+        } else if (values.b2bSalesMotionType === "Inside Sales / SDR") {
+          Object.assign(segmentData, {
+            aht: values.sdrAht || undefined,
+            daily_call_target: values.sdrDailyCallTarget || undefined,
+            daily_talk_time: values.sdrDailyTalkTime || undefined,
+            lead_sources: values.sdrLeadSource ? [values.sdrLeadSource] : undefined,
+          });
+        }
+      } else if (isB2C) {
+        Object.assign(segmentData, {
+          motion: values.b2cSalesMotion || undefined,
+          ticket: values.b2cTicketBand || undefined,
+          ticket_currency: values.b2cTicketCurrency || undefined,
+        });
+      }
+
+      // ---- Stage 3: Revenue Snapshot -- a dedicated profile-level step
+      // (period toggle + IC/Team-Lead banded target + achievement %, with an
+      // optional "do you also carry an individual quota" sub-branch). This
+      // supersedes the old per-role quarterly target/achievement grid that
+      // used to live on the Career Timeline's current-role card -- see the
+      // judgment-call note in CareerTimelinePanel.tsx and the hand-off report.
+      if (isSalesCategory && values.isFresher !== "Yes" && values.revenuePeriod) {
+        segmentData.revenue_snapshot = {
+          period: values.revenuePeriod,
+          target: values.revenueTarget || undefined,
+          target_currency: values.revenueTargetCurrency || undefined,
+          achievement: values.revenueAchievement || undefined,
+          has_individual_quota: values.roleType === "Leading a Team" ? values.hasIndividualQuota || undefined : undefined,
+          individual_target: values.hasIndividualQuota === "Yes" ? values.individualTarget || undefined : undefined,
+          individual_target_currency:
+            values.hasIndividualQuota === "Yes" ? values.individualTargetCurrency || undefined : undefined,
+          individual_achievement: values.hasIndividualQuota === "Yes" ? values.individualAchievement || undefined : undefined,
+        };
+        // Flat single-value convenience keys for simple CRM reads that just
+        // want "the current achievement %" without unpacking the nested
+        // object above (this restructure retires the old 4-quarter arrays
+        // in favor of one banded target + one achievement per period).
+        if (values.roleType === "Leading a Team") {
+          segmentData.team_quota = values.revenueAchievement || undefined;
+          if (values.hasIndividualQuota === "Yes") segmentData.quota = values.individualAchievement || undefined;
         } else {
-          if (teamTargets.length) segmentData.ic_targets = teamTargets;
-          if (teamAchievement.length) segmentData.quota = teamAchievement;
-          if (currentTimelineEntry.target_currency) segmentData.ic_target_currency = currentTimelineEntry.target_currency;
+          segmentData.quota = values.revenueAchievement || undefined;
         }
+      }
 
-        if (currentTimelineEntry.category === "b2b_sales") {
-          Object.assign(segmentData, {
-            deal_size: currentTimelineEntry.deal_size_band || undefined,
-            deal_size_currency: currentTimelineEntry.largest_deal_currency || undefined,
-            cycle: currentTimelineEntry.sales_cycle || undefined,
-            style: currentTimelineEntry.selling_style || undefined,
-            motion: currentTimelineEntry.sales_motion || undefined,
-            segment: currentTimelineEntry.customer_segment || undefined,
-          });
-        } else if (currentTimelineEntry.category === "b2c_sales") {
-          Object.assign(segmentData, {
-            ticket: currentTimelineEntry.deal_size_band || undefined,
-            ticket_currency: currentTimelineEntry.largest_deal_currency || undefined,
-            scope: currentTimelineEntry.geo_scope || undefined,
-          });
-        }
-
-        if (insideSalesSubDomains.includes(currentTimelineEntry.sub_domain)) {
-          Object.assign(segmentData, {
-            aht: currentTimelineEntry.aht || undefined,
-            daily_call_target: currentTimelineEntry.daily_call_target || undefined,
-            daily_talk_time: currentTimelineEntry.daily_talk_time || undefined,
-            lead_sources: currentTimelineEntry.lead_source ? [currentTimelineEntry.lead_source] : undefined,
-          });
-        }
+      // ---- Stage 4 (optional, post-submit) extra depth -- present only once
+      // the candidate has actually filled it in; safe to include on every
+      // save (initial submit or later autosave) since profile_stage below
+      // still reads the same completeness signals either way. ----
+      if (values.promotionHistory) segmentData.promotion_history = values.promotionHistory;
+      if (values.promotionDescription.trim()) segmentData.promotion_description = values.promotionDescription.trim();
+      if (isB2B) {
+        const crmTools = Array.from(new Set([...values.crmTools, values.customCrmTool.trim()].filter(Boolean)));
+        if (crmTools.length) segmentData.crm_tools = crmTools;
+        if (values.motionType) segmentData.motion_type = values.motionType;
+        if (values.customerSegmentSold.length) segmentData.customer_segment_sold = values.customerSegmentSold;
+      }
+      if (isIndustrialPractice) {
+        if (values.productLinesBrands.trim()) segmentData.product_lines_brands = values.productLinesBrands.trim();
+        if (values.technicalCertifications.trim()) segmentData.technical_certifications = values.technicalCertifications.trim();
+        if (values.tenderRfpExperience) segmentData.tender_rfp_experience = values.tenderRfpExperience;
+        if (values.tenderRfpDescription.trim()) segmentData.tender_rfp_description = values.tenderRfpDescription.trim();
       }
 
       // Career Timeline now lives inside this same wizard (Step 2), so its
@@ -1228,15 +1406,30 @@ export default function ApplyForm({
           values.secondarySubDomains.filter((d) => d !== "None — single specialization only").length > 0 ||
           (currentTimelineEntry?.best_win?.trim().length ?? 0) > 0 ||
           (currentTimelineEntry?.tough_loss?.trim().length ?? 0) > 0 ||
-          values.travelPreference
+          !!values.revenuePeriod ||
+          !!values.promotionHistory ||
+          !!values.linkedinUrl.trim()
             ? "full_profile"
             : "applicant",
       };
 
-      const { error } = await supabase.rpc("submit_candidate", { payload });
-      if (error) throw new Error(error.message);
+      // Server-side submit route: creates/links a real auth.users account for
+      // this email (service-role only, never exposed to the browser), calls
+      // submit_candidate the same way the old direct supabase.rpc() call used
+      // to, then stamps candidates.user_id -- see src/app/api/candidate-submit
+      // for the full flow. Transport-only change; every field above and the
+      // Stage 4 silent-autosave behavior below are unchanged.
+      const submitRes = await fetch("/api/candidate-submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload, mandateId }),
+      });
+      const submitJson = await submitRes.json().catch(() => ({}));
+      if (!submitRes.ok) throw new Error(submitJson?.error ?? "Something went wrong. Please try again.");
 
-      if (isEditMode) {
+      if (silent) {
+        setLastSavedAt(Date.now());
+      } else if (isEditMode) {
         toast.success("Profile saved.");
         onSaved?.();
       } else {
@@ -1244,52 +1437,54 @@ export default function ApplyForm({
         toast.success("Your profile is on record. Thank you.");
       }
     } catch (e) {
+      if (silent) return; // best-effort autosave -- never surface an error toast for it
       const message = e instanceof Error ? e.message : "Something went wrong. Please try again.";
       setErrorMsg(message);
       toast.error(message);
     } finally {
-      setSubmitting(false);
+      if (!silent) setSubmitting(false);
     }
   }
 
-  if (submitted && !isEditMode) {
-    return (
-      <div className="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_38%),radial-gradient(circle_at_80%_15%,rgba(14,165,233,0.14),transparent_32%),linear-gradient(to_bottom,#f8fbff_0%,#ffffff_45%,#f4f7fb_100%)]">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-emerald-200/30 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-sky-200/30 blur-3xl" />
-        <main className="relative mx-auto flex w-full max-w-xl px-4 py-16 sm:px-6 lg:px-8">
-          <Card className="w-full border-slate-200 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.35)]">
-            <CardContent className="space-y-4 py-10 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                ✓
-              </div>
-              <h2 className="text-xl font-bold text-slate-950">You&apos;re on record.</h2>
-              <p className="text-sm leading-6 text-slate-600">
-                Thanks, {values.fullName.split(" ")[0] || "there"}. A StaffAnchor recruiter will review your profile
-                and reach out if there&apos;s a mandate fit. No spam, no cold calls for irrelevant roles.
-              </p>
-              <div
-                className={`mx-auto flex max-w-xs items-center justify-center gap-2 rounded-2xl px-4 py-3 ${readinessMeta.chipBg}`}
-              >
-                <span className={`h-2 w-2 rounded-full ${readinessMeta.dot}`} />
-                <p className={`text-sm font-semibold ${readinessMeta.chipText}`}>
-                  Passport Readiness: {readinessTier} ({profileStrength}%)
-                </p>
-              </div>
-              {readinessTier !== "Premium" && (
-                <p className="text-xs text-slate-500">
-                  Come back anytime from your Candidate Portal to add more detail and move up a tier — more complete
-                  profiles get seen first.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    );
-  }
+  // Submit-button copy varies by entry source only (spec section "Submit"),
+  // never by which fields render.
+  const submitButtonLabel =
+    source === "recruiter_created" ? "Create Profile" : source === "quick_apply" ? "Submit Application" : "Save My Profile";
 
-  const StepIcon = STEP_META[step].icon;
+  // Stage 4 (optional, post-submit) renders inline on the SAME screen right
+  // after a successful fresh submit, and is always available in edit mode
+  // (an existing candidate revisiting "My Profile" already has a committed
+  // record, so there's no separate "submit" gate for them) -- autosaves via
+  // the same progressive-save mechanism used pre-submit (see the
+  // `onboarding_progressive_save` effect above), just reusing handleSubmit's
+  // full payload builder in `silent` mode instead of a second save path.
+  const showStage4 = submitted || isEditMode;
+
+  useEffect(() => {
+    if (!showStage4) return;
+    const handle = setTimeout(() => {
+      void handleSubmit({ silent: true });
+    }, 1200);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    showStage4,
+    values.linkedinUrl,
+    values.selectedSkills,
+    values.careerTimeline,
+    values.promotionHistory,
+    values.promotionDescription,
+    values.crmTools,
+    values.customCrmTool,
+    values.motionType,
+    values.customerSegmentSold,
+    values.productLinesBrands,
+    values.technicalCertifications,
+    values.tenderRfpExperience,
+    values.tenderRfpDescription,
+  ]);
+
+  const StepIcon = STAGE_META[stageIndex].icon;
 
   return (
     <>
@@ -1318,6 +1513,7 @@ export default function ApplyForm({
           </span>
         </div>
 
+        {!(submitted && !isEditMode) && (
         <div className="grid gap-6 lg:grid-cols-[260px_1fr_320px] lg:items-start">
           <aside className="space-y-4 lg:sticky lg:top-6">
             <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
@@ -1343,16 +1539,19 @@ export default function ApplyForm({
                   })}
                 </div>
                 <p className="text-xs text-slate-500">
-                  Step {step + 1} of {STEPS.length}
+                  Stage {ALL_STAGES[stageIndex]} — step {step + 1} of {stepSequence.length}
                 </p>
                 <ul className="space-y-0">
-                  {STEPS.map((label, i) => {
-                    // Smart Skip: step 3 ("Performance") has no content for a
-                    // non-sales candidate -- goNext()/goBack() already jump
-                    // over it, so the step list should say so rather than
-                    // showing a step they'll never actually land on as
+                  {ALL_STAGES.map((label, i) => {
+                    // Non-Sales candidates skip Stage 2 and Stage 3 entirely
+                    // (spec section 6) -- goNext()/goBack() already jump over
+                    // them via `stepSequence`, so the step list should say so
+                    // rather than showing a stage they'll never land on as
                     // "Pending" forever.
-                    const isSkipped = i === 4 && !isSalesCategory;
+                    const isSkipped = (i === 2 || i === 3) && !isSalesCategory;
+                    const posInSequence = stepSequence.indexOf(i);
+                    const isCurrent = posInSequence === step;
+                    const isDone = posInSequence >= 0 && posInSequence < step;
                     return (
                       <li key={label} className="flex gap-3">
                         <div className="flex flex-col items-center">
@@ -1360,17 +1559,17 @@ export default function ApplyForm({
                             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                               isSkipped
                                 ? "bg-slate-100 text-slate-400"
-                                : i < step
+                                : isDone
                                   ? "bg-emerald-500 text-white"
-                                  : i === step
+                                  : isCurrent
                                     ? "bg-blue-600 text-white"
                                     : "bg-slate-200 text-slate-500"
                             }`}
                           >
-                            {isSkipped ? "–" : i < step ? "✓" : i + 1}
+                            {isSkipped ? "–" : isDone ? "✓" : label}
                           </div>
-                          {i < STEPS.length - 1 && (
-                            <div className={`w-px flex-1 ${i < step ? "bg-emerald-300" : "bg-slate-200"}`} style={{ minHeight: 24 }} />
+                          {i < ALL_STAGES.length - 1 && (
+                            <div className={`w-px flex-1 ${isDone ? "bg-emerald-300" : "bg-slate-200"}`} style={{ minHeight: 24 }} />
                           )}
                         </div>
                         <div className="pb-4">
@@ -1378,17 +1577,17 @@ export default function ApplyForm({
                             className={`text-sm ${
                               isSkipped
                                 ? "text-slate-300 line-through"
-                                : i === step
+                                : isCurrent
                                   ? "font-semibold text-blue-600"
-                                  : i < step
+                                  : isDone
                                     ? "text-slate-700"
                                     : "text-slate-400"
                             }`}
                           >
-                            {label}
+                            Stage {label} — {STAGE_META[i].eyebrow.replace(/^Stage \S+ — /, "")}
                           </p>
                           <p className="text-xs text-slate-400">
-                            {isSkipped ? "Not applicable" : i < step ? "Completed" : i === step ? "In Progress" : "Pending"}
+                            {isSkipped ? "Not applicable" : isDone ? "Completed" : isCurrent ? "In Progress" : "Pending"}
                           </p>
                         </div>
                       </li>
@@ -1424,19 +1623,19 @@ export default function ApplyForm({
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
-                  {STEP_META[step].eyebrow}
+                  {STAGE_META[stageIndex].eyebrow}
                 </p>
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{STEP_META[step].heading}</h2>
-                <p className="mt-1 text-sm leading-relaxed text-slate-500">{STEP_META[step].subtext}</p>
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{STAGE_META[stageIndex].heading}</h2>
+                <p className="mt-1 text-sm leading-relaxed text-slate-500">{STAGE_META[stageIndex].subtext}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-2.5 rounded-xl bg-blue-50/70 px-3.5 py-3 text-sm text-blue-900 ring-1 ring-blue-100/80">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
-              <span className="leading-relaxed">{STEP_TIPS[step]}</span>
+              <span className="leading-relaxed">{STAGE_TIPS[stageIndex]}</span>
             </div>
             <p className="text-xs italic leading-relaxed text-slate-400">&ldquo;{quote}&rdquo;</p>
-          {step === 0 && (
+          {stageIndex === 0 && (
             <>
               <FormField label="Full Name" required>
                 <Input value={values.fullName} onChange={(e) => update("fullName", e.target.value)} />
@@ -1508,9 +1707,6 @@ export default function ApplyForm({
                   </FormField>
                 </div>
               )}
-              <FormField label="LinkedIn Profile URL" required>
-                <Input value={values.linkedinUrl} onChange={(e) => update("linkedinUrl", e.target.value)} />
-              </FormField>
               <FormField label="Resume" required>
                 <label
                   htmlFor="resume-upload"
@@ -1620,10 +1816,61 @@ export default function ApplyForm({
                   </div>
                 </div>
               )}
+
+              <FormField label="Profile Type" required>
+                <Select
+                  value={values.category}
+                  onChange={(e) => {
+                    const next = e.target.value as CategoryValue | "";
+                    update("category", next);
+                    update("subDomain", "");
+                    update("customSubDomain", "");
+                    update("secondarySubDomains", []);
+                  }}
+                >
+                  <option value="">Select...</option>
+                  {categoryOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+
+              {values.category && (
+                <FormField
+                  label={
+                    values.category === "b2b_sales"
+                      ? "Practice"
+                      : values.category === "b2c_sales"
+                        ? "Vertical"
+                        : "Function"
+                  }
+                  required
+                >
+                  <Select value={values.subDomain} onChange={(e) => update("subDomain", e.target.value)}>
+                    <option value="">Select...</option>
+                    {subDomainOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                    <option value="Other">Other</option>
+                  </Select>
+                  {values.subDomain === "Other" && (
+                    <Input
+                      className="mt-2"
+                      value={values.customSubDomain}
+                      onChange={(e) => update("customSubDomain", e.target.value)}
+                      placeholder="Please specify"
+                    />
+                  )}
+                </FormField>
+              )}
             </>
           )}
 
-          {step === 1 && (
+          {stageIndex === 1 && (
             <>
               <FormField label="Are you a fresher, or do you already have work experience?" required>
                 <div className="grid grid-cols-2 gap-2">
@@ -1658,13 +1905,12 @@ export default function ApplyForm({
                 </div>
               </FormField>
 
-              {(values.currentEmployer || values.currentJobTitle) && (
-                <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                  Current role: <span className="font-medium text-slate-700">{values.currentJobTitle || "—"}</span> at{" "}
-                  <span className="font-medium text-slate-700">{values.currentEmployer || "—"}</span> — from your Career
-                  Timeline entry. Edit it on the Career Timeline step if this needs updating.
-                </p>
-              )}
+              <FormField label="Current Employer" required>
+                <Input value={values.currentEmployer} onChange={(e) => update("currentEmployer", e.target.value)} />
+              </FormField>
+              <FormField label="Current Job Title" required>
+                <Input value={values.currentJobTitle} onChange={(e) => update("currentJobTitle", e.target.value)} />
+              </FormField>
               <FormField label="Employment Status" required>
                 <Select
                   value={values.currentEmploymentStatus}
@@ -1793,21 +2039,126 @@ export default function ApplyForm({
                 </FormField>
               )}
 
-              <FormField label="Function / Domain" required>
-                <Select
-                  value={values.category}
-                  onChange={(e) => {
-                    const next = e.target.value as CategoryValue | "";
-                    update("category", next);
-                    update("subDomain", "");
-                    update("customSubDomain", "");
-                    update("secondarySubDomains", []);
-                  }}
-                >
+              <FormField label="Current Industry" required>
+                <Select value={values.currentIndustry} onChange={(e) => update("currentIndustry", e.target.value)}>
                   <option value="">Select...</option>
-                  {categoryOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
+                  {industryOptions.map((industry) => (
+                    <option key={industry} value={industry}>
+                      {industry}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              {values.currentIndustry === "Other" && (
+                <FormField label="Please specify your current industry" required>
+                  <Input
+                    value={values.customCurrentIndustry}
+                    onChange={(e) => update("customCurrentIndustry", e.target.value)}
+                  />
+                </FormField>
+              )}
+              <FormField label="Other Industries Previously Worked In (multi-select)" required>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={values.noOtherIndustries}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setValues((prev) => ({
+                          ...prev,
+                          noOtherIndustries: checked,
+                          selectedIndustries: checked ? [] : prev.selectedIndustries,
+                        }));
+                      }}
+                    />
+                    No other industries — I&apos;ve only worked in my current industry
+                  </label>
+                  {!values.noOtherIndustries && (
+                    <div className="flex flex-wrap gap-2">
+                      {industryOptions
+                        .filter((industry) => industry !== values.currentIndustry)
+                        .map((industry) => {
+                          const active = values.selectedIndustries.includes(industry);
+                          return (
+                            <button
+                              type="button"
+                              key={industry}
+                              onClick={() => toggleArrayValue("selectedIndustries", industry)}
+                              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                                active
+                                  ? "border-slate-900 bg-slate-900 text-white"
+                                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                              }`}
+                            >
+                              {active ? "✓ " : "+ "}
+                              {industry}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              </FormField>
+
+              <FormField label="Work Mode Preference" required>
+                <Select value={values.workMode} onChange={(e) => update("workMode", e.target.value)}>
+                  <option value="">Select...</option>
+                  {workModeOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField label="Open to Relocation" required>
+                <Select value={values.openToRelocation} onChange={(e) => update("openToRelocation", e.target.value)}>
+                  <option value="">Select...</option>
+                  {relocationOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              {values.openToRelocation === "Yes" && (
+                <FormField label="Preferred Cities to Relocate To" required>
+                  <div className="flex flex-wrap gap-2">
+                    {cityOptions
+                      .filter((c) => c !== "Other")
+                      .map((city) => {
+                        const active = values.relocationPreferredCities.includes(city);
+                        return (
+                          <button
+                            type="button"
+                            key={city}
+                            onClick={() => toggleArrayValue("relocationPreferredCities", city)}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                              active
+                                ? "border-slate-900 bg-slate-900 text-white"
+                                : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                            }`}
+                          >
+                            {active ? "✓ " : "+ "}
+                            {city}
+                          </button>
+                        );
+                      })}
+                  </div>
+                  <Input
+                    className="mt-2"
+                    placeholder="Other city..."
+                    value={values.customRelocationCity}
+                    onChange={(e) => update("customRelocationCity", e.target.value)}
+                  />
+                </FormField>
+              )}
+              <FormField label="Willingness to Travel" required>
+                <Select value={values.travelPreference} onChange={(e) => update("travelPreference", e.target.value)}>
+                  <option value="">Select...</option>
+                  {travelPreferenceOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
                     </option>
                   ))}
                 </Select>
@@ -1815,26 +2166,6 @@ export default function ApplyForm({
 
               {values.category && (
                 <>
-                  <FormField label="Primary Specialization" required>
-                    <Select value={values.subDomain} onChange={(e) => update("subDomain", e.target.value)}>
-                      <option value="">Select...</option>
-                      {subDomainOptions.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                      <option value="Other">Other</option>
-                    </Select>
-                    {values.subDomain === "Other" && (
-                      <Input
-                        className="mt-2"
-                        value={values.customSubDomain}
-                        onChange={(e) => update("customSubDomain", e.target.value)}
-                        placeholder="Please specify"
-                      />
-                    )}
-                  </FormField>
-
                   {values.isFresher === "Yes" ? (
                     <p className="rounded-lg border border-dashed border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs font-medium text-emerald-700">
                       Since you&apos;re just starting out, we&apos;ll skip role level, team size, and career history for
@@ -1905,240 +2236,16 @@ export default function ApplyForm({
                           </Select>
                         </FormField>
                       )}
+                      {values.roleType === "Other" && (
+                        <FormField label="Please describe your role type" required>
+                          <Input value={values.customRoleType} onChange={(e) => update("customRoleType", e.target.value)} />
+                        </FormField>
+                      )}
                     </>
                   )}
                 </>
               )}
-            </>
-          )}
 
-          {step === 2 && (
-            values.isFresher === "Yes" ? (
-              <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
-                <Briefcase className="mx-auto mb-2 h-6 w-6 text-emerald-400" />
-                <p className="text-sm font-semibold text-emerald-800">No work history to add yet — and that's fine.</p>
-                <p className="mt-1 text-xs text-emerald-700">
-                  We've already got your preferred domain and specialization from the previous step. Once you gain
-                  some experience, come back here anytime to build out your Career Timeline.
-                </p>
-              </div>
-            ) : (
-              <CareerTimelinePanel
-                entries={values.careerTimeline}
-                onChange={(next) => update("careerTimeline", next)}
-                currentEmployer={values.currentEmployer || null}
-                resumeEntries={(existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[]}
-              />
-            )
-          )}
-
-          {step === 3 && (
-            <>
-              <FormField label="Key Skills / Tools" required>
-                <div className="space-y-2">
-                  {values.selectedSkills.length === 0 && (
-                    <p className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
-                      Profiles with 5+ specific skills get shortlisted noticeably more often — tap a few below to get started.
-                    </p>
-                  )}
-                  {suggestedSkills.length > 0 && (
-                    <p className="text-xs text-slate-500">
-                      Suggested for {values.subDomain || "your specialization"} — tap to add:
-                    </p>
-                  )}
-                  {suggestedSkills.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {suggestedSkills.map((skill) => {
-                        const active = values.selectedSkills.includes(skill);
-                        return (
-                          <button
-                            type="button"
-                            key={skill}
-                            onClick={() => toggleArrayValue("selectedSkills", skill)}
-                            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                              active
-                                ? "border-slate-900 bg-slate-900 text-white"
-                                : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
-                            }`}
-                          >
-                            {active ? "✓ " : "+ "}
-                            {skill}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {values.selectedSkills.filter((s) => !suggestedSkills.includes(s)).length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {values.selectedSkills
-                        .filter((s) => !suggestedSkills.includes(s))
-                        .map((skill) => (
-                          <span
-                            key={skill}
-                            className="inline-flex items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-xs font-medium text-white"
-                          >
-                            {skill}
-                            <button
-                              type="button"
-                              aria-label={`Remove ${skill}`}
-                              onClick={() => toggleArrayValue("selectedSkills", skill)}
-                              className="ml-1 text-white/80 hover:text-white"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))}
-                    </div>
-                  )}
-                  <div className="relative">
-                    <div className="flex gap-2 pt-1">
-                      <Input
-                        placeholder="Type to search skills (e.g. 's' for Salesforce, SPIN...)"
-                        value={values.customSkill}
-                        onChange={(e) => update("customSkill", e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addCustomSkill();
-                          }
-                        }}
-                      />
-                      <Button type="button" variant="outline" onClick={() => addCustomSkill()}>
-                        Add
-                      </Button>
-                    </div>
-                    {skillSearchResults.length > 0 && (
-                      <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
-                        {skillSearchResults.map((skill) => (
-                          <button
-                            type="button"
-                            key={skill}
-                            onClick={() => addCustomSkill(skill)}
-                            className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                          >
-                            {skill}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </FormField>
-              <FormField label="Current Industry" required>
-                <Select
-                  value={values.currentIndustry}
-                  onChange={(e) => update("currentIndustry", e.target.value)}
-                >
-                  <option value="">Select...</option>
-                  {industryOptions.map((industry) => (
-                    <option key={industry} value={industry}>
-                      {industry}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-              {values.currentIndustry === "Other" && (
-                <FormField label="Please specify your current industry" required>
-                  <Input
-                    value={values.customCurrentIndustry}
-                    onChange={(e) => update("customCurrentIndustry", e.target.value)}
-                  />
-                </FormField>
-              )}
-              <FormField label="Previous Industries Worked In (multi-select, for searchability)" required>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
-                    <input
-                      type="checkbox"
-                      checked={values.noOtherIndustries}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setValues((prev) => ({
-                          ...prev,
-                          noOtherIndustries: checked,
-                          selectedIndustries: checked ? [] : prev.selectedIndustries,
-                        }));
-                      }}
-                    />
-                    No other industries — I&apos;ve only worked in my current industry
-                  </label>
-                  {!values.noOtherIndustries && (
-                    <>
-                      <div className="flex flex-wrap gap-2">
-                        {industryOptions
-                          .filter((industry) => industry !== values.currentIndustry)
-                          .map((industry) => {
-                            const active = values.selectedIndustries.includes(industry);
-                            return (
-                              <button
-                                type="button"
-                                key={industry}
-                                onClick={() => toggleArrayValue("selectedIndustries", industry)}
-                                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                                  active
-                                    ? "border-slate-900 bg-slate-900 text-white"
-                                    : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
-                                }`}
-                              >
-                                {active ? "✓ " : "+ "}
-                                {industry}
-                              </button>
-                            );
-                          })}
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        <Input
-                          placeholder="Add another industry"
-                          value={values.customIndustry}
-                          onChange={(e) => update("customIndustry", e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              addCustomIndustry();
-                            }
-                          }}
-                        />
-                        <Button type="button" variant="outline" onClick={addCustomIndustry}>
-                          Add
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </FormField>
-              <FormField label="Work Mode Preference" required>
-                <Select value={values.workMode} onChange={(e) => update("workMode", e.target.value)}>
-                  <option value="">Select...</option>
-                  {workModeOptions.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-              <FormField label="Open to Relocation" required>
-                <Select value={values.openToRelocation} onChange={(e) => update("openToRelocation", e.target.value)}>
-                  <option value="">Select...</option>
-                  {relocationOptions.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-              <FormField label="Travel Preference" required>
-                <Select
-                  value={values.travelPreference}
-                  onChange={(e) => update("travelPreference", e.target.value)}
-                >
-                  <option value="">Select...</option>
-                  {travelPreferenceOptions.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
               <FormField label="Consent" required>
                 <label className="flex items-start gap-2 text-sm text-slate-700">
                   <input
@@ -2147,12 +2254,348 @@ export default function ApplyForm({
                     checked={values.consent}
                     onChange={(e) => update("consent", e.target.checked)}
                   />
-                  I consent to StaffAnchor creating my profile with this email and sharing it, in confidence, with
-                  recruiters against relevant sales mandates. I can log in any time using this email address (no
-                  password needed).
+                  This shall create your profile with StaffAnchor for future roles. Do you approve this?
                 </label>
               </FormField>
             </>
+          )}
+
+          {stageIndex === 2 && isSalesCategory && (
+            values.isFresher === "Yes" ? (
+              <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
+                <Briefcase className="mx-auto mb-2 h-6 w-6 text-emerald-400" />
+                <p className="text-sm font-semibold text-emerald-800">Nothing to fill in here yet — and that's fine.</p>
+                <p className="mt-1 text-xs text-emerald-700">
+                  Sales-motion specifics describe a role you're actually in. Once you gain some experience, come back
+                  anytime to fill this in.
+                </p>
+              </div>
+            ) : isB2B ? (
+              <>
+                <FormField label="Sales Motion" required>
+                  <Select value={values.b2bSalesMotionType} onChange={(e) => update("b2bSalesMotionType", e.target.value)}>
+                    <option value="">Select...</option>
+                    {b2bSalesMotionTypeOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+
+                {values.b2bSalesMotionType === "Field / Enterprise AE" && (
+                  <>
+                    <FormField label="Hunter or Farmer" required>
+                      <Select value={values.aeSellingStyle} onChange={(e) => update("aeSellingStyle", e.target.value)}>
+                        <option value="">Select...</option>
+                        {sellingStyleOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField label="Deal Size Currency" required>
+                        <Select
+                          value={values.aeDealSizeCurrency}
+                          onChange={(e) => {
+                            update("aeDealSizeCurrency", e.target.value as CurrencyValue);
+                            update("aeDealSizeBand", "");
+                          }}
+                        >
+                          <option value="">Select...</option>
+                          {currencyOptions.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                      <FormField label="Average Deal Size (ACV)" required>
+                        <Select value={values.aeDealSizeBand} onChange={(e) => update("aeDealSizeBand", e.target.value)}>
+                          <option value="">Select...</option>
+                          {dealSizeBandsFor("b2b_sales", values.aeDealSizeCurrency).map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                    </div>
+                    <FormField label="Sales Cycle Length" required>
+                      <Select value={values.aeSalesCycle} onChange={(e) => update("aeSalesCycle", e.target.value)}>
+                        <option value="">Select...</option>
+                        {salesCycleOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField label="Primary Buyer Persona" required>
+                      <Select value={values.aeBuyerPersona} onChange={(e) => update("aeBuyerPersona", e.target.value)}>
+                        <option value="">Select...</option>
+                        {clientProfileOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                  </>
+                )}
+
+                {values.b2bSalesMotionType === "Inside Sales / SDR" && (
+                  <>
+                    <FormField label="Average Handle Time (AHT)" required>
+                      <Select value={values.sdrAht} onChange={(e) => update("sdrAht", e.target.value)}>
+                        <option value="">Select...</option>
+                        {ahtOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField label="Daily Call Target" required>
+                      <Select value={values.sdrDailyCallTarget} onChange={(e) => update("sdrDailyCallTarget", e.target.value)}>
+                        <option value="">Select...</option>
+                        {dailyCallTargetOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField label="Daily Talk Time" required>
+                      <Select value={values.sdrDailyTalkTime} onChange={(e) => update("sdrDailyTalkTime", e.target.value)}>
+                        <option value="">Select...</option>
+                        {dailyTalkTimeOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField label="Primary Lead Source" required>
+                      <Select value={values.sdrLeadSource} onChange={(e) => update("sdrLeadSource", e.target.value)}>
+                        <option value="">Select...</option>
+                        {leadSourceOptions.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <FormField label="Sales Motion" required>
+                  <Select value={values.b2cSalesMotion} onChange={(e) => update("b2cSalesMotion", e.target.value)}>
+                    <option value="">Select...</option>
+                    {b2cSalesMotionOptions.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField label="Ticket Size Currency" required>
+                    <Select
+                      value={values.b2cTicketCurrency}
+                      onChange={(e) => {
+                        update("b2cTicketCurrency", e.target.value as CurrencyValue);
+                        update("b2cTicketBand", "");
+                      }}
+                    >
+                      <option value="">Select...</option>
+                      {currencyOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField label="Average Ticket Size" required>
+                    <Select value={values.b2cTicketBand} onChange={(e) => update("b2cTicketBand", e.target.value)}>
+                      <option value="">Select...</option>
+                      {dealSizeBandsFor("b2c_sales", values.b2cTicketCurrency).map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                </div>
+              </>
+            )
+          )}
+
+          {stageIndex === 3 && isSalesCategory && (
+            values.isFresher === "Yes" ? (
+              <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
+                <BarChart3 className="mx-auto mb-2 h-6 w-6 text-emerald-400" />
+                <p className="text-sm font-semibold text-emerald-800">Nothing to report yet — and that's fine.</p>
+                <p className="mt-1 text-xs text-emerald-700">
+                  Target vs. achievement describes a role you're actually in. Come back anytime once you have one.
+                </p>
+              </div>
+            ) : (
+              <>
+                <FormField label="Reporting Period" required>
+                  <div className="grid grid-cols-2 gap-2">
+                    {revenuePeriodOptions.map((o) => (
+                      <button
+                        key={o}
+                        type="button"
+                        onClick={() => {
+                          update("revenuePeriod", o);
+                          update("revenueTarget", "");
+                          update("individualTarget", "");
+                        }}
+                        className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                          values.revenuePeriod === o
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                        }`}
+                      >
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                </FormField>
+
+                <p className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
+                  {values.roleType === "Leading a Team" ? (
+                    <>
+                      You told us you lead a team, so the target below is your <strong>team&apos;s overall</strong>{" "}
+                      {values.revenuePeriod ? values.revenuePeriod.toLowerCase() : ""} number.
+                    </>
+                  ) : (
+                    <>
+                      You told us you&apos;re an individual contributor, so the target below is <strong>your own</strong>{" "}
+                      {values.revenuePeriod ? values.revenuePeriod.toLowerCase() : ""} number.
+                    </>
+                  )}
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField label={values.roleType === "Leading a Team" ? "Team Target Currency" : "Target Currency"} required>
+                    <Select
+                      value={values.revenueTargetCurrency}
+                      onChange={(e) => update("revenueTargetCurrency", e.target.value as CurrencyValue)}
+                    >
+                      <option value="">Select...</option>
+                      {currencyOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField label={values.roleType === "Leading a Team" ? "Team Target" : "Your Target"} required>
+                    <Select value={values.revenueTarget} onChange={(e) => update("revenueTarget", e.target.value)}>
+                      <option value="">Select...</option>
+                      {revenueTargetBandOptionsFor(values.revenuePeriod).map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                </div>
+                <FormField label="Achievement %" required>
+                  <div className="flex flex-wrap gap-1.5">
+                    {achievementBandOptions.map((o) => {
+                      const active = values.revenueAchievement === o;
+                      return (
+                        <button
+                          type="button"
+                          key={o}
+                          onClick={() => update("revenueAchievement", o)}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                            active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                          }`}
+                        >
+                          {o}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </FormField>
+
+                {values.roleType === "Leading a Team" && (
+                  <FormField label="Do you also carry an individual quota?" required>
+                    <Select
+                      value={values.hasIndividualQuota}
+                      onChange={(e) => update("hasIndividualQuota", e.target.value as "" | "Yes" | "No")}
+                    >
+                      <option value="">Select...</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </Select>
+                  </FormField>
+                )}
+
+                {values.roleType === "Leading a Team" && values.hasIndividualQuota === "Yes" && (
+                  <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Your individual target (in addition to the team number)
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField label="Individual Target Currency" required>
+                        <Select
+                          value={values.individualTargetCurrency}
+                          onChange={(e) => update("individualTargetCurrency", e.target.value as CurrencyValue)}
+                        >
+                          <option value="">Select...</option>
+                          {currencyOptions.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                      <FormField label="Individual Target" required>
+                        <Select value={values.individualTarget} onChange={(e) => update("individualTarget", e.target.value)}>
+                          <option value="">Select...</option>
+                          {revenueTargetBandOptionsFor(values.revenuePeriod).map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+                    </div>
+                    <FormField label="Individual Achievement %" required>
+                      <div className="flex flex-wrap gap-1.5">
+                        {achievementBandOptions.map((o) => {
+                          const active = values.individualAchievement === o;
+                          return (
+                            <button
+                              type="button"
+                              key={o}
+                              onClick={() => update("individualAchievement", o)}
+                              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                                active
+                                  ? "border-slate-900 bg-slate-900 text-white"
+                                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                              }`}
+                            >
+                              {o}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </FormField>
+                  </div>
+                )}
+              </>
+            )
           )}
 
           {errorMsg && <p className="text-sm text-red-600">{errorMsg}</p>}
@@ -2167,7 +2610,7 @@ export default function ApplyForm({
             >
               ← Previous
             </Button>
-            {step < STEPS.length - 1 ? (
+            {!isLastStage ? (
               <Button
                 type="button"
                 onClick={goNext}
@@ -2178,11 +2621,11 @@ export default function ApplyForm({
             ) : (
               <Button
                 type="button"
-                onClick={handleSubmit}
+                onClick={() => handleSubmit()}
                 disabled={submitting}
                 className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
               >
-                {submitting ? "Submitting..." : "Submit My Profile"}
+                {submitting ? "Submitting..." : isEditMode ? "Save Profile" : submitButtonLabel}
               </Button>
             )}
           </div>
@@ -2241,31 +2684,34 @@ export default function ApplyForm({
                 <p className="text-xs leading-5 text-slate-500">{readinessMeta.blurb}</p>
               </div>
               <ul className="space-y-2 border-t border-slate-100 pt-3">
-                {STEPS.map((label, i) => {
-                  const isSkipped = i === 4 && !isSalesCategory;
+                {ALL_STAGES.map((label, i) => {
+                  const isSkipped = (i === 2 || i === 3) && !isSalesCategory;
+                  const posInSequence = stepSequence.indexOf(i);
+                  const isCurrent = posInSequence === step;
+                  const isDone = posInSequence >= 0 && posInSequence < step;
                   return (
                     <li key={label} className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1.5">
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${
-                            isSkipped ? "bg-slate-200" : i < step ? "bg-emerald-500" : i === step ? "bg-blue-600" : "bg-slate-300"
+                            isSkipped ? "bg-slate-200" : isDone ? "bg-emerald-500" : isCurrent ? "bg-blue-600" : "bg-slate-300"
                           }`}
                         />
                         <span
                           className={
                             isSkipped
                               ? "text-slate-300 line-through"
-                              : i === step
+                              : isCurrent
                                 ? "font-medium text-slate-900"
-                                : i < step
+                                : isDone
                                   ? "text-slate-600"
                                   : "text-slate-400"
                           }
                         >
-                          {label}
+                          Stage {label}
                         </span>
                       </span>
-                      <span className="font-medium text-slate-400">{isSkipped ? "n/a" : `+${STEP_WEIGHTS[i]}%`}</span>
+                      <span className="font-medium text-slate-400">{isSkipped ? "n/a" : `+${STAGE_WEIGHTS[i]}%`}</span>
                     </li>
                   );
                 })}
@@ -2279,29 +2725,364 @@ export default function ApplyForm({
                 <ShieldCheck className="h-4 w-4 text-blue-600" />
                 <p className="text-sm font-semibold text-slate-900">Why we ask this</p>
               </div>
-              <p className="text-sm leading-6 text-slate-600">{STEP_TIPS[step]}</p>
+              <p className="text-sm leading-6 text-slate-600">{STAGE_TIPS[stageIndex]}</p>
             </CardContent>
           </Card>
         </aside>
         </div>
+        )}
+
+        {submitted && !isEditMode && (
+          <div className="mx-auto mb-6 max-w-3xl rounded-2xl border border-emerald-200 bg-emerald-50/60 px-6 py-8 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              ✓
+            </div>
+            <h2 className="text-xl font-bold text-slate-950">
+              Thank you, {values.fullName.split(" ")[0] || "there"}, your application has been successfully submitted
+              {mandateTitle ? ` for ${mandateTitle}` : ""}.
+            </h2>
+            <div
+              className={`mx-auto mt-4 flex max-w-xs items-center justify-center gap-2 rounded-2xl px-4 py-3 ${readinessMeta.chipBg}`}
+            >
+              <span className={`h-2 w-2 rounded-full ${readinessMeta.dot}`} />
+              <p className={`text-sm font-semibold ${readinessMeta.chipText}`}>
+                Passport Readiness: {readinessTier} ({profileStrength}%)
+              </p>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">
+              A StaffAnchor recruiter will review your profile and reach out if there&apos;s a mandate fit. A couple
+              more optional things below boost your shortlisting odds.
+            </p>
+          </div>
+        )}
+
+        {showStage4 && (
+          <Card className="mx-auto w-full max-w-3xl rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)]">
+            <CardContent className="space-y-6 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">Stage 4 — Optional</p>
+                  <h3 className="text-lg font-semibold text-slate-900">A few more things that boost your shortlisting odds</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    No pressure -- this all autosaves as you go, and you can come back anytime.
+                  </p>
+                </div>
+                <div className="hidden shrink-0 items-center gap-3 sm:flex">
+                  <div
+                    className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-500"
+                    style={{ background: `conic-gradient(${readinessMeta.ring} ${profileStrength * 3.6}deg, #e2e8f0 0deg)` }}
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-xs font-bold text-slate-900">
+                      {profileStrength}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cluster: Career History -- historic roles + revenue per role +
+                  reason for leaving + promotion history. This is the existing
+                  CareerTimelinePanel, minus the quarterly target/achievement
+                  grid it used to carry on the current-role card (that moved to
+                  Stage 3, see the Revenue Snapshot step above / the hand-off
+                  notes on CareerTimelinePanel.tsx). */}
+              <div className="space-y-3 border-t border-slate-100 pt-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Career History</p>
+                {values.isFresher === "Yes" ? (
+                  <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
+                    <Briefcase className="mx-auto mb-2 h-6 w-6 text-emerald-400" />
+                    <p className="text-sm font-semibold text-emerald-800">No work history to add yet — and that's fine.</p>
+                    <p className="mt-1 text-xs text-emerald-700">Once you gain some experience, come back here anytime.</p>
+                  </div>
+                ) : (
+                  <CareerTimelinePanel
+                    entries={values.careerTimeline}
+                    onChange={(next) => update("careerTimeline", next)}
+                    currentEmployer={values.currentEmployer || null}
+                    resumeEntries={(existingProfile?.career_timeline_resume ?? []) as ResumeTimelineEntry[]}
+                  />
+                )}
+                <FormField label="Were you promoted during your time at any of these companies? If so, briefly describe.">
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["Yes", "No"] as const).map((o) => (
+                      <button
+                        key={o}
+                        type="button"
+                        onClick={() => update("promotionHistory", o)}
+                        className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                          values.promotionHistory === o
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                        }`}
+                      >
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                  {values.promotionHistory === "Yes" && (
+                    <textarea
+                      className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                      rows={2}
+                      value={values.promotionDescription}
+                      onChange={(e) => update("promotionDescription", e.target.value)}
+                      placeholder="Briefly describe the promotion(s)..."
+                    />
+                  )}
+                </FormField>
+              </div>
+
+              {/* Cluster: Profile & Documents -- LinkedIn + skills (everyone) */}
+              <div className="space-y-3 border-t border-slate-100 pt-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Profile &amp; Documents</p>
+                <FormField label="LinkedIn Profile URL">
+                  <Input value={values.linkedinUrl} onChange={(e) => update("linkedinUrl", e.target.value)} />
+                </FormField>
+                <FormField label="Key Skills / Tools">
+                  <div className="space-y-2">
+                    {suggestedSkills.length > 0 && (
+                      <p className="text-xs text-slate-500">Suggested for {values.subDomain || "your specialization"} — tap to add:</p>
+                    )}
+                    {suggestedSkills.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {suggestedSkills.map((skill) => {
+                          const active = values.selectedSkills.includes(skill);
+                          return (
+                            <button
+                              type="button"
+                              key={skill}
+                              onClick={() => toggleArrayValue("selectedSkills", skill)}
+                              className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                                active
+                                  ? "border-slate-900 bg-slate-900 text-white"
+                                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                              }`}
+                            >
+                              {active ? "✓ " : "+ "}
+                              {skill}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {values.selectedSkills.filter((s) => !suggestedSkills.includes(s)).length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {values.selectedSkills
+                          .filter((s) => !suggestedSkills.includes(s))
+                          .map((skill) => (
+                            <span
+                              key={skill}
+                              className="inline-flex items-center gap-1 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-xs font-medium text-white"
+                            >
+                              {skill}
+                              <button
+                                type="button"
+                                aria-label={`Remove ${skill}`}
+                                onClick={() => toggleArrayValue("selectedSkills", skill)}
+                                className="ml-1 text-white/80 hover:text-white"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                    <div className="relative">
+                      <div className="flex gap-2 pt-1">
+                        <Input
+                          placeholder="Type to search skills (e.g. 's' for Salesforce, SPIN...)"
+                          value={values.customSkill}
+                          onChange={(e) => update("customSkill", e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addCustomSkill();
+                            }
+                          }}
+                        />
+                        <Button type="button" variant="outline" onClick={() => addCustomSkill()}>
+                          Add
+                        </Button>
+                      </div>
+                      {skillSearchResults.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
+                          {skillSearchResults.map((skill) => (
+                            <button
+                              type="button"
+                              key={skill}
+                              onClick={() => addCustomSkill(skill)}
+                              className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              {skill}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </FormField>
+              </div>
+
+              {/* Cluster: B2B extra depth */}
+              {isB2B && (
+                <div className="space-y-3 border-t border-slate-100 pt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">B2B Extra Depth</p>
+                  <FormField label="CRM Tool Stack">
+                    <div className="flex flex-wrap gap-2">
+                      {crmToolOptions.map((tool) => {
+                        const active = values.crmTools.includes(tool);
+                        return (
+                          <button
+                            type="button"
+                            key={tool}
+                            onClick={() => toggleArrayValue("crmTools", tool)}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                              active
+                                ? "border-slate-900 bg-slate-900 text-white"
+                                : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                            }`}
+                          >
+                            {active ? "✓ " : "+ "}
+                            {tool}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Input
+                      className="mt-2"
+                      placeholder="Other CRM tool..."
+                      value={values.customCrmTool}
+                      onChange={(e) => update("customCrmTool", e.target.value)}
+                    />
+                  </FormField>
+                  <FormField label="PLG vs. Sales-Led Motion">
+                    <Select value={values.motionType} onChange={(e) => update("motionType", e.target.value)}>
+                      <option value="">Select...</option>
+                      {motionTypeOptions.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField label="Customer Segment(s) Sold To">
+                    <div className="flex flex-wrap gap-2">
+                      {customerSegmentOptions.map((seg) => {
+                        const active = values.customerSegmentSold.includes(seg);
+                        return (
+                          <button
+                            type="button"
+                            key={seg}
+                            onClick={() => toggleArrayValue("customerSegmentSold", seg)}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                              active
+                                ? "border-slate-900 bg-slate-900 text-white"
+                                : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                            }`}
+                          >
+                            {active ? "✓ " : "+ "}
+                            {seg}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </FormField>
+                </div>
+              )}
+
+              {/* Cluster: Industrial & Infrastructure (Practice 2) extra depth --
+                  see the judgment-call note in the hand-off report: this is
+                  deliberately the ONLY place territory/route/account-type/
+                  complexity-style Industrial depth is asked at the profile
+                  level; the CareerTimelinePanel above already asks the
+                  matching per-role territory_region/commercial_route/
+                  target_account_type/product_complexity fields, so this
+                  cluster only covers what's genuinely new here. */}
+              {isIndustrialPractice && (
+                <div className="space-y-3 border-t border-slate-100 pt-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Industrial &amp; Infrastructure Extra Depth</p>
+                  <FormField label="Product Lines / Brands">
+                    <Input
+                      value={values.productLinesBrands}
+                      onChange={(e) => update("productLinesBrands", e.target.value)}
+                      placeholder="e.g. Siemens PLCs, Schneider drives..."
+                    />
+                  </FormField>
+                  <FormField label="Technical Certifications">
+                    <Input
+                      value={values.technicalCertifications}
+                      onChange={(e) => update("technicalCertifications", e.target.value)}
+                      placeholder="e.g. Six Sigma Green Belt, PMP..."
+                    />
+                  </FormField>
+                  <FormField label="Tender / RFP Experience">
+                    <div className="grid grid-cols-2 gap-2">
+                      {tenderRfpExperienceOptions.map((o) => (
+                        <button
+                          key={o}
+                          type="button"
+                          onClick={() => update("tenderRfpExperience", o)}
+                          className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                            values.tenderRfpExperience === o
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                          }`}
+                        >
+                          {o}
+                        </button>
+                      ))}
+                    </div>
+                    {values.tenderRfpExperience === "Yes" && (
+                      <textarea
+                        className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                        rows={2}
+                        value={values.tenderRfpDescription}
+                        onChange={(e) => update("tenderRfpDescription", e.target.value)}
+                        placeholder="Briefly describe your tender / RFP experience..."
+                      />
+                    )}
+                  </FormField>
+                </div>
+              )}
+
+              {isEditMode && (
+                <div className="flex justify-end border-t border-slate-100 pt-4">
+                  <Button type="button" onClick={() => handleSubmit()} disabled={submitting} className="rounded-xl bg-blue-600 px-6">
+                    {submitting ? "Saving..." : "Save Profile"}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
 
     {showLeaveWarning && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
         <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
-          <h2 className="text-base font-semibold text-slate-900">Wait — your profile isn&apos;t complete yet.</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Recruiters match candidates based on a complete profile, so leaving now means you may not get matched to
-            relevant roles. It&apos;s just 5 more minutes to finish. Are you sure you want to leave?
-          </p>
+          {submitted && !isEditMode ? (
+            <>
+              <h2 className="text-base font-semibold text-slate-900">Your application&apos;s in!</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                A couple more optional things (below) boost your shortlisting odds -- but you&apos;re already on
+                record either way. Want to add a bit more before you go?
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-base font-semibold text-slate-900">Wait — your profile isn&apos;t complete yet.</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Recruiters match candidates based on a complete profile, so leaving now means you may not get matched
+                to relevant roles. It&apos;s just 5 more minutes to finish. Are you sure you want to leave?
+              </p>
+            </>
+          )}
           <div className="mt-4 flex gap-2">
             <button
               type="button"
               onClick={() => setShowLeaveWarning(false)}
               className="flex-1 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
             >
-              Stay and finish
+              {submitted && !isEditMode ? "Stay and add more" : "Stay and finish"}
             </button>
             <button
               type="button"

@@ -93,31 +93,3 @@ export async function getOpenJob(mandateId: string): Promise<JobListing | null> 
   return rows[0] ?? null;
 }
 
-export type QuickApplyPayload = {
-  full_name: string;
-  email: string;
-  phone: string;
-  current_location: string;
-  total_experience_years: number | null;
-  current_fixed_ctc: number | null;
-  notice_period: string;
-  current_job_title: string;
-  current_employer: string;
-  current_employment_status: string;
-  current_industry: string;
-  category: string;
-  sub_domain: string;
-  resume_file_url: string | null;
-  segment_data: Record<string, unknown>;
-  consent: boolean;
-  profile_stage?: "lead" | "applicant" | "full_profile";
-};
-
-export async function submitQuickApply(mandateId: string, payload: QuickApplyPayload) {
-  const { data, error } = await supabase.rpc("quick_apply", {
-    payload,
-    p_mandate_id: mandateId,
-  });
-  if (error) throw new Error(error.message);
-  return data as string;
-}
