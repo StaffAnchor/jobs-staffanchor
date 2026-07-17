@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   BarChart3,
@@ -451,6 +452,7 @@ export default function ApplyForm({
   existingProfile?: ExistingProfile;
   onSaved?: () => void;
 } = {}) {
+  const router = useRouter();
   const isEditMode = !!existingProfile;
   const [step, setStep] = useState(0);
   const [values, setValues] = useState<FormState>(() =>
@@ -720,6 +722,52 @@ export default function ApplyForm({
   // -- no new fields, no change to what counts toward it.
   const readinessTier: "Basic" | "Good" | "Excellent" | "Premium" =
     profileStrength >= 90 ? "Premium" : profileStrength >= 65 ? "Excellent" : profileStrength >= 35 ? "Good" : "Basic";
+
+  // Nudge candidates who try to leave mid-way -- an incomplete profile means
+  // fewer/worse recruiter matches later, and it's cheap to remind them
+  // they're close (progressive save already means nothing is lost, but the
+  // fields still need to actually get filled in for matching to work well).
+  const isIncomplete = !submitted && profileStrength < 100;
+  const [showLeaveWarning, setShowLeaveWarning] = useState(false);
+  const pendingHrefRef = useRef<string | null>(null);
+
+  // Real tab-close / refresh / address-bar navigation: browsers force their
+  // own generic confirmation text here for security reasons (no custom copy
+  // is allowed to appear), so this only controls *whether* that native
+  // prompt fires, gated on completeness.
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (!isIncomplete) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isIncomplete]);
+
+  // Same-origin link clicks (navbar, "browse roles", footer, etc.) never
+  // trigger beforeunload since the page doesn't actually unload in a Next.js
+  // client-side navigation -- so those need their own interception with our
+  // actual custom message, via a capture-phase click listener on the whole
+  // page.
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!isIncomplete) return;
+      const anchor = (e.target as HTMLElement | null)?.closest("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+      if (anchor.target === "_blank") return;
+      if (/^https?:\/\//.test(href) && !href.startsWith(window.location.origin)) return;
+      if (href === window.location.pathname) return;
+      e.preventDefault();
+      e.stopPropagation();
+      pendingHrefRef.current = href;
+      setShowLeaveWarning(true);
+    }
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, [isIncomplete]);
 
   const READINESS_META: Record<
     "Basic" | "Good" | "Excellent" | "Premium",
@@ -1238,6 +1286,7 @@ export default function ApplyForm({
   const StepIcon = STEP_META[step].icon;
 
   return (
+    <>
     <div className="min-h-[calc(100vh-4rem)] bg-[#f7f9fc]">
       <main className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-5 flex flex-wrap items-center justify-end gap-2 text-xs font-medium text-slate-500">
@@ -2231,5 +2280,38 @@ export default function ApplyForm({
         </div>
       </main>
     </div>
+
+    {showLeaveWarning && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+        <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
+          <h2 className="text-base font-semibold text-slate-900">Wait — your profile isn&apos;t complete yet.</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Recruiters match candidates based on a complete profile, so leaving now means you may not get matched to
+            relevant roles. It&apos;s just 5 more minutes to finish. Are you sure you want to leave?
+          </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowLeaveWarning(false)}
+              className="flex-1 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              Stay and finish
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const href = pendingHrefRef.current;
+                setShowLeaveWarning(false);
+                if (href) router.push(href);
+              }}
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Leave anyway
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
