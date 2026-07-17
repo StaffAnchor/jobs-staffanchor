@@ -31,7 +31,7 @@ import {
   roleTypeOptions,
   teamSizeOptions,
   categoryOptions,
-  subDomainsForCategory,
+  level1OptionsForProfileType,
   dealSizeBandsFor,
   salesCycleOptions,
   sellingStyleOptions,
@@ -149,7 +149,7 @@ export default function QuickApplyPage() {
   }, [values.cityChoice, values.customCity]);
 
   const subDomainOptions = useMemo(
-    () => subDomainsForCategory(values.category || null),
+    () => level1OptionsForProfileType(values.category || null),
     [values.category]
   );
 
@@ -596,7 +596,7 @@ export default function QuickApplyPage() {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Function / Domain" required>
+            <FormField label="Profile Type" required>
               <Select
                 value={values.category}
                 onChange={(e) => {
@@ -614,9 +614,12 @@ export default function QuickApplyPage() {
                 ))}
               </Select>
             </FormField>
-            <FormField label="Sub-domain" required>
+            <FormField
+              label={values.category === "b2b_sales" ? "Practice" : values.category === "b2c_sales" ? "Vertical" : "Function"}
+              required
+            >
               <Select value={values.subDomain} onChange={(e) => set("subDomain", e.target.value)}>
-                <option value="">Select sub-domain</option>
+                <option value="">Select...</option>
                 {subDomainOptions.map((o) => (
                   <option key={o} value={o}>
                     {o}
