@@ -1714,10 +1714,22 @@ export default function ApplyForm({
   async function handleSubmit(opts?: { silent?: boolean }) {
     const silent = !!opts?.silent;
     if (!silent) {
-      const err = validateStep();
-      if (err) {
-        setErrorMsg(err);
-        return;
+      // Defensive re-check of every stage that applies to this candidate, not
+      // just whichever one `step` currently points to. validateStep() alone
+      // only checks the current stage -- fine for goNext()'s per-stage gate,
+      // but for a sales-category candidate the final Submit click happens on
+      // Stage 3, so relying on validateStep() alone here left Stage 1B's
+      // required fields (Expected CTC, Work Mode, Relocation, etc.)
+      // unchecked at the moment of the actual save. This is what let some
+      // profiles reach the database with those fields blank despite the
+      // wizard supposedly requiring them at every step.
+      for (const i of stepSequence) {
+        const err = validateStep(i);
+        if (err) {
+          setErrorMsg(err);
+          setStep(stepSequence.indexOf(i));
+          return;
+        }
       }
       // Belt-and-suspenders: resume is only checked by validateStep() on Stage
       // 1A, but a restored draft (or any future step-reordering) could
@@ -1970,20 +1982,18 @@ export default function ApplyForm({
         stability_score: stabilityResult?.score ?? null,
         domain_consistency_score: domainResult?.score ?? null,
         consent: values.consent,
-        // Reaching this final submit with the Stage-3-only fields (secondary
-        // specializations, self-assessment write-ups, travel preference) filled
-        // in marks a genuinely completed Build Your Profile wizard; a shorter
-        // submission (bare signup or a quick job application) still counts as
-        // "applicant" -- submit_candidate never demotes an existing higher stage.
+        // "full_profile" used to be triggered by whether the candidate filled
+        // in optional depth extras (secondary specializations, a best-win
+        // write-up, LinkedIn, etc.) -- which meant a candidate could be
+        // labeled "fully done" while Expected CTC / Work Mode / Relocation
+        // (all genuinely required fields) were still blank, and conversely a
+        // candidate who filled every required field but skipped the optional
+        // extras never got the "full_profile" label at all. This now checks
+        // real completeness of every stage that actually applies to this
+        // candidate (isStageComplete mirrors validateStep's own field list),
+        // so the label means what it says.
         profile_stage:
-          values.secondarySubDomains.filter((d) => d !== "None — single specialization only").length > 0 ||
-          (currentTimelineEntry?.best_win?.trim().length ?? 0) > 0 ||
-          (currentTimelineEntry?.tough_loss?.trim().length ?? 0) > 0 ||
-          !!values.revenuePeriod ||
-          !!values.promotionHistory ||
-          !!values.linkedinUrl.trim()
-            ? "full_profile"
-            : "applicant",
+          isStageComplete(1) && isStageComplete(2) && isStageComplete(3) ? "full_profile" : "applicant",
       };
 
       // Server-side submit route: creates/links a real auth.users account for
