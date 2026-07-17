@@ -583,6 +583,219 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
   };
 }
 
+// ---------------------------------------------------------------------------
+// My Profile read-first display -- Round 5 redesign.
+//
+// Naukri/iimjobs-style profile pages show data as label/value cards with a
+// pencil that opens editing for just that section; the previous My Profile
+// build kept every field as an always-open input the whole time, which read
+// as "the same form" rather than a profile. These pieces implement the new
+// pattern: a plain label/value row, a section shell that swaps between a
+// read summary and the (unchanged) input fields plus a Save/Cancel pair, and
+// one summary component per stage built straight from FormState so it can
+// never drift out of sync with what the fields actually collect.
+// ---------------------------------------------------------------------------
+
+function ProfileRow({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="py-1.5">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="text-sm text-slate-800">
+        {value && value.trim() ? value : <span className="text-slate-300">Not provided</span>}
+      </p>
+    </div>
+  );
+}
+
+// Read-only card shell for a closed section -- title + completion check +
+// Edit pencil, wrapping whatever summary content the caller passes in.
+function ProfileSummaryCard({
+  id,
+  title,
+  complete,
+  onEdit,
+  children,
+}: {
+  id: string;
+  title: string;
+  complete: boolean;
+  onEdit: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div id={id} className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-100">
+      <div className="flex items-center justify-between bg-slate-50/70 px-5 py-3">
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+          {complete && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+        </div>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          Edit
+        </button>
+      </div>
+      <div className="px-5 py-4">{children}</div>
+    </div>
+  );
+}
+
+// Cancel/Save row shown under an open section's fields in My Profile edit
+// mode -- "one section at a time and save," per the approved design: closes
+// the section back to its read card either way.
+function SectionSaveBar({ onCancel, onSave, saving }: { onCancel: () => void; onSave: () => void; saving: boolean }) {
+  return (
+    <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+      <Button type="button" variant="outline" onClick={onCancel} className="rounded-xl">
+        Cancel
+      </Button>
+      <Button type="button" onClick={onSave} disabled={saving} className="rounded-xl bg-blue-600 hover:bg-blue-700">
+        {saving ? "Saving..." : "Save"}
+      </Button>
+    </div>
+  );
+}
+
+function Stage1ASummary({ v }: { v: FormState }) {
+  const categoryLabel = categoryOptions.find((c) => c.value === v.category)?.label ?? "";
+  const specialization =
+    v.subDomain === "Other"
+      ? v.customSubDomain
+      : v.subDomain === "Other B2B"
+        ? v.otherB2BSubDomain === "Other"
+          ? v.customOtherB2BSubDomain
+          : v.otherB2BSubDomain
+        : v.subDomain;
+  const city = v.cityChoice === "Other" ? [v.customCity, v.customState].filter(Boolean).join(", ") : v.cityChoice;
+  return (
+    <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+      <ProfileRow label="Full Name" value={v.fullName} />
+      <ProfileRow label="Email" value={v.email} />
+      <ProfileRow label="Phone" value={v.phone} />
+      <ProfileRow label="Current City" value={city} />
+      <ProfileRow label="Current Profile Type" value={categoryLabel} />
+      <ProfileRow label="Primary Specialization" value={specialization} />
+    </div>
+  );
+}
+
+function Stage1BSummary({ v }: { v: FormState }) {
+  const relocation =
+    v.openToRelocation === "Yes" && (v.relocationPreferredCities.length || v.customRelocationCity.trim())
+      ? `Yes — ${[...v.relocationPreferredCities, v.customRelocationCity].filter(Boolean).join(", ")}`
+      : v.openToRelocation;
+  const roleType =
+    v.roleType === "Leading a Team" && v.teamSize
+      ? `Leading a Team (${v.teamSize})`
+      : v.roleType === "Other"
+        ? v.customRoleType
+        : v.roleType;
+  return (
+    <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+      {v.isFresher === "Yes" ? (
+        <>
+          <ProfileRow label="Employment Status" value="First Job Seeker" />
+          <ProfileRow label="Internship" value={v.hasInternship === "Yes" ? `${v.internshipCompany} — ${v.internshipRole}` : v.hasInternship} />
+        </>
+      ) : (
+        <>
+          <ProfileRow label="Current Employer" value={v.currentEmployer} />
+          <ProfileRow label="Current Job Title" value={v.currentJobTitle} />
+          <ProfileRow label="Employment Status" value={v.currentEmploymentStatus} />
+          <ProfileRow label="Current Fixed CTC" value={v.currentFixedCtc ? `₹${v.currentFixedCtc}L` : ""} />
+        </>
+      )}
+      <ProfileRow label="Total Experience" value={v.totalExperienceYears ? `${v.totalExperienceYears} yrs` : ""} />
+      <ProfileRow label="Expected Fixed CTC" value={v.expectedFixedCtc ? `₹${v.expectedFixedCtc}L` : ""} />
+      <ProfileRow label="Days to Join" value={v.noticePeriod} />
+      <ProfileRow label="Highest Qualification" value={v.highestQualification === "Other" ? v.customQualification : v.highestQualification} />
+      <ProfileRow label="Work Mode" value={v.workMode} />
+      <ProfileRow label="Open to Relocation" value={relocation} />
+      <ProfileRow label="Travel Preference" value={v.travelPreference} />
+      <ProfileRow label="Languages Known" value={[...v.languagesKnown.filter((l) => l !== "Other"), v.customLanguage].filter(Boolean).join(", ")} />
+      {v.isFresher !== "Yes" && (
+        <>
+          <ProfileRow label="Role Level" value={v.roleLevel} />
+          <ProfileRow label="Role Type" value={roleType} />
+          <ProfileRow
+            label="Secondary Specializations"
+            value={v.secondarySubDomains.length ? v.secondarySubDomains.join(", ") : ""}
+          />
+        </>
+      )}
+      <ProfileRow label="Current Industry" value={v.currentIndustry === "Other" ? v.customCurrentIndustry : v.currentIndustry} />
+      <ProfileRow
+        label="Previous Industries"
+        value={v.noOtherIndustries ? "None" : v.selectedIndustries.join(", ")}
+      />
+    </div>
+  );
+}
+
+function Stage2Summary({ v, isB2B, isB2C }: { v: FormState; isB2B: boolean; isB2C: boolean }) {
+  if (v.isFresher === "Yes") {
+    return <p className="text-sm text-slate-400">Not applicable — no work history yet.</p>;
+  }
+  if (isB2B) {
+    return (
+      <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+        <ProfileRow label="Sales Motion" value={v.b2bSalesMotionType} />
+        {(v.b2bSalesMotionType === "Field / Enterprise AE" || v.b2bSalesMotionType === "Inside Sales / SDR") && (
+          <>
+            <ProfileRow label="Selling Style" value={v.aeSellingStyle} />
+            <ProfileRow label="Avg. Deal Size" value={v.aeDealSizeBand ? `${v.aeDealSizeCurrency} ${v.aeDealSizeBand}` : ""} />
+            <ProfileRow label="Sales Cycle" value={v.aeSalesCycle} />
+            <ProfileRow label="Buyer Persona" value={v.aeBuyerPersona} />
+          </>
+        )}
+        {v.b2bSalesMotionType === "Inside Sales / SDR" && (
+          <>
+            <ProfileRow label="Avg. Handle Time" value={v.sdrAht} />
+            <ProfileRow label="Daily Call Target" value={v.sdrDailyCallTarget} />
+            <ProfileRow label="Daily Talk Time" value={v.sdrDailyTalkTime} />
+            <ProfileRow label="Primary Lead Source" value={v.sdrLeadSource} />
+          </>
+        )}
+      </div>
+    );
+  }
+  if (isB2C) {
+    return (
+      <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+        <ProfileRow label="Sales Motion" value={v.b2cSalesMotion} />
+        <ProfileRow label="Avg. Ticket Size" value={v.b2cTicketBand ? `${v.b2cTicketCurrency} ${v.b2cTicketBand}` : ""} />
+      </div>
+    );
+  }
+  return <p className="text-sm text-slate-400">Not applicable for this profile type.</p>;
+}
+
+function Stage3Summary({ v, isSales }: { v: FormState; isSales: boolean }) {
+  if (!isSales) return <p className="text-sm text-slate-400">Not applicable for this profile type.</p>;
+  if (v.isFresher === "Yes") {
+    return <p className="text-sm text-slate-400">Not applicable — no work history yet.</p>;
+  }
+  return (
+    <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+      <ProfileRow label="Reporting Period" value={v.revenuePeriod} />
+      <ProfileRow
+        label={v.roleType === "Leading a Team" ? "Team Target" : "Target"}
+        value={v.revenueTarget ? `${v.revenueTargetCurrency} ${v.revenueTarget}` : ""}
+      />
+      <ProfileRow label="Achievement %" value={v.revenueAchievement} />
+      {v.roleType === "Leading a Team" && v.hasIndividualQuota === "Yes" && (
+        <>
+          <ProfileRow label="Individual Target" value={v.individualTarget ? `${v.individualTargetCurrency} ${v.individualTarget}` : ""} />
+          <ProfileRow label="Individual Achievement %" value={v.individualAchievement} />
+        </>
+      )}
+    </div>
+  );
+}
+
 // Entry point this component was opened from -- recorded as a `source` tag
 // for attribution/analytics only. Per the frozen spec (section 0), the form
 // varies ONLY by Profile Type / Practice / Vertical, never by entry point --
@@ -1861,6 +2074,21 @@ export default function ApplyForm({
     !!values.linkedinUrl.trim();
   const [stage4Open, setStage4Open] = useState(hasStage4Data);
 
+  // My Profile read-first cards -- only one section's fields are open for
+  // editing at a time (per the approved design: "one section at a time and
+  // save"); everything else on the page renders as a read-only summary.
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const [savingSection, setSavingSection] = useState(false);
+  async function saveSection() {
+    setSavingSection(true);
+    try {
+      await handleSubmit({ silent: true });
+    } finally {
+      setSavingSection(false);
+      setOpenSection(null);
+    }
+  }
+
   useEffect(() => {
     if (!showStage4) return;
     const handle = setTimeout(() => {
@@ -2076,7 +2304,7 @@ export default function ApplyForm({
                   <div className="min-w-0">
                     <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Your Profile</h2>
                     <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                      Everything you&apos;ve told us, all on one page. Edit any field directly.
+                      Everything you&apos;ve told us, grouped by section. Tap Edit on any card to update it.
                     </p>
                   </div>
                 </div>
@@ -2096,19 +2324,26 @@ export default function ApplyForm({
                   the matching section id added to that section's header. */}
               <div className="-mt-1 flex flex-wrap gap-1.5 border-b border-slate-100 pb-4">
                 {[
-                  { id: "stage-1A", label: "1A · Core", done: isStageComplete(0) },
-                  { id: "stage-1B", label: "1B · Extended", done: isStageComplete(1) },
+                  { id: "stage-1A", section: "1A", label: "1A · Core", done: isStageComplete(0) },
+                  { id: "stage-1B", section: "1B", label: "1B · Extended", done: isStageComplete(1) },
                   ...(isSalesCategory
                     ? [
-                        { id: "stage-2", label: "2 · Specialization", done: isStageComplete(2) },
-                        { id: "stage-3", label: "3 · Revenue", done: isStageComplete(3) },
+                        { id: "stage-2", section: "2", label: "2 · Specialization", done: isStageComplete(2) },
+                        { id: "stage-3", section: "3", label: "3 · Revenue", done: isStageComplete(3) },
                       ]
                     : []),
-                  { id: "stage-4", label: "4 · Optional", done: hasStage4Data },
+                  { id: "stage-4", section: "4", label: "4 · Optional", done: hasStage4Data },
                 ].map((s) => (
                   <a
                     key={s.id}
                     href={`#${s.id}`}
+                    onClick={() => {
+                      if (s.section === "4") {
+                        setStage4Open(true);
+                      } else {
+                        setOpenSection(s.section);
+                      }
+                    }}
                     className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                       s.done
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
@@ -2144,16 +2379,17 @@ export default function ApplyForm({
               </>
             )}
 
-          {isEditMode && (
-            <p
-              id="stage-1A"
-              className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400"
-            >
+          {isEditMode && openSection !== "1A" && (
+            <ProfileSummaryCard id="stage-1A" title="Stage 1A — Core Details" complete={isStageComplete(0)} onEdit={() => setOpenSection("1A")}>
+              <Stage1ASummary v={values} />
+            </ProfileSummaryCard>
+          )}
+          {isEditMode && openSection === "1A" && (
+            <p className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Stage 1 — Core Details
-              {isStageComplete(0) && <CheckCircle2 className="ml-1.5 inline-block h-3.5 w-3.5 align-text-bottom text-emerald-500" />}
             </p>
           )}
-          {(stageIndex === 0 || isEditMode) && (
+          {(stageIndex === 0 || (isEditMode && openSection === "1A")) && (
             <>
               <FormField label="Full Name" required>
                 <Input value={values.fullName} onChange={(e) => update("fullName", e.target.value)} />
@@ -2467,19 +2703,21 @@ export default function ApplyForm({
                   )}
                 </FormField>
               )}
+              {isEditMode && <SectionSaveBar onCancel={() => setOpenSection(null)} onSave={saveSection} saving={savingSection} />}
             </>
           )}
 
-          {isEditMode && (
-            <p
-              id="stage-1B"
-              className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400"
-            >
+          {isEditMode && openSection !== "1B" && (
+            <ProfileSummaryCard id="stage-1B" title="Stage 1B — Extended Core" complete={isStageComplete(1)} onEdit={() => setOpenSection("1B")}>
+              <Stage1BSummary v={values} />
+            </ProfileSummaryCard>
+          )}
+          {isEditMode && openSection === "1B" && (
+            <p className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Stage 1B — Extended Core
-              {isStageComplete(1) && <CheckCircle2 className="ml-1.5 inline-block h-3.5 w-3.5 align-text-bottom text-emerald-500" />}
             </p>
           )}
-          {(stageIndex === 1 || isEditMode) && (
+          {(stageIndex === 1 || (isEditMode && openSection === "1B")) && (
             <>
               <FormField label="Are you a fresher, or do you already have work experience?" required>
                 <div className="grid grid-cols-2 gap-2">
@@ -3045,19 +3283,21 @@ export default function ApplyForm({
                   This shall create your profile with StaffAnchor for future roles. Do you approve this?
                 </label>
               </FormField>
+              {isEditMode && <SectionSaveBar onCancel={() => setOpenSection(null)} onSave={saveSection} saving={savingSection} />}
             </>
           )}
 
-          {isEditMode && isSalesCategory && (
-            <p
-              id="stage-2"
-              className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400"
-            >
+          {isEditMode && isSalesCategory && openSection !== "2" && (
+            <ProfileSummaryCard id="stage-2" title="Stage 2 — Profile-Type-Specific" complete={isStageComplete(2)} onEdit={() => setOpenSection("2")}>
+              <Stage2Summary v={values} isB2B={isB2B} isB2C={isB2C} />
+            </ProfileSummaryCard>
+          )}
+          {isEditMode && isSalesCategory && openSection === "2" && (
+            <p className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Stage 2 — Profile-Type-Specific
-              {isStageComplete(2) && <CheckCircle2 className="ml-1.5 inline-block h-3.5 w-3.5 align-text-bottom text-emerald-500" />}
             </p>
           )}
-          {(stageIndex === 2 || isEditMode) && isSalesCategory && (
+          {(stageIndex === 2 || (isEditMode && openSection === "2")) && isSalesCategory && (
             values.isFresher === "Yes" ? (
               <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
                 <Briefcase className="mx-auto mb-2 h-6 w-6 text-emerald-400" />
@@ -3236,17 +3476,21 @@ export default function ApplyForm({
               </>
             )
           )}
+          {isEditMode && isSalesCategory && openSection === "2" && (
+            <SectionSaveBar onCancel={() => setOpenSection(null)} onSave={saveSection} saving={savingSection} />
+          )}
 
-          {isEditMode && isSalesCategory && (
-            <p
-              id="stage-3"
-              className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400"
-            >
+          {isEditMode && isSalesCategory && openSection !== "3" && (
+            <ProfileSummaryCard id="stage-3" title="Stage 3 — Revenue Snapshot" complete={isStageComplete(3)} onEdit={() => setOpenSection("3")}>
+              <Stage3Summary v={values} isSales={isSalesCategory} />
+            </ProfileSummaryCard>
+          )}
+          {isEditMode && isSalesCategory && openSection === "3" && (
+            <p className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Stage 3 — Revenue Snapshot
-              {isStageComplete(3) && <CheckCircle2 className="ml-1.5 inline-block h-3.5 w-3.5 align-text-bottom text-emerald-500" />}
             </p>
           )}
-          {(stageIndex === 3 || isEditMode) && isSalesCategory && (
+          {(stageIndex === 3 || (isEditMode && openSection === "3")) && isSalesCategory && (
             values.isFresher === "Yes" ? (
               <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center">
                 <BarChart3 className="mx-auto mb-2 h-6 w-6 text-emerald-400" />
@@ -3428,24 +3672,13 @@ export default function ApplyForm({
               </>
             )
           )}
+          {isEditMode && isSalesCategory && openSection === "3" && (
+            <SectionSaveBar onCancel={() => setOpenSection(null)} onSave={saveSection} saving={savingSection} />
+          )}
 
           {errorMsg && <p className="text-sm text-red-600">{errorMsg}</p>}
 
-          {isEditMode ? (
-            // One continuous page, no stage-by-stage stepper -- a single
-            // always-available Save, since every field above is already
-            // visible and editable in place.
-            <div className="flex items-center justify-end border-t border-slate-100 pt-5">
-              <Button
-                type="button"
-                onClick={() => handleSubmit()}
-                disabled={submitting}
-                className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
-              >
-                {submitting ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          ) : (
+          {isEditMode ? null : (
             <div className="flex items-center justify-between border-t border-slate-100 pt-5">
               <Button
                 type="button"
