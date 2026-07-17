@@ -66,6 +66,7 @@ import {
   sellingStyleOptions,
   skillSuggestionsFor,
   subDomainsForCategory,
+  level1OptionsForProfileType,
   teamSizeOptions,
   travelPreferenceOptions,
   workModeOptions,
@@ -646,7 +647,12 @@ export default function ApplyForm({
   }, []);
 
   const quote = useMemo(() => quotes[step % quotes.length], [quotes, step]);
-  const subDomainOptions = subDomainsForCategory(values.category || null);
+  // Profile-level specialization now uses the Unified Candidate Intake
+  // taxonomy (Practice under B2B / Vertical under B2C / Function under
+  // Non-Sales) instead of the old flat sub-domain list -- `subDomainsForCategory`
+  // is kept only for the mandate-creation form and for reverse-mapping an
+  // existing candidate's pre-migration sub_domain value in edit mode above.
+  const subDomainOptions = level1OptionsForProfileType(values.category || null);
   const suggestedSkills = useMemo(() => skillSuggestionsFor(values.subDomain || null), [values.subDomain]);
   const skillSearchResults = useMemo(
     () => searchSkills(values.customSkill, values.selectedSkills),

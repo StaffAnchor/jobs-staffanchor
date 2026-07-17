@@ -15,15 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
-  b2bSubDomains,
-  b2cSubDomains,
-  nonSalesSubDomains,
   industryOptions,
   customerSegmentOptions,
   dealSizeBandsFor,
   salesCycleOptions,
   sellingStyleOptions,
   salesMotionOptions,
+  b2cSalesMotionOptions,
   clientProfileOptions,
   b2cCustomerTypeOptions,
   insideSalesSubDomains,
@@ -39,9 +37,21 @@ import {
   avgQuarterlyTargetBandOptions,
   achievementBandOptions,
   currencyOptions,
+  level1OptionsForProfileType,
+  industrialSubDomains,
   type CategoryValue,
   type CurrencyValue,
 } from "@/modules/apply/options";
+
+// Industrial & Infrastructure practice-specific option sets -- only rendered
+// when this entry's sub_domain (now the Level 1 Practice, see below) is
+// "Industrial & Infrastructure". Territory/channel/account-type/complexity
+// have no B2B-generic equivalent, so these are new fields, not a relabel.
+const territoryRegionOptions = ["North", "South", "West", "East", "Pan-India", "International"];
+const commercialRouteOptions = ["Direct Field", "Channel / Distributor", "Hybrid"];
+const targetAccountTypeOptions = ["OEMs", "EPC Contractors", "Government / PSU", "Industrial End-Users", "Distributors"];
+const productComplexityOptions = ["Standard Catalog Products", "Engineered / Customized Technical Solutions"];
+void industrialSubDomains; // reserved: available if a future pass wants Level-2 tagging within this practice
 import {
   mergeTimelines,
   computeStabilityScore,
@@ -66,11 +76,16 @@ const CATEGORY_OPTIONS: { value: ProfileTimelineEntry["category"]; label: string
   { value: "non_sales", label: "Non-Sales / Other" },
 ];
 
+// Now returns Level 1 (Practice / Vertical / Function) per the unified
+// taxonomy, not the old flat sub-domain list -- `sub_domain` on this entry
+// holds that Level 1 value going forward (e.g. "Enterprise Tech Sales &
+// Revenue", "Retail", "Marketing"). Level 2 (SaaS vs. Cybersecurity, etc.
+// within a B2B practice) is deliberately not a separate field here -- the
+// existing Industry / Current Industry selector below already captures that
+// granularity (e.g. "SaaS / Cloud Software" is already an industryOptions
+// entry), so it isn't duplicated as a second dropdown.
 function subDomainsFor(category: string): string[] {
-  if (category === "b2b_sales") return b2bSubDomains;
-  if (category === "b2c_sales") return b2cSubDomains;
-  if (category === "non_sales") return nonSalesSubDomains;
-  return [];
+  return level1OptionsForProfileType(category as CategoryValue | null);
 }
 
 function emptyEntry(): ProfileTimelineEntry {
@@ -101,6 +116,10 @@ function emptyEntry(): ProfileTimelineEntry {
     sales_motion: "",
     decision_maker_persona: "",
     customer_type: "",
+    territory_region: "",
+    commercial_route: "",
+    target_account_type: "",
+    product_complexity: "",
     aht: "",
     daily_call_target: "",
     daily_talk_time: "",
@@ -333,6 +352,7 @@ export default function CareerTimelinePanel({
   const isSalesCategory = form?.category === "b2b_sales" || form?.category === "b2c_sales";
   const isB2B = form?.category === "b2b_sales";
   const isB2C = form?.category === "b2c_sales";
+  const isIndustrial = isB2B && form?.sub_domain === "Industrial & Infrastructure";
   const isCurrentRole = form?.end_month === null;
   const isInsideSalesRole = !!form?.sub_domain && insideSalesSubDomains.includes(form.sub_domain);
   const isTeamLead = !!form?.team_size;
@@ -604,12 +624,60 @@ export default function CareerTimelinePanel({
                   </div>
                 </div>
 
+                {isIndustrial && (
+                  <div className="space-y-2 rounded-lg border border-dashed border-slate-200 p-2.5">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                      Industrial &amp; Infrastructure specifics
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Territory / Region</label>
+                        <Select value={form.territory_region ?? ""} onChange={(e) => set("territory_region", e.target.value)}>
+                          <option value="">Select...</option>
+                          {territoryRegionOptions.map((o) => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Commercial route</label>
+                        <Select value={form.commercial_route ?? ""} onChange={(e) => set("commercial_route", e.target.value)}>
+                          <option value="">Select...</option>
+                          {commercialRouteOptions.map((o) => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Target account type</label>
+                        <Select value={form.target_account_type ?? ""} onChange={(e) => set("target_account_type", e.target.value)}>
+                          <option value="">Select...</option>
+                          {targetAccountTypeOptions.map((o) => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Product complexity</label>
+                        <Select value={form.product_complexity ?? ""} onChange={(e) => set("product_complexity", e.target.value)}>
+                          <option value="">Select...</option>
+                          {productComplexityOptions.map((o) => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="mb-1 block text-xs text-slate-500">Sales motion</label>
                     <Select value={form.sales_motion ?? ""} onChange={(e) => set("sales_motion", e.target.value)}>
                       <option value="">Select...</option>
-                      {salesMotionOptions.map((o) => (
+                      {(isB2C ? b2cSalesMotionOptions : salesMotionOptions).map((o) => (
                         <option key={o} value={o}>
                           {o}
                         </option>

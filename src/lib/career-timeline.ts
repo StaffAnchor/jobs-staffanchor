@@ -47,6 +47,15 @@ export type ProfileTimelineEntry = {
   sales_motion?: string;
   decision_maker_persona?: string; // B2B: who was actually sold to (CFO/CTO/etc.)
   customer_type?: string; // B2C: end-consumer persona (HNI/Students/etc.)
+  // ---- Industrial & Infrastructure practice-specific fields (Unified
+  // Candidate Intake taxonomy) -- only meaningful/rendered when sub_domain
+  // for this entry is "Industrial & Infrastructure". No B2B-generic
+  // equivalent exists for these, unlike sales_motion/decision_maker_persona
+  // above which are shared across all B2B practices. ----
+  territory_region?: string;
+  commercial_route?: string;
+  target_account_type?: string;
+  product_complexity?: string;
   aht?: string;
   daily_call_target?: string;
   daily_talk_time?: string;

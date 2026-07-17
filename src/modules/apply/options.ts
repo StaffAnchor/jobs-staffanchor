@@ -436,6 +436,74 @@ export function subDomainsForCategory(category: CategoryValue | null): string[] 
   return [];
 }
 
+// ---- Unified Candidate Intake taxonomy (Profile Type -> Practice/Vertical/
+// Function -> Sub-domain). Additive -- `subDomainsForCategory`/`categoryOptions`
+// above are unchanged and still back existing candidate records at that
+// granularity. This is the new layer the unified form (Quick Apply / Recruiter
+// Created / Build Your Profile, one shared component) uses going forward.
+// `category` itself needs no change -- `categoryOptions` already matches
+// Profile Type 1:1, and is enforced by a DB CHECK constraint to exactly these
+// three values, confirmed before writing this, so no migration was required. ----
+
+export const profileTypeOptions = categoryOptions; // same values, this is the Profile Type selector
+
+// Level 1 under B2B Sales -- the three frozen business practices.
+export const b2bPractices = [
+  "Enterprise Tech Sales & Revenue",
+  "Industrial & Infrastructure",
+  "Other B2B",
+] as const;
+
+// Level 2 (sub-domain) per B2B practice.
+export const enterpriseTechSubDomains = [
+  "SaaS", "Cybersecurity", "Cloud Infrastructure", "AI Platforms", "FinTech", "Data & Analytics",
+];
+export const industrialSubDomains = [
+  "Industrial Automation", "Smart Manufacturing Software", "Capital Equipment",
+  "Electrical & Electronics", "Clean Energy", "Building Technologies",
+];
+export const otherB2BSubDomains = [
+  "Media & Advertising", "Professional / Business Services", "Logistics & Supply Chain (B2B)",
+  "Real Estate / Commercial (B2B)", "EdTech (B2B / Institutional)", "HR-Tech / HR Services (B2B)", "Other",
+];
+
+export function subDomainsForPractice(practice: string | null): string[] {
+  if (practice === "Enterprise Tech Sales & Revenue") return enterpriseTechSubDomains;
+  if (practice === "Industrial & Infrastructure") return industrialSubDomains;
+  if (practice === "Other B2B") return otherB2BSubDomains;
+  return [];
+}
+
+// Level 1 under B2C Sales -- vertical, no further sub-level.
+export const b2cVerticals = [
+  "Retail", "Insurance", "Loans & Lending", "EdTech", "Real Estate",
+  "Automobile", "Telecom", "Healthcare & Wellness", "Travel & Hospitality", "Other",
+];
+
+// Level 1 under Other (Non-Sales) -- function, no further sub-level. No
+// fields beyond this single tag render for this Profile Type, per spec --
+// Stage 2 and Stage 3 (Sales Motion / Revenue Snapshot) are both skipped.
+export const nonSalesFunctions = [
+  "Marketing", "Finance & Accounts", "HR", "Operations", "Customer Support / Service",
+  "IT / Technology", "Legal & Compliance", "Supply Chain & Procurement", "Admin", "Other",
+];
+
+// Single entry point the unified form calls once Profile Type is chosen --
+// returns the correct Level 1 list (Practice / Vertical / Function).
+export function level1OptionsForProfileType(profileType: CategoryValue | null): string[] {
+  if (profileType === "b2b_sales") return [...b2bPractices];
+  if (profileType === "b2c_sales") return b2cVerticals;
+  if (profileType === "non_sales") return nonSalesFunctions;
+  return [];
+}
+
+// B2C sales-motion options -- distinct from the existing B2B `salesMotionOptions`
+// (Outbound-Hunting/Inbound/Account-based/etc., which assumes a B2B buying
+// process). B2C motions describe how the sale physically happens.
+export const b2cSalesMotionOptions = [
+  "Retail / Counter Sales", "Field / Door-to-door", "Telesales / Inside Sales", "Channel / Franchise-led",
+];
+
 // ---- CTC dropdown (LPA, in whole-lakh increments 0-120, plus a 120L+ ceiling) ----
 export type CtcOption = { value: number | null; label: string };
 
