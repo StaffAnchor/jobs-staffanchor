@@ -96,8 +96,14 @@ export function Navbar() {
               <Button variant={pathname.startsWith("/candidate-login") ? "default" : "ghost"}>Sign Up / Login</Button>
             </Link>
           )}
-          {!isAuthenticated && (
-            <Link href={candidateSignedIn ? "/candidate-portal" : "/register"}>
+          {/* Once a candidate is signed in, "My Account" already routes to
+              their profile -- a second "Build My Profile" button next to it
+              was pure redundancy (and confusing: it implied nothing had been
+              built yet, even for a fully registered candidate). Only show
+              this CTA to signed-out visitors, for whom it's the actual
+              primary action. */}
+          {!isAuthenticated && !candidateSignedIn && (
+            <Link href="/register">
               <Button>Build My Profile</Button>
             </Link>
           )}

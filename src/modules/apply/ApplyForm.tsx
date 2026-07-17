@@ -1366,6 +1366,131 @@ export default function ApplyForm({
     return null;
   }
 
+  // Real per-stage completion, independent of the wizard's current `step`.
+  // validateStep() above only ever checks the *current* stage (it reads the
+  // closure `stageIndex`), which is fine for the step-by-step wizard but
+  // breaks down in My Profile edit mode, where `step` never advances -- that
+  // used to leave every stage stuck showing "Pending" (or the current one
+  // stuck on "In Progress") regardless of how much data actually existed.
+  // This mirrors validateStep's field checks exactly, just parameterized by
+  // stage index and returning a boolean instead of an error string, so the
+  // Passport Readiness rail can show real completion for any stage at any time.
+  function isStageComplete(i: number): boolean {
+    const isSales = isSalesCategory;
+    if (i === 0) {
+      if (!values.fullName.trim()) return false;
+      if (!/^\S+@\S+\.\S+$/.test(values.email)) return false;
+      if (values.phone.length !== 10) return false;
+      if (!values.cityChoice) return false;
+      if (values.cityChoice === "Other" && (!values.customCity.trim() || !values.customState.trim())) return false;
+      if (!resumeFile && !hasExistingResume) return false;
+      if (!values.category) return false;
+      if (!values.subDomain) return false;
+      if (values.subDomain === "Other" && !values.customSubDomain.trim()) return false;
+      if (values.subDomain === "Other B2B") {
+        if (!values.otherB2BSubDomain) return false;
+        if (values.otherB2BSubDomain === "Other" && !values.customOtherB2BSubDomain.trim()) return false;
+      }
+      return true;
+    }
+    if (i === 1) {
+      if (values.isFresher !== "Yes") {
+        if (!values.currentEmployer.trim()) return false;
+        if (!values.currentJobTitle.trim()) return false;
+        if (!values.currentFixedCtc) return false;
+        if (!values.currentVariableCtc) return false;
+      }
+      if (!values.currentEmploymentStatus) return false;
+      if (!values.currentIndustry) return false;
+      if (values.currentIndustry === "Other" && !values.customCurrentIndustry.trim()) return false;
+      if (!values.noOtherIndustries && !values.selectedIndustries.length) return false;
+      if (!values.isFresher) return false;
+      if (!values.totalExperienceYears) return false;
+      if (!values.expectedFixedCtc) return false;
+      if (!values.expectedVariableCtc) return false;
+      if (!values.noticePeriod) return false;
+      if (!values.highestQualification) return false;
+      if (values.highestQualification === "Other" && !values.customQualification.trim()) return false;
+      if (!values.workMode) return false;
+      if (!values.openToRelocation) return false;
+      if (
+        values.openToRelocation === "Yes" &&
+        !values.relocationPreferredCities.length &&
+        !values.customRelocationCity.trim()
+      ) {
+        return false;
+      }
+      if (!values.travelPreference) return false;
+      if (!values.languagesKnown.length) return false;
+      if (values.languagesKnown.includes("Other") && !values.customLanguage.trim()) return false;
+      if (values.isFresher === "No") {
+        if (!values.roleLevel) return false;
+        if (!values.roleType) return false;
+        if (values.roleType === "Leading a Team" && !values.teamSize) return false;
+        if (values.roleType === "Other" && !values.customRoleType.trim()) return false;
+        if (isSales && !values.secondarySubDomains.length) return false;
+        if (values.secondarySubDomains.includes("Other (B2B)") && !values.secondaryOtherB2BSubDomain.trim()) return false;
+        if (values.secondarySubDomains.includes("Other (B2C)") && !values.secondaryOtherB2CSpecify.trim()) return false;
+        if (values.secondarySubDomains.includes("Other (Non-Sales)") && !values.secondaryOtherNonSalesSpecify.trim()) {
+          return false;
+        }
+      } else if (values.isFresher === "Yes") {
+        if (!values.hasInternship) return false;
+        if (values.hasInternship === "Yes") {
+          if (!values.internshipCompany.trim()) return false;
+          if (!values.internshipRole.trim()) return false;
+          if (!values.internshipDuration.trim()) return false;
+          if (!values.internshipDescription.trim()) return false;
+        }
+      }
+      if (!values.consent) return false;
+      return true;
+    }
+    if (i === 2) {
+      if (!isSales) return true; // not applicable -- treated as satisfied
+      if (values.isFresher === "Yes") return true;
+      if (isB2B) {
+        if (!values.b2bSalesMotionType) return false;
+        if (values.b2bSalesMotionType === "Field / Enterprise AE" || values.b2bSalesMotionType === "Inside Sales / SDR") {
+          if (!values.aeSellingStyle) return false;
+          if (!values.aeDealSizeCurrency) return false;
+          if (!values.aeDealSizeBand) return false;
+          if (!values.aeSalesCycle) return false;
+          if (!values.aeBuyerPersona) return false;
+        }
+        if (values.b2bSalesMotionType === "Inside Sales / SDR") {
+          if (!values.sdrAht) return false;
+          if (!values.sdrDailyCallTarget) return false;
+          if (!values.sdrDailyTalkTime) return false;
+          if (!values.sdrLeadSource) return false;
+        }
+      } else if (isB2C) {
+        if (!values.b2cSalesMotion) return false;
+        if (!values.b2cTicketCurrency) return false;
+        if (!values.b2cTicketBand) return false;
+      }
+      return true;
+    }
+    if (i === 3) {
+      if (!isSales) return true;
+      if (values.isFresher === "Yes") return true;
+      if (!values.revenuePeriod) return false;
+      if (!values.revenueTargetCurrency) return false;
+      if (!values.revenueTarget) return false;
+      if (!values.revenueAchievement) return false;
+      if (values.roleType === "Leading a Team") {
+        if (!values.hasIndividualQuota) return false;
+        if (values.hasIndividualQuota === "Yes") {
+          if (!values.individualTargetCurrency) return false;
+          if (!values.individualTarget) return false;
+          if (!values.individualAchievement) return false;
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
   function goNext() {
     const err = validateStep();
     if (err) {
@@ -1837,7 +1962,9 @@ export default function ApplyForm({
                   })}
                 </div>
                 <p className="text-xs text-slate-500">
-                  Stage {ALL_STAGES[stageIndex]} — step {step + 1} of {stepSequence.length}
+                  {isEditMode
+                    ? "All sections editable — click any to jump there"
+                    : `Stage ${ALL_STAGES[stageIndex]} — step ${step + 1} of ${stepSequence.length}`}
                 </p>
                 <ul className="space-y-0">
                   {ALL_STAGES.map((label, i) => {
@@ -1848,10 +1975,16 @@ export default function ApplyForm({
                     // "Pending" forever.
                     const isSkipped = (i === 2 || i === 3) && !isSalesCategory;
                     const posInSequence = stepSequence.indexOf(i);
-                    const isCurrent = posInSequence === step;
-                    const isDone = posInSequence >= 0 && posInSequence < step;
-                    return (
-                      <li key={label} className="flex gap-3">
+                    // Edit mode has no "current step" concept (it's one
+                    // continuous page, not a wizard) -- completion there is
+                    // computed from real field data via isStageComplete()
+                    // instead of the wizard's step position, otherwise every
+                    // stage but the first showed "Pending" forever regardless
+                    // of how much was actually filled in.
+                    const isCurrent = !isEditMode && posInSequence === step;
+                    const isDone = isEditMode ? isStageComplete(i) : posInSequence >= 0 && posInSequence < step;
+                    const content = (
+                      <>
                         <div className="flex flex-col items-center">
                           <div
                             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
@@ -1888,6 +2021,20 @@ export default function ApplyForm({
                             {isSkipped ? "Not applicable" : isDone ? "Completed" : isCurrent ? "In Progress" : "Pending"}
                           </p>
                         </div>
+                      </>
+                    );
+                    if (isEditMode && !isSkipped) {
+                      return (
+                        <li key={label}>
+                          <a href={`#stage-${label}`} className="flex gap-3 rounded-lg transition-colors hover:bg-slate-50">
+                            {content}
+                          </a>
+                        </li>
+                      );
+                    }
+                    return (
+                      <li key={label} className="flex gap-3">
+                        {content}
                       </li>
                     );
                   })}
@@ -1920,6 +2067,7 @@ export default function ApplyForm({
               // not a stage-by-stage wizard replay -- so the header here is a
               // single overview with the profile score up top, not a
               // per-stage eyebrow/heading that would repeat once per section.
+              <>
               <div className="flex items-center justify-between gap-4 pb-1">
                 <div className="flex items-center gap-3.5">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 text-blue-600 ring-1 ring-blue-100">
@@ -1943,6 +2091,36 @@ export default function ApplyForm({
                   </div>
                 </div>
               </div>
+              {/* Quick jump-nav -- the one-page profile is long, so a sticky
+                  set of section pills beats scrolling blind. Each links to
+                  the matching section id added to that section's header. */}
+              <div className="-mt-1 flex flex-wrap gap-1.5 border-b border-slate-100 pb-4">
+                {[
+                  { id: "stage-1A", label: "1A · Core", done: isStageComplete(0) },
+                  { id: "stage-1B", label: "1B · Extended", done: isStageComplete(1) },
+                  ...(isSalesCategory
+                    ? [
+                        { id: "stage-2", label: "2 · Specialization", done: isStageComplete(2) },
+                        { id: "stage-3", label: "3 · Revenue", done: isStageComplete(3) },
+                      ]
+                    : []),
+                  { id: "stage-4", label: "4 · Optional", done: hasStage4Data },
+                ].map((s) => (
+                  <a
+                    key={s.id}
+                    href={`#${s.id}`}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                      s.done
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                    }`}
+                  >
+                    {s.done && <CheckCircle2 className="h-3 w-3" />}
+                    {s.label}
+                  </a>
+                ))}
+              </div>
+              </>
             ) : (
               <>
                 <div className="flex items-start gap-3.5 pb-1">
@@ -1967,8 +2145,12 @@ export default function ApplyForm({
             )}
 
           {isEditMode && (
-            <p className="border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p
+              id="stage-1A"
+              className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Stage 1 — Core Details
+              {isStageComplete(0) && <CheckCircle2 className="ml-1.5 inline-block h-3.5 w-3.5 align-text-bottom text-emerald-500" />}
             </p>
           )}
           {(stageIndex === 0 || isEditMode) && (
@@ -2289,8 +2471,12 @@ export default function ApplyForm({
           )}
 
           {isEditMode && (
-            <p className="border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p
+              id="stage-1B"
+              className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Stage 1B — Extended Core
+              {isStageComplete(1) && <CheckCircle2 className="ml-1.5 inline-block h-3.5 w-3.5 align-text-bottom text-emerald-500" />}
             </p>
           )}
           {(stageIndex === 1 || isEditMode) && (
@@ -2863,8 +3049,12 @@ export default function ApplyForm({
           )}
 
           {isEditMode && isSalesCategory && (
-            <p className="border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p
+              id="stage-2"
+              className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Stage 2 — Profile-Type-Specific
+              {isStageComplete(2) && <CheckCircle2 className="ml-1.5 inline-block h-3.5 w-3.5 align-text-bottom text-emerald-500" />}
             </p>
           )}
           {(stageIndex === 2 || isEditMode) && isSalesCategory && (
@@ -3048,8 +3238,12 @@ export default function ApplyForm({
           )}
 
           {isEditMode && isSalesCategory && (
-            <p className="border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p
+              id="stage-3"
+              className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Stage 3 — Revenue Snapshot
+              {isStageComplete(3) && <CheckCircle2 className="ml-1.5 inline-block h-3.5 w-3.5 align-text-bottom text-emerald-500" />}
             </p>
           )}
           {(stageIndex === 3 || isEditMode) && isSalesCategory && (
@@ -3318,7 +3512,7 @@ export default function ApplyForm({
           <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
             <CardContent className="space-y-4 py-5">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-900">Passport Readiness</p>
+                <p className="text-sm font-semibold text-slate-900">Score</p>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${readinessMeta.chipBg} ${readinessMeta.chipText}`}>
                   {readinessTier}
                 </span>
@@ -3336,46 +3530,41 @@ export default function ApplyForm({
                 </div>
                 <p className="text-xs leading-5 text-slate-500">{readinessMeta.blurb}</p>
               </div>
-              <ul className="space-y-2 border-t border-slate-100 pt-3">
-                {ALL_STAGES.map((label, i) => {
-                  // Only strike Stage 2/3 through as "Not applicable" once we
-                  // actually know they don't apply -- i.e. Profile Type has
-                  // been chosen AND it resolved to Non-Sales. Before Profile
-                  // Type is picked, values.category is "" so isSalesCategory
-                  // is (incorrectly) false, which used to strike these out
-                  // from the very first screen, before there was any way to
-                  // know yet. Show them as plain "Pending" until then.
-                  const isSkipped = !!values.category && (i === 2 || i === 3) && !isSalesCategory;
-                  const posInSequence = stepSequence.indexOf(i);
-                  const isCurrent = posInSequence === step;
-                  const isDone = posInSequence >= 0 && posInSequence < step;
-                  return (
-                    <li key={label} className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            isSkipped ? "bg-slate-200" : isDone ? "bg-emerald-500" : isCurrent ? "bg-blue-600" : "bg-slate-300"
-                          }`}
-                        />
-                        <span
-                          className={
-                            isSkipped
-                              ? "text-slate-300 line-through"
-                              : isCurrent
-                                ? "font-medium text-slate-900"
-                                : isDone
-                                  ? "text-slate-600"
-                                  : "text-slate-400"
-                          }
-                        >
-                          Stage {label}
-                        </span>
+              {/* Composition of the score, not a repeat of the left rail's
+                  per-stage checklist -- this shows how much each stage is
+                  *worth* toward the 100%, as one segmented bar, rather than
+                  duplicating the same "Completed/Pending" list twice on the
+                  same screen. */}
+              <div className="border-t border-slate-100 pt-3">
+                <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  {ALL_STAGES.map((label, i) => {
+                    const isSkipped = !!values.category && (i === 2 || i === 3) && !isSalesCategory;
+                    const done = isEditMode
+                      ? isStageComplete(i)
+                      : stepSequence.indexOf(i) >= 0 && stepSequence.indexOf(i) < step;
+                    if (isSkipped) return null;
+                    return (
+                      <div
+                        key={label}
+                        title={`Stage ${label} — ${STAGE_WEIGHTS[i]}% of score`}
+                        className={`h-full transition-colors duration-500 ${done ? "bg-emerald-500" : "bg-slate-200"}`}
+                        style={{ width: `${STAGE_WEIGHTS[i]}%` }}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-400">
+                  {ALL_STAGES.map((label, i) => {
+                    const isSkipped = !!values.category && (i === 2 || i === 3) && !isSalesCategory;
+                    if (isSkipped) return null;
+                    return (
+                      <span key={label}>
+                        Stage {label} · {STAGE_WEIGHTS[i]}%
                       </span>
-                      <span className="font-medium text-slate-400">{isSkipped ? "n/a" : `+${STAGE_WEIGHTS[i]}%`}</span>
-                    </li>
-                  );
-                })}
-              </ul>
+                    );
+                  })}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -3417,7 +3606,10 @@ export default function ApplyForm({
         )}
 
         {showStage4 && (
-          <Card className="mx-auto w-full max-w-3xl rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)]">
+          <Card
+            id="stage-4"
+            className="mx-auto w-full max-w-3xl scroll-mt-24 rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)]"
+          >
             <CardContent className="space-y-6 p-6">
               <div className="flex items-center justify-between">
                 <div>
