@@ -195,7 +195,7 @@ type FormState = {
 
   // ---- Stage 2: Profile-Type-Specific block ----
   // B2B: Sales Motion is the PRIMARY branch (asked before AE/SDR sub-fields).
-  b2bSalesMotionType: string;
+  b2bSalesMotionType: string[];
   aeSellingStyle: string; // Hunter / Farmer / Hybrid
   aeDealSizeBand: string;
   aeDealSizeCurrency: CurrencyValue | "";
@@ -206,7 +206,7 @@ type FormState = {
   sdrDailyTalkTime: string;
   sdrLeadSource: string;
   // B2C
-  b2cSalesMotion: string;
+  b2cSalesMotion: string[];
   b2cTicketBand: string;
   b2cTicketCurrency: CurrencyValue | "";
 
@@ -302,7 +302,7 @@ const initialState: FormState = {
   customLanguage: "",
   relocationPreferredCities: [],
   customRelocationCity: "",
-  b2bSalesMotionType: "",
+  b2bSalesMotionType: [],
   aeSellingStyle: "",
   aeDealSizeBand: "",
   aeDealSizeCurrency: "",
@@ -312,7 +312,7 @@ const initialState: FormState = {
   sdrDailyCallTarget: "",
   sdrDailyTalkTime: "",
   sdrLeadSource: "",
-  b2cSalesMotion: "",
+  b2cSalesMotion: [],
   b2cTicketBand: "",
   b2cTicketCurrency: "",
   revenuePeriod: "",
@@ -738,8 +738,8 @@ function Stage2Summary({ v, isB2B, isB2C }: { v: FormState; isB2B: boolean; isB2
   if (isB2B) {
     return (
       <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
-        <ProfileRow label="Sales Motion" value={v.b2bSalesMotionType} />
-        {!!v.b2bSalesMotionType && (
+        <ProfileRow label="Sales Motion" value={v.b2bSalesMotionType.join(", ")} />
+        {v.b2bSalesMotionType.length > 0 && (
           <>
             <ProfileRow label="Selling Style" value={v.aeSellingStyle} />
             <ProfileRow label="Avg. Deal Size" value={v.aeDealSizeBand ? `${v.aeDealSizeCurrency} ${v.aeDealSizeBand}` : ""} />
@@ -753,7 +753,7 @@ function Stage2Summary({ v, isB2B, isB2C }: { v: FormState; isB2B: boolean; isB2
   if (isB2C) {
     return (
       <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
-        <ProfileRow label="Sales Motion" value={v.b2cSalesMotion} />
+        <ProfileRow label="Sales Motion" value={v.b2cSalesMotion.join(", ")} />
         <ProfileRow label="Avg. Ticket Size" value={v.b2cTicketBand ? `${v.b2cTicketCurrency} ${v.b2cTicketBand}` : ""} />
       </div>
     );
@@ -1412,7 +1412,9 @@ export default function ApplyForm({
       | "relocationPreferredCities"
       | "crmTools"
       | "customerSegmentSold"
-      | "languagesKnown",
+      | "languagesKnown"
+      | "b2bSalesMotionType"
+      | "b2cSalesMotion",
     value: string
   ) {
     setValues((prev) => {
@@ -1534,7 +1536,7 @@ export default function ApplyForm({
     if (stageIndex === 2 && isSales) {
       if (values.isFresher === "Yes") return null;
       if (isB2B) {
-        if (!values.b2bSalesMotionType) return "Please select your Sales Motion.";
+        if (values.b2bSalesMotionType.length === 0) return "Please select at least one Sales Motion.";
         // Every B2B Sales Motion gets the same field set -- Hunter/Farmer,
         // deal size, sales cycle, and buyer persona.
         if (!values.aeSellingStyle) return "Please select Hunter, Farmer, or Hybrid.";
@@ -1543,7 +1545,7 @@ export default function ApplyForm({
         if (!values.aeSalesCycle) return "Please select your typical sales cycle length.";
         if (!values.aeBuyerPersona) return "Please select your primary buyer persona.";
       } else if (isB2C) {
-        if (!values.b2cSalesMotion) return "Please select your Sales Motion.";
+        if (values.b2cSalesMotion.length === 0) return "Please select at least one Sales Motion.";
         if (!values.b2cTicketCurrency) return "Please select a currency for your average ticket size.";
         if (!values.b2cTicketBand) return "Please select your average ticket size.";
       }
@@ -1652,14 +1654,14 @@ export default function ApplyForm({
       if (!isSales) return true; // not applicable -- treated as satisfied
       if (values.isFresher === "Yes") return true;
       if (isB2B) {
-        if (!values.b2bSalesMotionType) return false;
+        if (values.b2bSalesMotionType.length === 0) return false;
         if (!values.aeSellingStyle) return false;
         if (!values.aeDealSizeCurrency) return false;
         if (!values.aeDealSizeBand) return false;
         if (!values.aeSalesCycle) return false;
         if (!values.aeBuyerPersona) return false;
       } else if (isB2C) {
-        if (!values.b2cSalesMotion) return false;
+        if (values.b2cSalesMotion.length === 0) return false;
         if (!values.b2cTicketCurrency) return false;
         if (!values.b2cTicketBand) return false;
       }
@@ -1829,7 +1831,7 @@ export default function ApplyForm({
 
       // ---- Stage 2: Profile-Type-Specific ----
       if (isB2B) {
-        segmentData.b2b_sales_motion_type = values.b2bSalesMotionType || undefined;
+        segmentData.b2b_sales_motion_type = values.b2bSalesMotionType.length > 0 ? values.b2bSalesMotionType : undefined;
         // Every B2B Sales Motion gets the same Hunter/Farmer, deal size, sales
         // cycle, and buyer persona fields.
         Object.assign(segmentData, {
@@ -1841,7 +1843,7 @@ export default function ApplyForm({
         });
       } else if (isB2C) {
         Object.assign(segmentData, {
-          motion: values.b2cSalesMotion || undefined,
+          motion: values.b2cSalesMotion.length > 0 ? values.b2cSalesMotion : undefined,
           ticket: values.b2cTicketBand || undefined,
           ticket_currency: values.b2cTicketCurrency || undefined,
         });
@@ -2153,15 +2155,15 @@ export default function ApplyForm({
         <div
           className={
             isEditMode
-              ? "grid gap-4 lg:grid-cols-5 lg:items-start"
+              ? "grid gap-4 lg:grid-cols-6 lg:items-stretch"
               : "grid gap-6 lg:grid-cols-[260px_1fr_320px] lg:items-start"
           }
         >
           <aside className={isEditMode ? "contents" : "space-y-4 lg:sticky lg:top-6"}>
             <Card
-              className={`${isEditMode ? "order-1 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+              className={`${isEditMode ? "order-1 flex h-full flex-col lg:col-span-2 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
             >
-              <CardContent className="space-y-4 py-5">
+              <CardContent className={`space-y-4 py-5${isEditMode ? " flex h-full flex-col" : ""}`}>
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-slate-900">Passport Readiness</p>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${readinessMeta.chipBg} ${readinessMeta.chipText}`}>
@@ -2184,7 +2186,7 @@ export default function ApplyForm({
                 </div>
                 <p className="text-xs text-slate-500">
                   {isEditMode
-                    ? "All sections editable — click any to jump there"
+                    ? "All sections editable — click any to open it"
                     : `Stage ${ALL_STAGES[stageIndex]} — step ${step + 1} of ${stepSequence.length}`}
                 </p>
                 <ul className="space-y-0">
@@ -2247,9 +2249,23 @@ export default function ApplyForm({
                     if (isEditMode && !isSkipped) {
                       return (
                         <li key={label}>
-                          <a href={`#stage-${label}`} className="flex gap-3 rounded-lg transition-colors hover:bg-slate-50">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenSection(label);
+                              // Scroll after the section's fields have had a
+                              // chance to render -- scrolling synchronously
+                              // (like a plain anchor href would) targets the
+                              // element's pre-open position and reads as
+                              // "broken" once the layout reflows underneath it.
+                              requestAnimationFrame(() => {
+                                document.getElementById(`stage-${label}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                              });
+                            }}
+                            className="flex w-full gap-3 rounded-lg text-left transition-colors hover:bg-slate-50"
+                          >
                             {content}
-                          </a>
+                          </button>
                         </li>
                       );
                     }
@@ -2259,14 +2275,46 @@ export default function ApplyForm({
                       </li>
                     );
                   })}
+                  {isEditMode && (
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStage4Open(true);
+                          requestAnimationFrame(() => {
+                            document.getElementById("stage-4")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          });
+                        }}
+                        className="flex w-full gap-3 rounded-lg text-left transition-colors hover:bg-slate-50"
+                      >
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                              hasStage4Data ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-500"
+                            }`}
+                          >
+                            {hasStage4Data ? "✓" : "4"}
+                          </div>
+                        </div>
+                        <div>
+                          <p className={`text-sm ${hasStage4Data ? "text-slate-700" : "text-slate-400"}`}>
+                            Stage 4 — Optional Depth
+                          </p>
+                          <p className="text-xs text-slate-400">{hasStage4Data ? "Completed" : "Optional"}</p>
+                        </div>
+                      </button>
+                    </li>
+                  )}
                 </ul>
               </CardContent>
             </Card>
 
             <Card
-              className={`${isEditMode ? "order-2 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+              className={`${isEditMode ? "order-2 flex h-full flex-col " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
             >
-              <CardContent className="space-y-3 py-5 text-center">
+              <CardContent
+                className={`space-y-3 py-5 text-center${isEditMode ? " flex h-full flex-col items-center justify-center" : ""}`}
+              >
                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                   <HelpCircle className="h-5 w-5" />
                 </div>
@@ -2274,7 +2322,7 @@ export default function ApplyForm({
                 <p className="text-xs leading-5 text-slate-500">
                   Our team is here to help you build the perfect profile.
                 </p>
-                <a href="https://www.staffanchor.com/contact" target="_blank" rel="noreferrer">
+                <a href="https://www.staffanchor.com/contact" target="_blank" rel="noreferrer" className="w-full">
                   <Button variant="outline" className="w-full">
                     Chat with Us
                   </Button>
@@ -2284,7 +2332,7 @@ export default function ApplyForm({
           </aside>
 
         <Card
-          className={`w-full${isEditMode ? " order-6 lg:col-span-5" : ""} rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+          className={`w-full${isEditMode ? " order-6 lg:col-span-6" : ""} rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
         >
           <CardContent className="space-y-5 p-6">
             {isEditMode ? (
@@ -2293,7 +2341,7 @@ export default function ApplyForm({
               // single overview with the profile score up top, not a
               // per-stage eyebrow/heading that would repeat once per section.
               <>
-              <div className="flex items-center justify-between gap-4 pb-1">
+              <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-3.5">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/60 text-blue-600 ring-1 ring-blue-100">
                     <StepIcon className="h-5.5 w-5.5" />
@@ -2315,42 +2363,6 @@ export default function ApplyForm({
                     </div>
                   </div>
                 </div>
-              </div>
-              {/* Quick jump-nav -- the one-page profile is long, so a sticky
-                  set of section pills beats scrolling blind. Each links to
-                  the matching section id added to that section's header. */}
-              <div className="-mt-1 flex flex-wrap gap-1.5 border-b border-slate-100 pb-4">
-                {[
-                  { id: "stage-1A", section: "1A", label: "1A · Core", done: isStageComplete(0) },
-                  { id: "stage-1B", section: "1B", label: "1B · Extended", done: isStageComplete(1) },
-                  ...(isSalesCategory
-                    ? [
-                        { id: "stage-2", section: "2", label: "2 · Specialization", done: isStageComplete(2) },
-                        { id: "stage-3", section: "3", label: "3 · Revenue", done: isStageComplete(3) },
-                      ]
-                    : []),
-                  { id: "stage-4", section: "4", label: "4 · Optional", done: hasStage4Data },
-                ].map((s) => (
-                  <a
-                    key={s.id}
-                    href={`#${s.id}`}
-                    onClick={() => {
-                      if (s.section === "4") {
-                        setStage4Open(true);
-                      } else {
-                        setOpenSection(s.section);
-                      }
-                    }}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                      s.done
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                    }`}
-                  >
-                    {s.done && <CheckCircle2 className="h-3 w-3" />}
-                    {s.label}
-                  </a>
-                ))}
               </div>
               </>
             ) : (
@@ -3306,22 +3318,39 @@ export default function ApplyForm({
               </div>
             ) : isB2B ? (
               <>
-                <FormField label="Sales Motion" required>
-                  <Select value={values.b2bSalesMotionType} onChange={(e) => update("b2bSalesMotionType", e.target.value)}>
-                    <option value="">Select...</option>
+                <FormField label="Sales Motion (select all that apply)" required>
+                  <div className="space-y-3">
                     {b2bSalesMotionTypeGroups.map(({ group, options }) => (
-                      <optgroup key={group} label={group}>
-                        {options.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </optgroup>
+                      <div key={group}>
+                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                          {group}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {options.map((o) => {
+                            const checked = values.b2bSalesMotionType.includes(o);
+                            return (
+                              <button
+                                type="button"
+                                key={o}
+                                onClick={() => toggleArrayValue("b2bSalesMotionType", o)}
+                                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                                  checked
+                                    ? "border-blue-600 bg-blue-600 text-white"
+                                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                                }`}
+                              >
+                                {checked ? "✓ " : "+ "}
+                                {o}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     ))}
-                  </Select>
+                  </div>
                 </FormField>
 
-                {!!values.b2bSalesMotionType && (
+                {values.b2bSalesMotionType.length > 0 && (
                   <>
                     <FormField label="Hunter or Farmer" required>
                       <Select value={values.aeSellingStyle} onChange={(e) => update("aeSellingStyle", e.target.value)}>
@@ -3386,15 +3415,27 @@ export default function ApplyForm({
               </>
             ) : (
               <>
-                <FormField label="Sales Motion" required>
-                  <Select value={values.b2cSalesMotion} onChange={(e) => update("b2cSalesMotion", e.target.value)}>
-                    <option value="">Select...</option>
-                    {b2cSalesMotionOptions.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </Select>
+                <FormField label="Sales Motion (select all that apply)" required>
+                  <div className="flex flex-wrap gap-1.5">
+                    {b2cSalesMotionOptions.map((o) => {
+                      const checked = values.b2cSalesMotion.includes(o);
+                      return (
+                        <button
+                          type="button"
+                          key={o}
+                          onClick={() => toggleArrayValue("b2cSalesMotion", o)}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                            checked
+                              ? "border-blue-600 bg-blue-600 text-white"
+                              : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          {checked ? "✓ " : "+ "}
+                          {o}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </FormField>
                 <div className="grid grid-cols-2 gap-3">
                   <FormField label="Ticket Size Currency" required>
@@ -3665,9 +3706,9 @@ export default function ApplyForm({
 
         <aside className={isEditMode ? "contents" : "space-y-4 lg:sticky lg:top-6"}>
           <Card
-            className={`${isEditMode ? "order-3 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+            className={`${isEditMode ? "order-3 flex h-full flex-col " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
           >
-            <CardContent className="space-y-3 py-5">
+            <CardContent className={`space-y-3 py-5${isEditMode ? " flex h-full flex-col" : ""}`}>
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-900">Your Profile Preview</p>
                 <Eye className="h-4 w-4 text-slate-400" />
@@ -3687,7 +3728,7 @@ export default function ApplyForm({
               <button
                 type="button"
                 onClick={() => setStep(0)}
-                className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                className={`flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700${isEditMode ? " mt-auto" : ""}`}
               >
                 <Pencil className="h-3 w-3" />
                 Edit basic info
@@ -3696,9 +3737,9 @@ export default function ApplyForm({
           </Card>
 
           <Card
-            className={`${isEditMode ? "order-4 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+            className={`${isEditMode ? "order-4 flex h-full flex-col " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
           >
-            <CardContent className="space-y-4 py-5">
+            <CardContent className={`space-y-4 py-5${isEditMode ? " flex h-full flex-col" : ""}`}>
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-900">Score</p>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${readinessMeta.chipBg} ${readinessMeta.chipText}`}>
@@ -3723,7 +3764,7 @@ export default function ApplyForm({
                   *worth* toward the 100%, as one segmented bar, rather than
                   duplicating the same "Completed/Pending" list twice on the
                   same screen. */}
-              <div className="border-t border-slate-100 pt-3">
+              <div className={`border-t border-slate-100 pt-3${isEditMode ? " mt-auto" : ""}`}>
                 <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
                   {ALL_STAGES.map((label, i) => {
                     const isSkipped = !!values.category && (i === 2 || i === 3) && !isSalesCategory;
@@ -3757,9 +3798,9 @@ export default function ApplyForm({
           </Card>
 
           <Card
-            className={`${isEditMode ? "order-5 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+            className={`${isEditMode ? "order-5 flex h-full flex-col " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
           >
-            <CardContent className="space-y-2 py-5">
+            <CardContent className={`space-y-2 py-5${isEditMode ? " flex h-full flex-col justify-center" : ""}`}>
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-blue-600" />
                 <p className="text-sm font-semibold text-slate-900">Why we ask this</p>
