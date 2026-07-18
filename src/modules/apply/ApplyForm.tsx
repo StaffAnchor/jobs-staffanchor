@@ -903,18 +903,20 @@ export default function ApplyForm({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  // Quick Apply "already registered?" check -- see the real-time email lookup
-  // effect below. Deliberately Quick-Apply-only: Build Your Profile and
-  // Recruiter Created have no reason to short-circuit, they're already the
-  // "fill everything" / "edit everything" paths respectively.
+  // "Already registered?" check -- see the real-time email lookup effect
+  // below. Runs for both Apply and Build Your Profile (any candidate-
+  // initiated entry point); deliberately excludes Recruiter Created (that's
+  // the "create on someone's behalf" path, not a self-service one) and edit
+  // mode (the candidate is already signed in as this exact email). This is
+  // now a hard block, not a convenience shortcut -- a candidate whose email
+  // already exists cannot proceed past Stage 1A at all, they're told to log
+  // in instead. No dismiss / fast-apply escape hatch, by design (see chat
+  // round: "to remove any doubt").
   const [existingCheck, setExistingCheck] = useState<{
     exists: boolean;
     firstName: string | null;
     alreadyApplied: boolean;
   } | null>(null);
-  const [existingCheckDismissed, setExistingCheckDismissed] = useState(false);
-  const [fastApplying, setFastApplying] = useState(false);
-  const [fastApplied, setFastApplied] = useState(false);
   const [quotes, setQuotes] = useState<string[]>(FALLBACK_QUOTES);
   const [noticePeriods, setNoticePeriods] = useState<string[]>(defaultNoticePeriods);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -1051,15 +1053,13 @@ export default function ApplyForm({
     values.selectedSkills,
   ]);
 
-  // Quick Apply real-time "you're already registered" check -- fires once the
-  // email looks valid, Quick-Apply-only. Lets a returning candidate apply with
-  // their existing profile instead of re-filling Stage 1B/2/3 from scratch
-  // (feedback: "why do I have to redo everything"). Deliberately debounced and
-  // best-effort -- a failed lookup just means the candidate falls through to
-  // the normal full form, never blocks it.
+  // Real-time "you already have an account" check -- fires once the email
+  // looks valid, for any candidate-initiated entry (Apply or Build Your
+  // Profile). Deliberately debounced and best-effort/fail-open -- a failed
+  // lookup just means the candidate falls through to the normal form rather
+  // than getting incorrectly blocked.
   useEffect(() => {
-    if (source !== "quick_apply" || isEditMode) return;
-    if (fastApplied || existingCheckDismissed) return;
+    if (source === "recruiter_created" || isEditMode) return;
     if (!/^\S+@\S+\.\S+$/.test(values.email)) {
       setExistingCheck(null);
       return;
@@ -1081,35 +1081,7 @@ export default function ApplyForm({
     }, 700);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values.email, source, isEditMode, mandateId, fastApplied, existingCheckDismissed]);
-
-  // "Use my existing profile" fast path -- calls the exact same
-  // candidate-submit -> quick_apply RPC route the full form uses, but with a
-  // minimal { email } payload. quick_apply's own SQL coalesces every field
-  // against the existing row (see options.ts / hand-off notes), so this can
-  // never blank out anything already on file -- it only inserts the new
-  // candidate_mandate_links row for this job.
-  async function handleFastApply() {
-    setFastApplying(true);
-    setErrorMsg(null);
-    try {
-      const res = await fetch("/api/candidate-submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: { email: values.email.trim() }, mandateId }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error ?? "Something went wrong. Please try again.");
-      setFastApplied(true);
-      toast.success("You're all set -- your existing profile has been submitted for this role.");
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Something went wrong. Please try again.";
-      setErrorMsg(message);
-      toast.error(message);
-    } finally {
-      setFastApplying(false);
-    }
-  }
+  }, [values.email, source, isEditMode, mandateId]);
 
   // Round 8: currentEmployer/currentJobTitle are no longer entered directly
   // in this wizard -- they're sourced from whichever Career Timeline entry
@@ -1809,6 +1781,7 @@ export default function ApplyForm({
   }
 
   function goNext() {
+    if (existingCheck?.exists) return; // hard block -- see the email-lookup effect above
     const err = validateStep();
     if (err) {
       setErrorMsg(err.message);
@@ -2240,28 +2213,6 @@ export default function ApplyForm({
 
   const StepIcon = STAGE_META[stageIndex].icon;
 
-  // Fast-apply success: a returning candidate chose "use my existing
-  // profile" instead of re-filling Stage 1B/2/3 -- short-circuit straight to
-  // a clean confirmation instead of rendering the full wizard chrome.
-  if (fastApplied) {
-    return (
-      <div className="mx-auto max-w-lg rounded-2xl border border-emerald-200 bg-emerald-50/60 px-6 py-10 text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-          ✓
-        </div>
-        <h2 className="text-xl font-bold text-slate-950">
-          {existingCheck?.firstName ? `Thanks, ${existingCheck.firstName}` : "Thank you"} — you&apos;re all set
-          {mandateTitle ? ` for ${mandateTitle}` : ""}.
-        </h2>
-        <p className="mt-3 text-sm text-slate-600">
-          We applied your existing profile to this role. A StaffAnchor recruiter will review it and reach out if
-          there&apos;s a fit. If anything about your profile has changed, head to My Profile in your candidate
-          portal any time to update it.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <>
     <div className="min-h-[calc(100vh-4rem)] bg-[#f7f9fc]">
@@ -2643,7 +2594,13 @@ export default function ApplyForm({
                   value={values.email}
                   disabled={isEditMode}
                   onChange={(e) => update("email", e.target.value)}
-                  className={isEditMode ? "bg-slate-50 text-slate-500" : undefined}
+                  className={
+                    isEditMode
+                      ? "bg-slate-50 text-slate-500"
+                      : existingCheck?.exists
+                        ? "border-red-400 focus-visible:ring-red-300"
+                        : undefined
+                  }
                 />
                 {isEditMode && (
                   <p className="text-xs text-slate-400">
@@ -2652,54 +2609,26 @@ export default function ApplyForm({
                 )}
               </FormField>
 
-              {existingCheck?.exists && !existingCheckDismissed && (
-                <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4">
-                  {existingCheck.alreadyApplied ? (
-                    <>
-                      <p className="text-sm font-semibold text-blue-900">
-                        You&apos;ve already applied to this role{existingCheck.firstName ? `, ${existingCheck.firstName}` : ""}.
-                      </p>
-                      <p className="mt-1 text-xs text-blue-800">
-                        No need to apply again -- a recruiter already has this application on file. If something
-                        about your profile has changed, update it any time from My Profile in your candidate
-                        portal.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setExistingCheckDismissed(true)}
-                        className="mt-2 text-xs font-medium text-blue-700 underline hover:text-blue-900"
-                      >
-                        Fill this out as a new application anyway
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm font-semibold text-blue-900">
-                        Looks like you&apos;re already registered with us{existingCheck.firstName ? `, ${existingCheck.firstName}` : ""}!
-                      </p>
-                      <p className="mt-1 text-xs text-blue-800">
-                        Want to apply for this role with your existing profile, or update your profile first?
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button type="button" onClick={handleFastApply} disabled={fastApplying} className="text-xs">
-                          {fastApplying ? "Applying..." : "Use my existing profile — apply now"}
-                        </Button>
-                        <a
-                          href="/candidate-login"
-                          className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-slate-400"
-                        >
-                          Update my profile first
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => setExistingCheckDismissed(true)}
-                          className="text-xs font-medium text-blue-700 underline hover:text-blue-900"
-                        >
-                          No, fill out a fresh form
-                        </button>
-                      </div>
-                    </>
-                  )}
+              {/* Hard block, not a convenience shortcut -- a profile with this
+                  email already exists (self-registered or recruiter-created),
+                  so there's no ambiguity about whether this person is a new
+                  or returning candidate. They can't proceed past this field;
+                  the only way forward is Login. */}
+              {existingCheck?.exists && (
+                <div className="rounded-xl border border-red-200 bg-red-50/70 p-4">
+                  <p className="text-sm font-semibold text-red-900">
+                    A profile with this email is already registered in our system
+                    {existingCheck.firstName ? ` (${existingCheck.firstName})` : ""} — by you or a recruiter.
+                  </p>
+                  <p className="mt-1 text-xs text-red-800">
+                    Please log in to view or update it{existingCheck.alreadyApplied ? " and see your application status" : ""}.
+                  </p>
+                  <a
+                    href={`/candidate-login${values.email.trim() ? `?email=${encodeURIComponent(values.email.trim())}` : ""}`}
+                    className="mt-3 inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+                  >
+                    Login
+                  </a>
                 </div>
               )}
 
@@ -3954,6 +3883,7 @@ export default function ApplyForm({
                 <Button
                   type="button"
                   onClick={goNext}
+                  disabled={!!existingCheck?.exists}
                   className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
                 >
                   Continue →
@@ -3962,7 +3892,7 @@ export default function ApplyForm({
                 <Button
                   type="button"
                   onClick={() => handleSubmit()}
-                  disabled={submitting}
+                  disabled={submitting || !!existingCheck?.exists}
                   className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
                 >
                   {submitting ? "Submitting..." : submitButtonLabel}

@@ -15,7 +15,8 @@ export default function CandidateLoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Prefills from ?email=... when arriving via the "sign up for future
-  // openings" link after a Quick Apply submission -- read off window.location
+  // openings" link after an Apply submission, or via the "Login" button on
+  // the already-registered block in ApplyForm -- read off window.location
   // directly (rather than useSearchParams) so this plain client component
   // doesn't need a Suspense boundary for static export.
   useEffect(() => {
@@ -32,9 +33,10 @@ export default function CandidateLoginPage() {
     // Magic-link sign-in has no separate "sign up" step -- Supabase will
     // happily create a brand-new account for any email typed here. So before
     // ever sending a link, confirm a candidate record already exists for
-    // this email (from Build Your Profile, Quick Apply, or a
-    // recruiter-created profile). No profile on file -> no account, no
-    // portal access -- just a plain message pointing them at applying first.
+    // this email (from Build Your Profile, Apply, or a recruiter-created
+    // profile). This is the login-side half of the same "no ambiguity" rule
+    // as ApplyForm's email gate: no profile on file -> no account, no portal
+    // access -- just a plain message pointing them at applying first.
     const { data: exists, error: checkError } = await supabase.rpc("candidate_email_exists", {
       p_email: email.trim(),
     });
@@ -46,7 +48,7 @@ export default function CandidateLoginPage() {
     if (!exists) {
       setSending(false);
       setError(
-        "We don't have a profile on file for this email yet. Build your profile or apply to an open role first, then come back here to log in."
+        "We don't have a profile on file for this email yet. Register or apply to an open role first, then come back here to log in."
       );
       return;
     }

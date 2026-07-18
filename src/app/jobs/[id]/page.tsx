@@ -93,7 +93,7 @@ export default function QuickApplyPage() {
           onClick={() => logQuickApplyClick(mandateId)}
           className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-blue-700 shadow-md transition hover:bg-blue-50"
         >
-          <Zap className="h-4 w-4" /> Quick Apply
+          <Zap className="h-4 w-4" /> Apply
         </a>
       </div>
 
@@ -176,7 +176,7 @@ export default function QuickApplyPage() {
               onClick={() => logQuickApplyClick(mandateId)}
               className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
             >
-              <Zap className="h-4 w-4" /> Quick Apply
+              <Zap className="h-4 w-4" /> Apply
             </a>
           </div>
         </div>

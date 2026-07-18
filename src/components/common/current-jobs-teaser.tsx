@@ -57,7 +57,7 @@ export function CurrentJobsTeaser() {
                 <span>{budgetLabel(job.budget_min, job.budget_max)}</span>
               </div>
               <Link href={`/jobs/${job.id}`} className="mt-4 block">
-                <Button className="w-full rounded-full">Quick Apply</Button>
+                <Button className="w-full rounded-full">Apply</Button>
               </Link>
             </Card>
           ))}
