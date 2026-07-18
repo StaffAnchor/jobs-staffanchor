@@ -34,39 +34,52 @@ export default function PortalHome({
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-3">
         {/* --- Profile Score --- */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-900">Profile Score</p>
-            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${meta.chipBg} ${meta.chipText}`}>{tier}</span>
-          </div>
-          <div className="mt-4 flex items-center gap-4">
-            <div
-              className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full"
-              style={{ background: `conic-gradient(${meta.ring} ${score * 3.6}deg, #e2e8f0 0deg)` }}
-            >
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white">
-                <span className="text-lg font-bold text-slate-900">{score}%</span>
-              </div>
+        {/* Tier colors scale with urgency (see profile-score.ts) -- Basic
+            gets a top accent strip + amber tones instead of the old flat
+            slate gray, so the profile that most needs finishing carries the
+            most visual weight, not the least. Same treatment as the Apply
+            flow's SignedInApplyCard, since both read off the same shared
+            PROFILE_SCORE_TIER_META. */}
+        <div
+          className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${
+            missing.length > 0 ? `border-t-4 ${meta.accentBorder}` : ""
+          }`}
+        >
+          <div className="p-6">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-900">Profile Score</p>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${meta.chipBg} ${meta.chipText}`}>{tier}</span>
             </div>
-            <p className="text-xs leading-5 text-slate-500">{meta.blurb}</p>
-          </div>
-          {missing.length > 0 && (
-            <div className="mt-4 border-t border-slate-100 pt-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                Still missing ({missing.length})
-              </p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">
-                {missing.slice(0, 4).join(", ")}
-                {missing.length > 4 ? `, +${missing.length - 4} more` : ""}
-              </p>
-              <button
-                onClick={() => onNavigate("profile")}
-                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+            <div className="mt-4 flex items-center gap-4">
+              <div
+                className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full"
+                style={{ background: `conic-gradient(${meta.ring} ${score * 3.6}deg, #e2e8f0 0deg)` }}
               >
-                Complete my profile <ArrowRight className="h-3 w-3" />
-              </button>
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white">
+                  <span className="text-lg font-bold text-slate-900">{score}%</span>
+                </div>
+              </div>
+              <p className="text-xs leading-5 text-slate-500">{meta.blurb}</p>
             </div>
-          )}
+            {missing.length > 0 && (
+              <div className={`mt-4 rounded-xl border-l-4 ${meta.accentBorder} ${meta.accentBg} p-3.5`}>
+                <p className={`text-[11px] font-bold uppercase tracking-wide ${meta.chipText}`}>
+                  Still missing ({missing.length})
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  {missing.slice(0, 4).join(", ")}
+                  {missing.length > 4 ? `, +${missing.length - 4} more` : ""}
+                </p>
+                <button
+                  onClick={() => onNavigate("profile")}
+                  className="mt-3 inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-bold shadow-sm ring-1 ring-inset ring-slate-200 transition hover:ring-slate-300"
+                  style={{ color: meta.ring }}
+                >
+                  Complete my profile <ArrowRight className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* --- Big-block CTAs --- */}

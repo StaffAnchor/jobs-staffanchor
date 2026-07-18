@@ -140,60 +140,72 @@ export default function SignedInApplyCard({
   }
 
   return (
-    <div className="mx-auto max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Signed in</p>
-          <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
-            Apply as {candidate.full_name || "yourself"}
-          </h2>
-        </div>
-        <div
-          className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
-          style={{ background: `conic-gradient(${meta.ring} ${score * 3.6}deg, #e2e8f0 0deg)` }}
-        >
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white">
-            <span className="text-xs font-bold text-slate-900">{score}%</span>
+    <div
+      className={`mx-auto max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${
+        missing.length > 0 ? `border-t-4 ${meta.accentBorder}` : ""
+      }`}
+    >
+      <div className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Signed in</p>
+            <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
+              Apply as {candidate.full_name || "yourself"}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${meta.chipBg} ${meta.chipText}`}>
+              {tier}
+            </span>
+            <div
+              className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full"
+              style={{ background: `conic-gradient(${meta.ring} ${score * 3.6}deg, #e2e8f0 0deg)` }}
+            >
+              <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-white">
+                <span className="text-sm font-bold text-slate-900">{score}%</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <p className="mt-3 text-sm text-slate-500">
-        We&apos;ll submit your existing StaffAnchor profile for {mandateTitle ? `${mandateTitle}` : "this role"} — no
-        need to fill anything out again.
-      </p>
+        <p className="mt-3 text-sm text-slate-500">
+          We&apos;ll submit your existing StaffAnchor profile for {mandateTitle ? `${mandateTitle}` : "this role"} —
+          no need to fill anything out again.
+        </p>
 
-      {missing.length > 0 && (
-        <div className={`mt-4 rounded-xl p-3 ${meta.chipBg}`}>
-          <p className={`text-xs font-semibold ${meta.chipText}`}>
-            Your profile is {score}% complete ({tier}) — recruiters see stronger matches with more detail.
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Still missing: {missing.slice(0, 3).join(", ")}
-            {missing.length > 3 ? `, +${missing.length - 3} more` : ""}.
-          </p>
-          <Link
-            href="/candidate-portal"
-            className="mt-2 inline-block text-xs font-semibold text-blue-700 hover:underline"
+        {missing.length > 0 && (
+          <div className={`mt-4 rounded-xl border-l-4 ${meta.accentBorder} ${meta.accentBg} p-3.5`}>
+            <p className={`text-sm font-bold ${meta.chipText}`}>{meta.blurb}</p>
+            <p className="mt-1.5 text-xs leading-5 text-slate-600">
+              <span className="font-semibold text-slate-700">Still missing:</span> {missing.slice(0, 3).join(", ")}
+              {missing.length > 3 ? `, +${missing.length - 3} more` : ""}.
+            </p>
+          </div>
+        )}
+
+        {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600"
           >
-            Complete my profile →
-          </Link>
+            <LogOut className="h-3 w-3" /> Not you? Log out
+          </button>
+          <div className="flex items-center gap-2">
+            {missing.length > 0 && (
+              <Link href="/candidate-portal">
+                <Button type="button" variant="outline" className="px-4">
+                  Complete my profile
+                </Button>
+              </Link>
+            )}
+            <Button type="button" onClick={handleApply} disabled={applying} className="px-6">
+              {applying ? "Applying..." : "Apply for this role"}
+            </Button>
+          </div>
         </div>
-      )}
-
-      {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
-
-      <div className="mt-5 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600"
-        >
-          <LogOut className="h-3 w-3" /> Not you? Log out
-        </button>
-        <Button type="button" onClick={handleApply} disabled={applying} className="px-6">
-          {applying ? "Applying..." : "Apply for this role"}
-        </Button>
       </div>
     </div>
   );

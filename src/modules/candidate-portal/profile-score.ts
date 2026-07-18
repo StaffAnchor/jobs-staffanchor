@@ -101,32 +101,48 @@ export function computeProfileScore(candidate: ScoreCandidateRow): ProfileScoreR
   return { score: Math.min(100, Math.max(0, score)), tier, missing };
 }
 
+// Note the deliberate inversion fixed here: Basic used to be the same flat
+// slate-gray as "nothing to see," which meant the tier that most needs a
+// nudge carried the *least* visual urgency of any of the four. Salience now
+// scales with how much attention a profile actually needs -- amber for
+// Basic (genuinely worth flagging), cooling through blue/violet to emerald
+// once there's nothing left to nudge about. `accentBorder`/`accentBg` are
+// shared by every surface that renders a Profile Score (SignedInApplyCard,
+// PortalHome) so this fix applies everywhere at once, not just one screen.
 export const PROFILE_SCORE_TIER_META: Record<
   ProfileScoreTier,
-  { ring: string; chipBg: string; chipText: string; blurb: string }
+  { ring: string; chipBg: string; chipText: string; accentBorder: string; accentBg: string; blurb: string }
 > = {
   Basic: {
-    ring: "#94a3b8",
-    chipBg: "bg-slate-100",
-    chipText: "text-slate-600",
-    blurb: "A few more sections and recruiters will start seeing a real picture of you.",
+    ring: "#d97706",
+    chipBg: "bg-amber-100",
+    chipText: "text-amber-800",
+    accentBorder: "border-amber-400",
+    accentBg: "bg-amber-50",
+    blurb: "Recruiters can barely see you yet — a handful of key details unlock real visibility.",
   },
   Good: {
     ring: "#2563eb",
     chipBg: "bg-blue-50",
     chipText: "text-blue-700",
+    accentBorder: "border-blue-300",
+    accentBg: "bg-blue-50",
     blurb: "Solid start — fill in your role details and targets to stand out further.",
   },
   Excellent: {
     ring: "#7c3aed",
     chipBg: "bg-violet-50",
     chipText: "text-violet-700",
+    accentBorder: "border-violet-300",
+    accentBg: "bg-violet-50",
     blurb: "Strong profile — recruiters can already make a confident first read on you.",
   },
   Premium: {
     ring: "#059669",
     chipBg: "bg-emerald-50",
     chipText: "text-emerald-700",
+    accentBorder: "border-emerald-300",
+    accentBg: "bg-emerald-50",
     blurb: "Complete profile — you're in the top tier of what recruiters see.",
   },
 };
