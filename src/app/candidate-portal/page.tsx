@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserCircle2, Briefcase, Gift, Sparkles } from "lucide-react";
+import { Home, UserCircle2, Briefcase, Gift, Sparkles } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
 import { type CandidateProfile } from "@/modules/candidate-portal/ProfileEditor";
@@ -10,9 +10,17 @@ import ApplyForm from "@/modules/apply/ApplyForm";
 import MyPipeline from "@/modules/candidate-portal/MyPipeline";
 import ReferEarn from "@/modules/candidate-portal/ReferEarn";
 import MandatoryBasicsGate from "@/modules/candidate-portal/MandatoryBasicsGate";
+import PortalHome from "@/modules/candidate-portal/PortalHome";
 import { listOpenJobs, type JobListing } from "@/modules/jobs/api";
 
 const TABS = [
+  {
+    key: "home" as const,
+    label: "Home",
+    icon: Home,
+    accent: "text-slate-700",
+    ring: "ring-slate-100",
+  },
   {
     key: "profile" as const,
     label: "My Profile",
@@ -42,6 +50,12 @@ const TAB_META: Record<
   TabKey,
   { icon: typeof Briefcase; iconClasses: string; title: string; subtitle: string }
 > = {
+  home: {
+    icon: Home,
+    iconClasses: "bg-slate-100 text-slate-700",
+    title: "Home",
+    subtitle: "Your Profile Score and everything you can do from here.",
+  },
   profile: {
     icon: UserCircle2,
     iconClasses: "bg-emerald-50 text-emerald-600",
@@ -75,7 +89,7 @@ export default function CandidatePortalPage() {
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [openJobs, setOpenJobs] = useState<JobListing[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabKey>("profile");
+  const [tab, setTab] = useState<TabKey>("home");
   const [pipelineCount, setPipelineCount] = useState<number | null>(null);
   const [activeReferralCount, setActiveReferralCount] = useState<number | null>(null);
 
@@ -222,13 +236,25 @@ export default function CandidatePortalPage() {
         </div>
       </div>
 
-      {tab === "profile" ? (
+      {tab === "home" && (
+        <PortalHome
+          candidate={profile}
+          pipelineCount={pipelineCount}
+          activeReferralCount={activeReferralCount}
+          openJobsCount={openJobs.length}
+          onNavigate={(t) => setTab(t)}
+        />
+      )}
+
+      {tab === "profile" && (
         // Career Timeline is now Step 2 inside ApplyForm's own wizard -- it used
         // to be a separate always-visible panel rendered below the wizard here,
         // which read as two disconnected forms (profile-strength moving up top
         // while a second panel silently saved itself below). Single form now.
         <ApplyForm existingProfile={profile} onSaved={() => loadProfile()} />
-      ) : (
+      )}
+
+      {(tab === "pipeline" || tab === "refer") && (
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-start gap-3">
             <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${meta.iconClasses}`}>
