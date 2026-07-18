@@ -31,7 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { FormField, CollapsibleFormField } from "@/components/forms/form-field";
+import { FormField, CollapsibleFormField, slugifyFieldLabel } from "@/components/forms/form-field";
 import {
   achievementBandOptions,
   b2bSalesMotionTypeGroups,
@@ -1519,7 +1519,12 @@ export default function ApplyForm({
     });
   }
 
-  function validateStep(stageOverride?: number): string | null {
+  // Returns the exact label text of the first unfilled required field, not
+  // just an error string -- goNext()/saveSection()/handleSubmit() use
+  // `field` to scroll to and highlight that field directly (see
+  // focusField() below) instead of leaving the candidate to hunt for
+  // whichever one of a long list is actually missing.
+  function validateStep(stageOverride?: number): { field: string; message: string } | null {
     // In the step-by-step wizard this always validates the current step
     // (the closure `stageIndex`). My Profile edit mode's per-section Save
     // passes the specific stage index of whichever section is actually open
@@ -1531,23 +1536,23 @@ export default function ApplyForm({
 
     // Stage 1A -- Critical Core
     if (stageIndex === 0) {
-      if (!values.fullName.trim()) return "Full name is required.";
-      if (!/^\S+@\S+\.\S+$/.test(values.email)) return "A valid email is required.";
-      if (values.phone.length !== 10) return "Please enter a valid 10-digit phone number.";
-      if (!values.cityChoice) return "Please select your current city.";
+      if (!values.fullName.trim()) return { field: "Full Name", message: "Full name is required." };
+      if (!/^\S+@\S+\.\S+$/.test(values.email)) return { field: "Email", message: "A valid email is required." };
+      if (values.phone.length !== 10) return { field: "Phone (10-digit mobile number)", message: "Please enter a valid 10-digit phone number." };
+      if (!values.cityChoice) return { field: "Current City", message: "Please select your current city." };
       if (values.cityChoice === "Other" && (!values.customCity.trim() || !values.customState.trim())) {
-        return "Please enter both city and state.";
+        return { field: "City", message: "Please enter both city and state." };
       }
-      if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
-      if (!values.category) return "Please select your Current Profile Type.";
-      if (!values.subDomain) return "Please select your Practice / Vertical / Function.";
+      if (!resumeFile && !hasExistingResume) return { field: "Resume", message: "Please upload your resume." };
+      if (!values.category) return { field: "Current Profile Type", message: "Please select your Current Profile Type." };
+      if (!values.subDomain) return { field: "Primary Specialization", message: "Please select your Practice / Vertical / Function." };
       if (values.subDomain === "Other" && !values.customSubDomain.trim()) {
-        return "Please specify your Practice / Vertical / Function.";
+        return { field: "Primary Specialization", message: "Please specify your Practice / Vertical / Function." };
       }
       if (values.subDomain === "Other B2B") {
-        if (!values.otherB2BSubDomain) return "Please tell us more about your B2B specialization.";
+        if (!values.otherB2BSubDomain) return { field: "Primary Specialization", message: "Please tell us more about your B2B specialization." };
         if (values.otherB2BSubDomain === "Other" && !values.customOtherB2BSubDomain.trim()) {
-          return "Please specify your B2B specialization.";
+          return { field: "Primary Specialization", message: "Please specify your B2B specialization." };
         }
       }
     }
@@ -1562,103 +1567,103 @@ export default function ApplyForm({
       // (nothing to have been paid yet) and is auto-zeroed the same way --
       // only Expected CTC (what they're looking for) makes sense to ask them.
       if (values.isFresher !== "Yes") {
-        if (!values.currentEmployer.trim()) return "Current employer is required.";
-        if (!values.currentJobTitle.trim()) return "Current job title is required.";
-        if (!values.currentFixedCtc) return "Current fixed CTC is required.";
-        if (!values.currentVariableCtc) return "Current variable CTC is required (select 0 LPA if none).";
+        if (!values.currentEmployer.trim()) return { field: "Current Employer", message: "Current employer is required." };
+        if (!values.currentJobTitle.trim()) return { field: "Current Job Title", message: "Current job title is required." };
+        if (!values.currentFixedCtc) return { field: "Current Fixed CTC", message: "Current fixed CTC is required." };
+        if (!values.currentVariableCtc) return { field: "Current Variable CTC", message: "Current variable CTC is required (select 0 LPA if none)." };
       }
-      if (!values.currentEmploymentStatus) return "Employment status is required.";
-      if (!values.currentIndustry) return "Please select your current industry.";
+      if (!values.currentEmploymentStatus) return { field: "Employment Status", message: "Employment status is required." };
+      if (!values.currentIndustry) return { field: "Current Industry", message: "Please select your current industry." };
       if (values.currentIndustry === "Other" && !values.customCurrentIndustry.trim()) {
-        return "Please specify your current industry.";
+        return { field: "Please specify your current industry", message: "Please specify your current industry." };
       }
       if (!values.noOtherIndustries && !values.selectedIndustries.length) {
-        return "Please select at least one previous industry, or check 'No other industries'.";
+        return { field: "Other Industries Previously Worked In (multi-select)", message: "Please select at least one previous industry, or check 'No other industries'." };
       }
-      if (!values.isFresher) return "Please let us know if you're a fresher or already have work experience.";
-      if (!values.totalExperienceYears) return "Total experience is required.";
-      if (!values.expectedFixedCtc) return "Expected fixed CTC is required.";
-      if (!values.expectedVariableCtc) return "Expected variable CTC is required (select 0 LPA if none).";
-      if (!values.noticePeriod) return "Please let us know how many days you'd need to join.";
-      if (!values.highestQualification) return "Highest qualification is required.";
+      if (!values.isFresher) return { field: "Are you a fresher, or do you already have work experience?", message: "Please let us know if you're a fresher or already have work experience." };
+      if (!values.totalExperienceYears) return { field: "Total Experience", message: "Total experience is required." };
+      if (!values.expectedFixedCtc) return { field: "Expected Fixed CTC", message: "Expected fixed CTC is required." };
+      if (!values.expectedVariableCtc) return { field: "Expected Variable CTC", message: "Expected variable CTC is required (select 0 LPA if none)." };
+      if (!values.noticePeriod) return { field: "In how many days can you join?", message: "Please let us know how many days you'd need to join." };
+      if (!values.highestQualification) return { field: "Highest Qualification", message: "Highest qualification is required." };
       if (values.highestQualification === "Other" && !values.customQualification.trim()) {
-        return "Please specify your qualification.";
+        return { field: "Please specify", message: "Please specify your qualification." };
       }
-      if (!values.workMode) return "Please select a work mode preference.";
-      if (!values.openToRelocation) return "Please select your relocation preference.";
+      if (!values.workMode) return { field: "Work Mode Preference", message: "Please select a work mode preference." };
+      if (!values.openToRelocation) return { field: "Open to Relocation", message: "Please select your relocation preference." };
       if (values.openToRelocation === "Yes" && !values.relocationPreferredCities.length && !values.customRelocationCity.trim()) {
-        return "Please select at least one preferred city to relocate to.";
+        return { field: "Preferred Cities to Relocate To", message: "Please select at least one preferred city to relocate to." };
       }
-      if (!values.travelPreference) return "Please select your travel preference.";
-      if (!values.languagesKnown.length) return "Please select at least one language you know.";
+      if (!values.travelPreference) return { field: "Willingness to Travel", message: "Please select your travel preference." };
+      if (!values.languagesKnown.length) return { field: "Languages Known", message: "Please select at least one language you know." };
       if (values.languagesKnown.includes("Other") && !values.customLanguage.trim()) {
-        return "Please specify the other language(s) you know.";
+        return { field: "Languages Known", message: "Please specify the other language(s) you know." };
       }
       // A fresher has no role level, IC-vs-team, team size, or secondary
       // specializations to speak of yet -- those describe an existing career,
       // not a preference. Only ask them once there's actual experience --
       // instead, a fresher gets one lightweight internship question.
       if (values.isFresher === "No") {
-        if (!values.roleLevel) return "Please select your role level.";
-        if (!values.roleType) return "Please select whether you are an IC or leading a team.";
-        if (values.roleType === "Leading a Team" && !values.teamSize) return "Please select your team size.";
-        if (values.roleType === "Other" && !values.customRoleType.trim()) return "Please describe your role type.";
+        if (!values.roleLevel) return { field: "Role Level", message: "Please select your role level." };
+        if (!values.roleType) return { field: "Current Role Type", message: "Please select whether you are an IC or leading a team." };
+        if (values.roleType === "Leading a Team" && !values.teamSize) return { field: "Team Size", message: "Please select your team size." };
+        if (values.roleType === "Other" && !values.customRoleType.trim()) return { field: "Please describe your role type", message: "Please describe your role type." };
         if (isSales && !values.secondarySubDomains.length) {
-          return "Please select at least one option (choose 'None — single specialization only' if not applicable).";
+          return { field: "Secondary Specializations", message: "Please select at least one option (choose 'None — single specialization only' if not applicable)." };
         }
         if (values.secondarySubDomains.includes("Other (B2B)") && !values.secondaryOtherB2BSubDomain.trim()) {
-          return "Please specify your secondary B2B specialization.";
+          return { field: "Secondary Specializations", message: "Please specify your secondary B2B specialization." };
         }
         if (values.secondarySubDomains.includes("Other (B2C)") && !values.secondaryOtherB2CSpecify.trim()) {
-          return "Please specify your secondary B2C specialization.";
+          return { field: "Secondary Specializations", message: "Please specify your secondary B2C specialization." };
         }
         if (values.secondarySubDomains.includes("Other (Non-Sales)") && !values.secondaryOtherNonSalesSpecify.trim()) {
-          return "Please specify your secondary Non-Sales specialization.";
+          return { field: "Secondary Specializations", message: "Please specify your secondary Non-Sales specialization." };
         }
       } else {
-        if (!values.hasInternship) return "Please let us know if you've done an internship.";
+        if (!values.hasInternship) return { field: "Have you done an internship?", message: "Please let us know if you've done an internship." };
         if (values.hasInternship === "Yes") {
-          if (!values.internshipCompany.trim()) return "Please enter the company you interned at.";
-          if (!values.internshipRole.trim()) return "Please enter your internship role/title.";
-          if (!values.internshipDuration.trim()) return "Please enter how long your internship was.";
-          if (!values.internshipDescription.trim()) return "Please add one line on what you did during the internship.";
+          if (!values.internshipCompany.trim()) return { field: "Internship Company", message: "Please enter the company you interned at." };
+          if (!values.internshipRole.trim()) return { field: "Internship Role / Title", message: "Please enter your internship role/title." };
+          if (!values.internshipDuration.trim()) return { field: "Duration", message: "Please enter how long your internship was." };
+          if (!values.internshipDescription.trim()) return { field: "What did you do? (one line)", message: "Please add one line on what you did during the internship." };
         }
       }
-      if (!values.consent) return "Please confirm consent to continue.";
+      if (!values.consent) return { field: "Consent", message: "Please confirm consent to continue." };
     }
 
     // Stage 2 -- Profile-Type-Specific (B2B / B2C only; skipped for Non-Sales)
     if (stageIndex === 2 && isSales) {
       if (values.isFresher === "Yes") return null;
       if (isB2B) {
-        if (values.b2bSalesMotionType.length === 0) return "Please select at least one Sales Motion.";
+        if (values.b2bSalesMotionType.length === 0) return { field: "Sales Motion (select all that apply)", message: "Please select at least one Sales Motion." };
         // Every B2B Sales Motion gets the same field set -- Hunter/Farmer,
         // deal size, sales cycle, and buyer persona.
-        if (!values.aeSellingStyle) return "Please select Hunter, Farmer, or Hybrid.";
-        if (!values.aeDealSizeCurrency) return "Please select a currency for your average deal size.";
-        if (!values.aeDealSizeBand) return "Please select your average deal size.";
-        if (!values.aeSalesCycle) return "Please select your typical sales cycle length.";
-        if (!values.aeBuyerPersona) return "Please select your primary buyer persona.";
+        if (!values.aeSellingStyle) return { field: "Hunter or Farmer", message: "Please select Hunter, Farmer, or Hybrid." };
+        if (!values.aeDealSizeCurrency) return { field: "Deal Size Currency", message: "Please select a currency for your average deal size." };
+        if (!values.aeDealSizeBand) return { field: "Average Deal Size (ACV)", message: "Please select your average deal size." };
+        if (!values.aeSalesCycle) return { field: "Sales Cycle Length", message: "Please select your typical sales cycle length." };
+        if (!values.aeBuyerPersona) return { field: "Primary Buyer Persona", message: "Please select your primary buyer persona." };
       } else if (isB2C) {
-        if (values.b2cSalesMotion.length === 0) return "Please select at least one Sales Motion.";
-        if (!values.b2cTicketCurrency) return "Please select a currency for your average ticket size.";
-        if (!values.b2cTicketBand) return "Please select your average ticket size.";
+        if (values.b2cSalesMotion.length === 0) return { field: "Sales Motion (select all that apply)", message: "Please select at least one Sales Motion." };
+        if (!values.b2cTicketCurrency) return { field: "Ticket Size Currency", message: "Please select a currency for your average ticket size." };
+        if (!values.b2cTicketBand) return { field: "Average Ticket Size", message: "Please select your average ticket size." };
       }
     }
 
     // Stage 3 -- Revenue Snapshot (B2B / B2C only; skipped for Non-Sales)
     if (stageIndex === 3 && isSales) {
       if (values.isFresher === "Yes") return null;
-      if (!values.revenuePeriod) return "Please select Quarterly or Annual.";
-      if (!values.revenueTargetCurrency) return "Please select a currency for your target.";
-      if (!values.revenueTarget) return `Please select ${values.roleType === "Leading a Team" ? "your team's" : "your"} target.`;
-      if (!values.revenueAchievement) return "Please select your achievement %.";
+      if (!values.revenuePeriod) return { field: "Reporting Period", message: "Please select Quarterly or Annual." };
+      if (!values.revenueTargetCurrency) return { field: (values.roleType === "Leading a Team" ? "Team Target Currency" : "Target Currency"), message: "Please select a currency for your target." };
+      if (!values.revenueTarget) return { field: (values.roleType === "Leading a Team" ? "Team Target" : "Your Target"), message: `Please select ${values.roleType === "Leading a Team" ? "your team's" : "your"} target.` };
+      if (!values.revenueAchievement) return { field: "Achievement %", message: "Please select your achievement %." };
       if (values.roleType === "Leading a Team") {
-        if (!values.hasIndividualQuota) return "Please let us know if you also carry an individual quota.";
+        if (!values.hasIndividualQuota) return { field: "Do you also carry an individual quota?", message: "Please let us know if you also carry an individual quota." };
         if (values.hasIndividualQuota === "Yes") {
-          if (!values.individualTargetCurrency) return "Please select a currency for your individual target.";
-          if (!values.individualTarget) return "Please select your individual target.";
-          if (!values.individualAchievement) return "Please select your individual achievement %.";
+          if (!values.individualTargetCurrency) return { field: "Individual Target Currency", message: "Please select a currency for your individual target." };
+          if (!values.individualTarget) return { field: "Individual Target", message: "Please select your individual target." };
+          if (!values.individualAchievement) return { field: "Individual Achievement %", message: "Please select your individual achievement %." };
         }
       }
     }
@@ -1782,10 +1787,32 @@ export default function ApplyForm({
     return false;
   }
 
+  // Scrolls to and briefly highlights the field named by validateStep()'s
+  // `field` return value, instead of leaving the candidate to scan the whole
+  // section for whichever one of many required fields is actually missing.
+  // Handles CollapsibleFormField specially -- if the target is still
+  // collapsed, opens it first (via its own toggle button) so the field is
+  // actually visible before scrolling to it.
+  function focusField(label: string) {
+    const id = slugifyFieldLabel(label);
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.dataset.collapsibleField === "true") {
+      const toggle = el.querySelector('button[aria-expanded="false"]');
+      if (toggle) (toggle as HTMLButtonElement).click();
+    }
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-red-400");
+      window.setTimeout(() => el.classList.remove("ring-2", "ring-red-400"), 2200);
+    });
+  }
+
   function goNext() {
     const err = validateStep();
     if (err) {
-      setErrorMsg(err);
+      setErrorMsg(err.message);
+      focusField(err.field);
       return;
     }
     setErrorMsg(null);
@@ -1821,8 +1848,13 @@ export default function ApplyForm({
       for (const i of stepSequence) {
         const err = validateStep(i);
         if (err) {
-          setErrorMsg(err);
+          setErrorMsg(err.message);
           setStep(stepSequence.indexOf(i));
+          if (isEditMode) {
+            const stageLabel = ALL_STAGES[i];
+            setOpenSection(stageLabel as typeof openSection);
+          }
+          requestAnimationFrame(() => focusField(err.field));
           return;
         }
       }
@@ -2167,7 +2199,8 @@ export default function ApplyForm({
     if (idx !== undefined) {
       const err = validateStep(idx);
       if (err) {
-        setErrorMsg(err);
+        setErrorMsg(err.message);
+        focusField(err.field);
         return;
       }
     }
@@ -3151,7 +3184,18 @@ export default function ApplyForm({
                   />
                 </FormField>
               )}
-              <CollapsibleFormField label="Other Industries Previously Worked In (multi-select)" required>
+              <CollapsibleFormField
+                label="Other Industries Previously Worked In (multi-select)"
+                required
+                summary={
+                  values.noOtherIndustries
+                    ? "No other industries"
+                    : values.selectedIndustries.length
+                      ? `${values.selectedIndustries.length} selected`
+                      : "Not selected yet"
+                }
+                summaryFilled={values.noOtherIndustries || values.selectedIndustries.length > 0}
+              >
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
                     <input
@@ -3216,7 +3260,18 @@ export default function ApplyForm({
                 </Select>
               </FormField>
               {values.openToRelocation === "Yes" && (
-                <CollapsibleFormField label="Preferred Cities to Relocate To" required>
+                <CollapsibleFormField
+                  label="Preferred Cities to Relocate To"
+                  required
+                  summary={
+                    values.relocationPreferredCities.length
+                      ? `${values.relocationPreferredCities.length} selected`
+                      : values.customRelocationCity
+                        ? values.customRelocationCity
+                        : "Not selected yet"
+                  }
+                  summaryFilled={values.relocationPreferredCities.length > 0 || !!values.customRelocationCity}
+                >
                   <div className="flex flex-wrap gap-2">
                     {cityOptions
                       .filter((c) => c !== "Other")
@@ -3339,7 +3394,18 @@ export default function ApplyForm({
                     </>
                   ) : (
                     <>
-                      <CollapsibleFormField label="Secondary Specializations" required>
+                      <CollapsibleFormField
+                        label="Secondary Specializations"
+                        required
+                        summary={
+                          values.secondarySubDomains.length
+                            ? values.secondarySubDomains.includes("None — single specialization only")
+                              ? "None — single specialization"
+                              : `${values.secondarySubDomains.length} selected`
+                            : "Not selected yet"
+                        }
+                        summaryFilled={values.secondarySubDomains.length > 0}
+                      >
                         {values.secondarySubDomains.length === 0 && (
                           <p className="mb-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/60 px-3 py-2 text-xs font-medium text-blue-700">
                             Even one extra specialization can open up more mandates you'd be a fit for -- and if
