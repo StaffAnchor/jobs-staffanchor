@@ -124,7 +124,10 @@ export default function QuickApplyPage() {
         <ArrowLeft className="h-3.5 w-3.5" /> Back to open roles
       </Link>
 
-      <div className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-sky-500 p-6 text-white shadow-lg shadow-blue-900/20 sm:p-8">
+      <div
+        className="mb-6 overflow-hidden rounded-2xl p-6 text-white shadow-lg shadow-slate-900/20 sm:p-8"
+        style={{ backgroundImage: "linear-gradient(135deg, #12131A 0%, #3730B3 55%, #4F46E5 100%)" }}
+      >
         <p className="text-[11px] font-semibold uppercase tracking-wide text-white/80">
           {categoryLabel(job.category)}
           {jobSubDomains.length ? ` · ${jobSubDomains.join(", ")}` : ""}
@@ -154,7 +157,7 @@ export default function QuickApplyPage() {
           <a
             href="#apply-form"
             onClick={() => logQuickApplyClick(mandateId)}
-            className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-blue-700 shadow-md transition hover:bg-blue-50"
+            className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-indigo-800 shadow-md transition hover:bg-indigo-50"
           >
             <Zap className="h-4 w-4" /> Apply
           </a>
@@ -170,7 +173,7 @@ export default function QuickApplyPage() {
                   {job.jd_overview && <p className="text-[14px] leading-6 text-slate-600">{job.jd_overview}</p>}
                   {job.jd_responsibilities && (
                     <div>
-                      <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-blue-700">
+                      <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-indigo-700">
                         Key Responsibilities
                       </h2>
                       <ul className="list-disc space-y-1.5 pl-4 text-[13.5px] leading-6 text-slate-700">
@@ -243,7 +246,7 @@ export default function QuickApplyPage() {
               <a
                 href="#apply-form"
                 onClick={() => logQuickApplyClick(mandateId)}
-                className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
+                className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-[#4F46E5] px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#3730B3]"
               >
                 <Zap className="h-4 w-4" /> Apply
               </a>

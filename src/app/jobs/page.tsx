@@ -100,11 +100,11 @@ export default function JobsPage() {
             StaffAnchor Careers
           </div>
           <h1 className="mt-4 font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-            Open Sales &amp; GTM Roles
+            Open Mandates
           </h1>
           <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-slate-500">
-            Verified mandates from companies hiring B2B sales talent right now — quota history and deal context
-            included, not a pile of unread resumes.
+            Verified mandates from companies hiring right now, led by B2B sales roles — with B2C sales and non-sales
+            positions included too. Quota history and role context included, not a pile of unread resumes.
           </p>
           {jobs && jobs.length > 0 && (
             <p className="mt-4 text-xs font-medium text-slate-400">
