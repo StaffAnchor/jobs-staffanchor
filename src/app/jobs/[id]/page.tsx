@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getOpenJob, logQuickApplyClick, categoryLabel, budgetLabel, experienceLabel, type JobListing } from "@/modules/jobs/api";
 import ApplyForm from "@/modules/apply/ApplyForm";
+import SignedInApplyCard from "@/modules/apply/SignedInApplyCard";
+import { supabase } from "@/lib/supabaseClient";
 
 function bulletList(value: string) {
   return value
@@ -22,12 +24,33 @@ export default function QuickApplyPage() {
   const mandateId = params.id;
 
   const [job, setJob] = useState<JobListing | null | undefined>(undefined);
+  // Recognize a persisted session the same way the navbar already does
+  // (see components/layout/navbar.tsx) -- a signed-in candidate should never
+  // hit the anonymous Apply form again, same as re-visiting Naukri while
+  // still logged in drops you straight onto your own homepage instead of a
+  // signup screen. `null` means "still checking", so we don't flash the
+  // anonymous form for a split second before the session resolves.
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
     getOpenJob(mandateId)
       .then(setJob)
       .catch(() => setJob(null));
   }, [mandateId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!cancelled) setSignedIn(!!data.user);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSignedIn(!!session?.user);
+    });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   if (job === undefined) {
     return (
@@ -191,7 +214,15 @@ export default function QuickApplyPage() {
     <div className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
       <Card id="apply-form" className="mt-6 scroll-mt-24">
         <CardContent className="p-5 sm:p-6">
-          <ApplyForm source="quick_apply" mandateId={mandateId} mandateTitle={job.role_title ?? undefined} />
+          {signedIn === null ? (
+            <div className="flex justify-center py-16">
+              <Spinner />
+            </div>
+          ) : signedIn ? (
+            <SignedInApplyCard mandateId={mandateId} mandateTitle={job.role_title ?? undefined} />
+          ) : (
+            <ApplyForm source="quick_apply" mandateId={mandateId} mandateTitle={job.role_title ?? undefined} />
+          )}
         </CardContent>
       </Card>
     </div>
