@@ -874,18 +874,30 @@ export default function ApplyForm({
   source = "build_profile",
   mandateTitle,
   mandateId,
+  initialEmail,
 }: {
   existingProfile?: ExistingProfile;
   onSaved?: () => void;
   source?: ApplyFormSource;
   mandateTitle?: string;
   mandateId?: string;
+  // Seeds Stage 1A's email field. Used by EmailGate -- by the time this
+  // component mounts for an anonymous visitor, the gate has already
+  // confirmed this email has no existing profile, so there's no need to
+  // make them type it a second time. ApplyForm's own existingCheck effect
+  // still runs as a defensive backstop in case they edit it to something
+  // that does exist.
+  initialEmail?: string;
 } = {}) {
   const router = useRouter();
   const isEditMode = !!existingProfile;
   const [step, setStep] = useState(0);
   const [values, setValues] = useState<FormState>(() =>
-    existingProfile ? buildFormStateFromProfile(existingProfile) : initialState
+    existingProfile
+      ? buildFormStateFromProfile(existingProfile)
+      : initialEmail
+        ? { ...initialState, email: initialEmail }
+        : initialState
   );
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const hasExistingResume = !!existingProfile?.resume_file_url;
@@ -2624,7 +2636,10 @@ export default function ApplyForm({
                     Please log in to view or update it{existingCheck.alreadyApplied ? " and see your application status" : ""}.
                   </p>
                   <a
-                    href={`/candidate-login${values.email.trim() ? `?email=${encodeURIComponent(values.email.trim())}` : ""}`}
+                    href={`/candidate-login?${new URLSearchParams({
+                      ...(values.email.trim() ? { email: values.email.trim() } : {}),
+                      ...(mandateId ? { returnTo: `/jobs/${mandateId}` } : {}),
+                    }).toString()}`}
                     className="mt-3 inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
                   >
                     Login

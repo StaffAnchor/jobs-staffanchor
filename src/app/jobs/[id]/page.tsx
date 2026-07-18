@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Briefcase, IndianRupee, MapPin, Zap } from "lucide-react";
+import { ArrowLeft, Briefcase, CheckCircle2, IndianRupee, MapPin, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getOpenJob, logQuickApplyClick, categoryLabel, budgetLabel, experienceLabel, type JobListing } from "@/modules/jobs/api";
 import ApplyForm from "@/modules/apply/ApplyForm";
 import SignedInApplyCard from "@/modules/apply/SignedInApplyCard";
+import EmailGate from "@/modules/apply/EmailGate";
 import { supabase } from "@/lib/supabaseClient";
 
 function bulletList(value: string) {
@@ -31,6 +32,15 @@ export default function QuickApplyPage() {
   // signup screen. `null` means "still checking", so we don't flash the
   // anonymous form for a split second before the session resolves.
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  // Once a signed-in candidate is confirmed, resolved separately (and ahead
+  // of SignedInApplyCard mounting) purely so the header/sidebar CTA can show
+  // "Applied" immediately instead of only after they open the apply panel --
+  // Naukri shows this the instant the page loads, not after an extra click.
+  const [appliedAlready, setAppliedAlready] = useState(false);
+  // Anonymous visitor only: set once EmailGate has confirmed this email has
+  // no existing profile, so ApplyForm can mount pre-filled instead of asking
+  // for the email a second time.
+  const [gateEmail, setGateEmail] = useState<string | null>(null);
 
   useEffect(() => {
     getOpenJob(mandateId)
@@ -51,6 +61,31 @@ export default function QuickApplyPage() {
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: candidateId } = await supabase.rpc("get_or_create_my_candidate_profile");
+        if (!candidateId) return;
+        const { data: candidate } = await supabase.from("candidates").select("email").eq("id", candidateId).single();
+        if (cancelled || !candidate?.email) return;
+        const res = await fetch("/api/candidate-lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: candidate.email, mandateId }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!cancelled) setAppliedAlready(!!json.alreadyApplied);
+      } catch {
+        // best-effort only -- SignedInApplyCard's own check is authoritative
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn, mandateId]);
 
   if (job === undefined) {
     return (
@@ -111,13 +146,19 @@ export default function QuickApplyPage() {
             </span>
           )}
         </div>
-        <a
-          href="#apply-form"
-          onClick={() => logQuickApplyClick(mandateId)}
-          className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-blue-700 shadow-md transition hover:bg-blue-50"
-        >
-          <Zap className="h-4 w-4" /> Apply
-        </a>
+        {signedIn && appliedAlready ? (
+          <span className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md">
+            <CheckCircle2 className="h-4 w-4" /> Applied
+          </span>
+        ) : (
+          <a
+            href="#apply-form"
+            onClick={() => logQuickApplyClick(mandateId)}
+            className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-blue-700 shadow-md transition hover:bg-blue-50"
+          >
+            <Zap className="h-4 w-4" /> Apply
+          </a>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -194,13 +235,19 @@ export default function QuickApplyPage() {
                 <dd className="font-medium text-slate-800">{categoryLabel(job.category)}</dd>
               </div>
             </dl>
-            <a
-              href="#apply-form"
-              onClick={() => logQuickApplyClick(mandateId)}
-              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
-            >
-              <Zap className="h-4 w-4" /> Apply
-            </a>
+            {signedIn && appliedAlready ? (
+              <span className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md">
+                <CheckCircle2 className="h-4 w-4" /> Applied
+              </span>
+            ) : (
+              <a
+                href="#apply-form"
+                onClick={() => logQuickApplyClick(mandateId)}
+                className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-90"
+              >
+                <Zap className="h-4 w-4" /> Apply
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -220,8 +267,15 @@ export default function QuickApplyPage() {
             </div>
           ) : signedIn ? (
             <SignedInApplyCard mandateId={mandateId} mandateTitle={job.role_title ?? undefined} />
+          ) : gateEmail === null ? (
+            <EmailGate mandateId={mandateId} mandateTitle={job.role_title ?? undefined} onNewCandidate={setGateEmail} />
           ) : (
-            <ApplyForm source="quick_apply" mandateId={mandateId} mandateTitle={job.role_title ?? undefined} />
+            <ApplyForm
+              source="quick_apply"
+              mandateId={mandateId}
+              mandateTitle={job.role_title ?? undefined}
+              initialEmail={gateEmail}
+            />
           )}
         </CardContent>
       </Card>

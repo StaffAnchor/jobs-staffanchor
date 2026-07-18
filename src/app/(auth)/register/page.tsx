@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ApplyForm, { type ExistingProfile } from "@/modules/apply/ApplyForm";
+import EmailGate from "@/modules/apply/EmailGate";
 import { supabase } from "@/lib/supabaseClient";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -27,6 +28,11 @@ function RegisterForm() {
 
   const [loading, setLoading] = useState(true);
   const [existingProfile, setExistingProfile] = useState<ExistingProfile | undefined>(undefined);
+  // Same email-first gate as the job Apply flow (EmailGate.tsx) -- only
+  // relevant for the plain, no-`ref` visit (a `ref` link is a recruiter
+  // handing a specific candidate a direct completion link, which already
+  // knows who they are and shouldn't re-ask).
+  const [gateEmail, setGateEmail] = useState<string | null>(null);
 
   // A signed-in candidate landing here (old bookmark, the "sign up for
   // future openings" link, whatever) has already registered -- send them to
@@ -69,5 +75,13 @@ function RegisterForm() {
     );
   }
 
-  return <ApplyForm existingProfile={existingProfile} />;
+  if (!ref && !existingProfile && gateEmail === null) {
+    return (
+      <div className="px-4 py-12 sm:px-6">
+        <EmailGate onNewCandidate={setGateEmail} />
+      </div>
+    );
+  }
+
+  return <ApplyForm existingProfile={existingProfile} initialEmail={gateEmail ?? undefined} />;
 }

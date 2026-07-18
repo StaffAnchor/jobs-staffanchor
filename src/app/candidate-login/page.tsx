@@ -13,15 +13,23 @@ export default function CandidateLoginPage() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [returnTo, setReturnTo] = useState<string | null>(null);
 
   // Prefills from ?email=... when arriving via the "sign up for future
   // openings" link after an Apply submission, or via the "Login" button on
   // the already-registered block in ApplyForm -- read off window.location
   // directly (rather than useSearchParams) so this plain client component
-  // doesn't need a Suspense boundary for static export.
+  // doesn't need a Suspense boundary for static export. ?returnTo=... carries
+  // "which job were you trying to apply to" so, after verifying, they land
+  // back there instead of a generic dashboard -- same idea as EmailGate's own
+  // redirectTo, just for the case where they reached this standalone page
+  // directly rather than through the inline gate.
   useEffect(() => {
-    const prefill = new URLSearchParams(window.location.search).get("email");
+    const params = new URLSearchParams(window.location.search);
+    const prefill = params.get("email");
     if (prefill) setEmail(prefill);
+    const rt = params.get("returnTo");
+    if (rt && rt.startsWith("/")) setReturnTo(rt);
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -56,7 +64,7 @@ export default function CandidateLoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
-        emailRedirectTo: `${window.location.origin}/candidate-portal`,
+        emailRedirectTo: `${window.location.origin}${returnTo ?? "/candidate-portal"}`,
       },
     });
     setSending(false);
