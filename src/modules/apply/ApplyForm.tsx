@@ -2254,6 +2254,20 @@ export default function ApplyForm({
             <Clock className="h-3.5 w-3.5" />
             Estimated time {minutesLeft}-{minutesLeft + 2} min
           </span>
+          {/* Need Help used to be its own card wedged between the completion
+              widget and the profile preview, breaking the left-to-right
+              reading flow of the top row. It's a low-frequency escape hatch,
+              not a step in the profile-building flow, so it now lives here
+              as a plain pill alongside the other status indicators. */}
+          <a
+            href="https://www.staffanchor.com/contact"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-slate-500 shadow-sm ring-1 ring-slate-100 transition hover:text-blue-700 hover:ring-blue-200"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+            Need help? Chat with us
+          </a>
         </div>
 
         {!(submitted && !isEditMode) && (
@@ -2266,174 +2280,256 @@ export default function ApplyForm({
         >
           <aside className={isEditMode ? "contents" : "space-y-4 lg:sticky lg:top-6"}>
             <Card
-              className={`${isEditMode ? "order-1 flex h-full flex-col lg:col-span-2 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+              className={`${isEditMode ? "order-1 flex h-full flex-col lg:col-span-3 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
             >
               <CardContent className={`space-y-4 py-5${isEditMode ? " flex h-full flex-col" : ""}`}>
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-slate-900">Passport Readiness</p>
+                  <p className="text-sm font-semibold text-slate-900">{isEditMode ? "Profile Completion" : "Passport Readiness"}</p>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${readinessMeta.chipBg} ${readinessMeta.chipText}`}>
                     {readinessTier}
                   </span>
                 </div>
-                <div className="flex gap-1">
-                  {(["Basic", "Good", "Excellent", "Premium"] as const).map((tier, i) => {
-                    const tierOrder = ["Basic", "Good", "Excellent", "Premium"];
-                    const reached = tierOrder.indexOf(readinessTier) >= i;
-                    return (
-                      <div
-                        key={tier}
-                        className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${
-                          reached ? "bg-blue-600" : "bg-slate-200"
-                        }`}
-                      />
-                    );
-                  })}
-                </div>
+
+                {/* Edit mode: this card now absorbs what used to be a
+                    separate "Score" card (the % ring + segmented
+                    composition bar) so there's exactly one gamification
+                    widget instead of two showing the same tier twice. The
+                    wizard (non-edit) view keeps its original tier-progress
+                    bar unchanged below. */}
+                {isEditMode ? (
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full transition-all duration-500"
+                      style={{ background: `conic-gradient(${readinessMeta.ring} ${profileStrength * 3.6}deg, #e2e8f0 0deg)` }}
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-sm font-bold text-slate-900">
+                        {profileStrength}%
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      {missingStages.length === 0 ? (
+                        <p className="text-xs leading-5 text-slate-500">{readinessMeta.blurb}</p>
+                      ) : (
+                        <>
+                          <p className="text-xs font-semibold text-slate-700">
+                            Complete your profile to get maximum recruiter attention
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-slate-400">
+                            {missingStages.length} section{missingStages.length > 1 ? "s" : ""} still pending — click any below to fix it
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-1">
+                    {(["Basic", "Good", "Excellent", "Premium"] as const).map((tier, i) => {
+                      const tierOrder = ["Basic", "Good", "Excellent", "Premium"];
+                      const reached = tierOrder.indexOf(readinessTier) >= i;
+                      return (
+                        <div
+                          key={tier}
+                          className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${
+                            reached ? "bg-blue-600" : "bg-slate-200"
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+
+                {isEditMode && (
+                  <div>
+                    <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                      {ALL_STAGES.map((label, i) => {
+                        const isSkipped = !!values.category && (i === 2 || i === 3) && !isSalesCategory;
+                        if (isSkipped) return null;
+                        const done = isStageComplete(i);
+                        return (
+                          <div
+                            key={label}
+                            title={`Stage ${label} — ${STAGE_WEIGHTS[i]}% of score`}
+                            className={`h-full transition-colors duration-500 ${done ? "bg-emerald-500" : "bg-slate-200"}`}
+                            style={{ width: `${STAGE_WEIGHTS[i]}%` }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-400">
+                      {ALL_STAGES.map((label, i) => {
+                        const isSkipped = !!values.category && (i === 2 || i === 3) && !isSalesCategory;
+                        if (isSkipped) return null;
+                        return (
+                          <span key={label}>
+                            Stage {label} · {STAGE_WEIGHTS[i]}%
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <p className="text-xs text-slate-500">
                   {isEditMode
                     ? "All sections editable — click any to open it"
                     : `Stage ${ALL_STAGES[stageIndex]} — step ${step + 1} of ${stepSequence.length}`}
                 </p>
-                <ul className="space-y-0">
-                  {ALL_STAGES.map((label, i) => {
-                    // Non-Sales candidates skip Stage 2 and Stage 3 entirely
-                    // (spec section 6) -- goNext()/goBack() already jump over
-                    // them via `stepSequence`, so the step list should say so
-                    // rather than showing a stage they'll never land on as
-                    // "Pending" forever.
-                    const isSkipped = (i === 2 || i === 3) && !isSalesCategory;
-                    const posInSequence = stepSequence.indexOf(i);
-                    // Edit mode has no "current step" concept (it's one
-                    // continuous page, not a wizard) -- completion there is
-                    // computed from real field data via isStageComplete()
-                    // instead of the wizard's step position, otherwise every
-                    // stage but the first showed "Pending" forever regardless
-                    // of how much was actually filled in.
-                    const isCurrent = !isEditMode && posInSequence === step;
-                    const isDone = isEditMode ? isStageComplete(i) : posInSequence >= 0 && posInSequence < step;
-                    const content = (
-                      <>
-                        <div className="flex flex-col items-center">
-                          <div
-                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                              isSkipped
-                                ? "bg-slate-100 text-slate-400"
-                                : isDone
-                                  ? "bg-emerald-500 text-white"
-                                  : isCurrent
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-slate-200 text-slate-500"
-                            }`}
-                          >
-                            {isSkipped ? "–" : isDone ? "✓" : label}
-                          </div>
-                          {i < ALL_STAGES.length - 1 && (
-                            <div className={`w-px flex-1 ${isDone ? "bg-emerald-300" : "bg-slate-200"}`} style={{ minHeight: 24 }} />
-                          )}
-                        </div>
-                        <div className="pb-4">
-                          <p
-                            className={`text-sm ${
-                              isSkipped
-                                ? "text-slate-300 line-through"
-                                : isCurrent
-                                  ? "font-semibold text-blue-600"
-                                  : isDone
-                                    ? "text-slate-700"
-                                    : "text-slate-400"
-                            }`}
-                          >
-                            Stage {label} — {STAGE_META[i].eyebrow.replace(/^Stage \S+ — /, "")}
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            {isSkipped ? "Not applicable" : isDone ? "Completed" : isCurrent ? "In Progress" : "Pending"}
-                          </p>
-                        </div>
-                      </>
-                    );
-                    if (isEditMode && !isSkipped) {
+                {isEditMode ? (
+                  // Edit mode: each section is a clear, self-contained
+                  // interactive button -- amber "Fix →" for anything still
+                  // missing, a quiet green "Done" pill for what's already
+                  // complete -- instead of the wizard's vertical timeline
+                  // rail, which reads more like a passive status list than
+                  // something you're meant to click.
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {ALL_STAGES.map((label, i) => {
+                      const isSkipped = !!values.category && (i === 2 || i === 3) && !isSalesCategory;
+                      if (isSkipped) return null;
+                      const done = isStageComplete(i);
                       return (
-                        <li key={label}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setOpenSection(label);
-                              // Scroll after the section's fields have had a
-                              // chance to render -- scrolling synchronously
-                              // (like a plain anchor href would) targets the
-                              // element's pre-open position and reads as
-                              // "broken" once the layout reflows underneath it.
-                              requestAnimationFrame(() => {
-                                document.getElementById(`stage-${label}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                              });
-                            }}
-                            className="flex w-full gap-3 rounded-lg text-left transition-colors hover:bg-slate-50"
-                          >
-                            {content}
-                          </button>
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => {
+                            setOpenSection(label);
+                            requestAnimationFrame(() => {
+                              document.getElementById(`stage-${label}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                            });
+                          }}
+                          className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left text-xs font-medium transition ${
+                            done
+                              ? "border-emerald-100 bg-emerald-50/50 text-emerald-800 hover:border-emerald-200"
+                              : "border-amber-100 bg-amber-50/60 text-amber-800 hover:border-amber-200 hover:bg-amber-50"
+                          }`}
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span
+                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                                done ? "bg-emerald-500 text-white" : "bg-white text-amber-600 ring-1 ring-amber-200"
+                              }`}
+                            >
+                              {done ? "✓" : label}
+                            </span>
+                            <span className="truncate">{STAGE_META[i].eyebrow.replace(/^Stage \S+ — /, "")}</span>
+                          </span>
+                          <span className={`shrink-0 ${done ? "text-emerald-600" : "text-amber-500"}`}>
+                            {done ? "Done" : "Fix →"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStage4Open(true);
+                        requestAnimationFrame(() => {
+                          document.getElementById("stage-4")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        });
+                      }}
+                      className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left text-xs font-medium transition ${
+                        hasStage4Data
+                          ? "border-emerald-100 bg-emerald-50/50 text-emerald-800 hover:border-emerald-200"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                            hasStage4Data ? "bg-emerald-500 text-white" : "bg-white text-slate-400 ring-1 ring-slate-200"
+                          }`}
+                        >
+                          {hasStage4Data ? "✓" : "4"}
+                        </span>
+                        <span className="truncate">Optional Depth</span>
+                      </span>
+                      <span className={`shrink-0 ${hasStage4Data ? "text-emerald-600" : "text-slate-400"}`}>
+                        {hasStage4Data ? "Done" : "Optional"}
+                      </span>
+                    </button>
+                  </div>
+                ) : (
+                  <ul className="space-y-0">
+                    {ALL_STAGES.map((label, i) => {
+                      // Non-Sales candidates skip Stage 2 and Stage 3 entirely
+                      // (spec section 6) -- goNext()/goBack() already jump over
+                      // them via `stepSequence`, so the step list should say so
+                      // rather than showing a stage they'll never land on as
+                      // "Pending" forever.
+                      const isSkipped = (i === 2 || i === 3) && !isSalesCategory;
+                      const posInSequence = stepSequence.indexOf(i);
+                      const isCurrent = posInSequence === step;
+                      const isDone = posInSequence >= 0 && posInSequence < step;
+                      return (
+                        <li key={label} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div
+                              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                isSkipped
+                                  ? "bg-slate-100 text-slate-400"
+                                  : isDone
+                                    ? "bg-emerald-500 text-white"
+                                    : isCurrent
+                                      ? "bg-blue-600 text-white"
+                                      : "bg-slate-200 text-slate-500"
+                              }`}
+                            >
+                              {isSkipped ? "–" : isDone ? "✓" : label}
+                            </div>
+                            {i < ALL_STAGES.length - 1 && (
+                              <div className={`w-px flex-1 ${isDone ? "bg-emerald-300" : "bg-slate-200"}`} style={{ minHeight: 24 }} />
+                            )}
+                          </div>
+                          <div className="pb-4">
+                            <p
+                              className={`text-sm ${
+                                isSkipped
+                                  ? "text-slate-300 line-through"
+                                  : isCurrent
+                                    ? "font-semibold text-blue-600"
+                                    : isDone
+                                      ? "text-slate-700"
+                                      : "text-slate-400"
+                              }`}
+                            >
+                              Stage {label} — {STAGE_META[i].eyebrow.replace(/^Stage \S+ — /, "")}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              {isSkipped ? "Not applicable" : isDone ? "Completed" : isCurrent ? "In Progress" : "Pending"}
+                            </p>
+                          </div>
                         </li>
                       );
-                    }
-                    return (
-                      <li key={label} className="flex gap-3">
-                        {content}
-                      </li>
-                    );
-                  })}
-                  {isEditMode && (
-                    <li>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStage4Open(true);
-                          requestAnimationFrame(() => {
-                            document.getElementById("stage-4")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                          });
-                        }}
-                        className="flex w-full gap-3 rounded-lg text-left transition-colors hover:bg-slate-50"
-                      >
-                        <div className="flex flex-col items-center">
-                          <div
-                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                              hasStage4Data ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-500"
-                            }`}
-                          >
-                            {hasStage4Data ? "✓" : "4"}
-                          </div>
-                        </div>
-                        <div>
-                          <p className={`text-sm ${hasStage4Data ? "text-slate-700" : "text-slate-400"}`}>
-                            Stage 4 — Optional Depth
-                          </p>
-                          <p className="text-xs text-slate-400">{hasStage4Data ? "Completed" : "Optional"}</p>
-                        </div>
-                      </button>
-                    </li>
-                  )}
-                </ul>
+                    })}
+                  </ul>
+                )}
               </CardContent>
             </Card>
 
-            <Card
-              className={`${isEditMode ? "order-2 flex h-full flex-col " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
-            >
-              <CardContent
-                className={`space-y-3 py-5 text-center${isEditMode ? " flex h-full flex-col items-center justify-center" : ""}`}
-              >
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                  <HelpCircle className="h-5 w-5" />
-                </div>
-                <p className="text-sm font-semibold text-slate-900">Need Help?</p>
-                <p className="text-xs leading-5 text-slate-500">
-                  Our team is here to help you build the perfect profile.
-                </p>
-                <a href="https://www.staffanchor.com/contact" target="_blank" rel="noreferrer" className="w-full">
-                  <Button variant="outline" className="w-full">
-                    Chat with Us
-                  </Button>
-                </a>
-              </CardContent>
-            </Card>
+            {/* In edit mode (My Profile) this card is replaced by the plain
+                "Need help?" pill up in the top status row -- a standalone
+                card here sat wedged between the completion widget and the
+                profile preview, breaking the left-to-right scan of the row.
+                The step-by-step wizard (not edit mode) keeps the original
+                card since it's the only thing in that column besides
+                Passport Readiness. */}
+            {!isEditMode && (
+              <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
+                <CardContent className="space-y-3 py-5 text-center">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                    <HelpCircle className="h-5 w-5" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900">Need Help?</p>
+                  <p className="text-xs leading-5 text-slate-500">
+                    Our team is here to help you build the perfect profile.
+                  </p>
+                  <a href="https://www.staffanchor.com/contact" target="_blank" rel="noreferrer" className="w-full">
+                    <Button variant="outline" className="w-full">
+                      Chat with Us
+                    </Button>
+                  </a>
+                </CardContent>
+              </Card>
+            )}
           </aside>
 
         <Card
@@ -2499,7 +2595,7 @@ export default function ApplyForm({
             </ProfileSummaryCard>
           )}
           {isEditMode && openSection === "1A" && (
-            <p className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p id="stage-1A" className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Stage 1 — Core Details
             </p>
           )}
@@ -2827,7 +2923,7 @@ export default function ApplyForm({
             </ProfileSummaryCard>
           )}
           {isEditMode && openSection === "1B" && (
-            <p className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p id="stage-1B" className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Stage 1B — Extended Core
             </p>
           )}
@@ -3409,7 +3505,7 @@ export default function ApplyForm({
             </ProfileSummaryCard>
           )}
           {isEditMode && isSalesCategory && openSection === "2" && (
-            <p className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p id="stage-2" className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Stage 2 — Profile-Type-Specific
             </p>
           )}
@@ -3585,7 +3681,7 @@ export default function ApplyForm({
             </ProfileSummaryCard>
           )}
           {isEditMode && isSalesCategory && openSection === "3" && (
-            <p className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p id="stage-3" className="scroll-mt-24 border-t border-slate-100 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
               Stage 3 — Revenue Snapshot
             </p>
           )}
@@ -3813,7 +3909,7 @@ export default function ApplyForm({
 
         <aside className={isEditMode ? "contents" : "space-y-4 lg:sticky lg:top-6"}>
           <Card
-            className={`${isEditMode ? "order-3 flex h-full flex-col " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
+            className={`${isEditMode ? "order-2 flex h-full flex-col lg:col-span-2 " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
           >
             <CardContent className={`space-y-3 py-5${isEditMode ? " flex h-full flex-col" : ""}`}>
               <div className="flex items-center justify-between">
@@ -3879,10 +3975,15 @@ export default function ApplyForm({
             </CardContent>
           </Card>
 
-          <Card
-            className={`${isEditMode ? "order-4 flex h-full flex-col " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
-          >
-            <CardContent className={`space-y-4 py-5${isEditMode ? " flex h-full flex-col" : ""}`}>
+          {/* Edit mode: this card's content (ring, missing-sections list,
+              composition bar) now lives inside the merged "Profile
+              Completion" card at the top of the page, so it no longer
+              renders here in edit mode -- avoids showing the same tier
+              chip ("Excellent") twice on one screen. The step-by-step
+              wizard sidebar is unchanged. */}
+          {!isEditMode && (
+          <Card className="rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]">
+            <CardContent className="space-y-4 py-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-900">Score</p>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${readinessMeta.chipBg} ${readinessMeta.chipText}`}>
@@ -3966,11 +4067,12 @@ export default function ApplyForm({
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Previously a full-height column card for two sentences -- now a
               compact inline note instead of matching the height of the
               substantive cards next to it. */}
-          <div className={`${isEditMode ? "order-5 self-start" : ""} flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-2.5`}>
+          <div className={`${isEditMode ? "order-3 self-start" : ""} flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-2.5`}>
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-500" />
             <p className="text-xs leading-5 text-slate-500">
               <span className="font-medium text-slate-600">Why we ask this — </span>
