@@ -551,6 +551,81 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
     roleLevel: seg(sd, "role_level"),
     roleType: roleTypeRaw === "Team Lead" ? "Leading a Team" : roleTypeRaw === "IC" ? "Individual Contributor (IC)" : "",
     teamSize: seg(sd, "team_size"),
+    // Previously missing entirely from this prefill -- languagesKnown,
+    // relocationPreferredCities, and the whole Stage 2 (Sales Motion detail)
+    // / Stage 3 (Revenue Snapshot) block were saved correctly by handleSubmit
+    // but never read back out of segment_data when re-opening My Profile, so
+    // the edit-mode form (and therefore isStageComplete/Passport Readiness)
+    // saw them as blank even though the database had real data. This block
+    // mirrors handleSubmit's segmentData assembly in reverse.
+    languagesKnown: segArr(sd, "languages_known"),
+    customLanguage: "",
+    relocationPreferredCities: segArr(sd, "relocation_preferred_cities"),
+    customRelocationCity: "",
+    otherB2BSubDomain: seg(sd, "other_b2b_subdomain")
+      ? subDomainsForPractice("Other B2B").includes(seg(sd, "other_b2b_subdomain"))
+        ? seg(sd, "other_b2b_subdomain")
+        : "Other"
+      : "",
+    customOtherB2BSubDomain:
+      seg(sd, "other_b2b_subdomain") && !subDomainsForPractice("Other B2B").includes(seg(sd, "other_b2b_subdomain"))
+        ? seg(sd, "other_b2b_subdomain")
+        : "",
+    // Stage 2 -- B2B: b2b_sales_motion_type was stored as a single string
+    // before the multi-select conversion; accept either shape.
+    b2bSalesMotionType: (() => {
+      const raw = sd?.["b2b_sales_motion_type"];
+      if (Array.isArray(raw)) return raw.map(String);
+      return raw ? [String(raw)] : [];
+    })(),
+    aeSellingStyle: seg(sd, "style"),
+    aeDealSizeBand: seg(sd, "deal_size"),
+    aeDealSizeCurrency: seg(sd, "deal_size_currency") as CurrencyValue | "",
+    aeSalesCycle: seg(sd, "cycle"),
+    aeBuyerPersona: seg(sd, "buyer_persona"),
+    // Stage 2 -- B2C
+    b2cSalesMotion: (() => {
+      const raw = sd?.["motion"];
+      if (Array.isArray(raw)) return raw.map(String);
+      return raw ? [String(raw)] : [];
+    })(),
+    b2cTicketBand: seg(sd, "ticket"),
+    b2cTicketCurrency: seg(sd, "ticket_currency") as CurrencyValue | "",
+    // Stage 3 -- Revenue Snapshot
+    ...(() => {
+      const rs = (sd?.["revenue_snapshot"] ?? null) as Record<string, unknown> | null;
+      return {
+        revenuePeriod: (seg(rs, "period") as RevenuePeriodValue | ""),
+        revenueTarget: seg(rs, "target"),
+        revenueTargetCurrency: (seg(rs, "target_currency") as CurrencyValue | ""),
+        revenueAchievement: seg(rs, "achievement"),
+        hasIndividualQuota: seg(rs, "has_individual_quota") as "" | "Yes" | "No",
+        individualTarget: seg(rs, "individual_target"),
+        individualTargetCurrency: (seg(rs, "individual_target_currency") as CurrencyValue | ""),
+        individualAchievement: seg(rs, "individual_achievement"),
+      };
+    })(),
+    // isFresher was never persisted or re-derived on prefill either -- an
+    // employed candidate reopening My Profile always saw the fresher toggle
+    // unset, which alone was enough to make isStageComplete(1) return false
+    // regardless of everything else on the profile.
+    isFresher: (p.current_employer ? "No" : sd && "has_internship" in sd ? "Yes" : "") as "" | "Yes" | "No",
+    hasInternship: seg(sd, "has_internship") as "" | "Yes" | "No",
+    internshipCompany: seg((sd?.["internship"] ?? null) as Record<string, unknown> | null, "company"),
+    internshipRole: seg((sd?.["internship"] ?? null) as Record<string, unknown> | null, "role"),
+    internshipDuration: seg((sd?.["internship"] ?? null) as Record<string, unknown> | null, "duration"),
+    internshipDescription: seg((sd?.["internship"] ?? null) as Record<string, unknown> | null, "description"),
+    // Stage 4 -- optional depth, also previously dropped on prefill
+    promotionHistory: seg(sd, "promotion_history") as "" | "Yes" | "No",
+    promotionDescription: seg(sd, "promotion_description"),
+    crmTools: segArr(sd, "crm_tools"),
+    customCrmTool: "",
+    motionType: seg(sd, "motion_type"),
+    customerSegmentSold: segArr(sd, "customer_segment_sold"),
+    productLinesBrands: seg(sd, "product_lines_brands"),
+    technicalCertifications: seg(sd, "technical_certifications"),
+    tenderRfpExperience: seg(sd, "tender_rfp_experience") as "" | "Yes" | "No",
+    tenderRfpDescription: seg(sd, "tender_rfp_description"),
     // Deal size, sales cycle, selling style, motion, segment, scope,
     // inside-sales detail, quarterly targets/achievement, and best-win/
     // missed-target are no longer separate global FormState fields (Round 8)
@@ -1309,6 +1384,26 @@ export default function ApplyForm({
     },
   };
   const readinessMeta = READINESS_META[readinessTier];
+
+  // Plain-language, clickable "what's left" list for the Score card -- reuses
+  // the exact same isStageComplete/setOpenSection/scroll mechanism the left
+  // Passport Readiness rail already uses, so clicking an item here opens that
+  // section for editing instead of just naming it.
+  const STAGE_SHORT_LABELS = ["Basic details & resume", "Experience & preferences", "Sales specialization", "Revenue snapshot"];
+  const missingStages = ALL_STAGES.map((label, i) => ({ label, short: STAGE_SHORT_LABELS[i], index: i }))
+    .filter(({ index }) => {
+      const isSkipped = !!values.category && (index === 2 || index === 3) && !isSalesCategory;
+      if (isSkipped) return false;
+      return !isStageComplete(index);
+    });
+  function openMissingSection(label: string) {
+    if (isEditMode) {
+      setOpenSection(label);
+      setTimeout(() => document.getElementById(`stage-${label}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    } else {
+      setStep(stepSequence.indexOf(ALL_STAGES.indexOf(label as (typeof ALL_STAGES)[number])));
+    }
+  }
 
   function addCustomSkill(skillOverride?: string) {
     const skill = (skillOverride ?? values.customSkill).trim();
@@ -3737,6 +3832,42 @@ export default function ApplyForm({
                   {values.currentLocation && <p className="truncate text-xs text-slate-400">{values.currentLocation}</p>}
                 </div>
               </div>
+              {/* Previously just avatar/name/title/location -- expanded with a
+                  few more at-a-glance facts (mirroring what a recruiter would
+                  actually scan first) so this card reads as an actual preview
+                  rather than a near-empty stub. */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-slate-100 pt-3 text-xs">
+                <div>
+                  <p className="text-slate-400">Experience</p>
+                  <p className="truncate font-medium text-slate-700">
+                    {values.isFresher === "Yes"
+                      ? "Fresher"
+                      : values.totalExperienceYears
+                        ? `${values.totalExperienceYears} yrs`
+                        : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Notice Period</p>
+                  <p className="truncate font-medium text-slate-700">{values.noticePeriod || "—"}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-slate-400">Specialization</p>
+                  <p className="truncate font-medium text-slate-700">
+                    {values.subDomain === "Other" ? values.customSubDomain : values.subDomain || "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Expected CTC</p>
+                  <p className="truncate font-medium text-slate-700">
+                    {values.expectedFixedCtc ? `₹${values.expectedFixedCtc}L` : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Work Mode</p>
+                  <p className="truncate font-medium text-slate-700">{values.workMode || "—"}</p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setStep(0)}
@@ -3769,8 +3900,35 @@ export default function ApplyForm({
                     {profileStrength}%
                   </div>
                 </div>
-                <p className="text-xs leading-5 text-slate-500">{readinessMeta.blurb}</p>
+                <div className="min-w-0 flex-1">
+                  {missingStages.length === 0 ? (
+                    <p className="text-xs leading-5 text-slate-500">{readinessMeta.blurb}</p>
+                  ) : (
+                    <>
+                      <p className="text-xs font-semibold text-slate-700">
+                        Complete your profile to get maximum recruiter attention
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-400">Still pending:</p>
+                    </>
+                  )}
+                </div>
               </div>
+              {missingStages.length > 0 && (
+                <ul className="space-y-1">
+                  {missingStages.map(({ label, short }) => (
+                    <li key={label}>
+                      <button
+                        type="button"
+                        onClick={() => openMissingSection(label)}
+                        className="flex w-full items-center justify-between rounded-lg border border-amber-100 bg-amber-50/60 px-2.5 py-1.5 text-left text-xs font-medium text-amber-800 transition hover:border-amber-200 hover:bg-amber-50"
+                      >
+                        {short}
+                        <span className="text-amber-500">Fix →</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               {/* Composition of the score, not a repeat of the left rail's
                   per-stage checklist -- this shows how much each stage is
                   *worth* toward the 100%, as one segmented bar, rather than
@@ -3809,17 +3967,16 @@ export default function ApplyForm({
             </CardContent>
           </Card>
 
-          <Card
-            className={`${isEditMode ? "order-5 flex h-full flex-col " : ""}rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]`}
-          >
-            <CardContent className={`space-y-2 py-5${isEditMode ? " flex h-full flex-col justify-center" : ""}`}>
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-blue-600" />
-                <p className="text-sm font-semibold text-slate-900">Why we ask this</p>
-              </div>
-              <p className="text-sm leading-6 text-slate-600">{STAGE_TIPS[stageIndex]}</p>
-            </CardContent>
-          </Card>
+          {/* Previously a full-height column card for two sentences -- now a
+              compact inline note instead of matching the height of the
+              substantive cards next to it. */}
+          <div className={`${isEditMode ? "order-5 self-start" : ""} flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-2.5`}>
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-500" />
+            <p className="text-xs leading-5 text-slate-500">
+              <span className="font-medium text-slate-600">Why we ask this — </span>
+              {STAGE_TIPS[stageIndex]}
+            </p>
+          </div>
         </aside>
         </div>
         )}
