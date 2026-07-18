@@ -28,12 +28,12 @@ const profileHighlights = [
 const journey = [
   {
     step: "01",
-    title: "Build your profile",
+    title: "Share your basics",
     description: "No account or password needed — share your details in one guided flow, in about 10 minutes.",
   },
   {
     step: "02",
-    title: "Build a complete profile",
+    title: "Add your sales story",
     description: "Add experience, metrics, skills, preferred locations, and salary expectations in one structured flow.",
   },
   {
@@ -88,22 +88,22 @@ export default function Home() {
         <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(15,23,42,0.02),transparent_45%,rgba(20,184,166,0.04))]" />
         <div className="relative container-page grid gap-10 py-16 md:py-20 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:py-24">
           <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">
+            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-800">
               <Sparkles className="h-3.5 w-3.5" />
-              Sales recruitment specialists
+              B2B sales recruitment specialists
             </div>
             <div className="space-y-4">
               <h1 className="max-w-2xl font-(family-name:--font-space-grotesk) text-4xl font-black leading-tight tracking-tight text-slate-950 md:text-5xl lg:text-6xl">
                 We only recruit for sales. That&apos;s why hiring teams trust us to find you.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
-                StaffAnchor is a specialist recruitment firm for B2B and B2C sales talent — not a generic job board. Build one structured sales profile, with quota history and deal context hiring teams actually evaluate, and get discovered directly. No cold outreach, no blind applications, no noise.
+                StaffAnchor specializes in B2B sales and GTM hiring — with B2C sales expertise built in too. Build one structured sales profile, with quota history and deal context hiring teams actually evaluate, and get discovered directly. No cold outreach, no blind applications, no noise.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
               <Link href="/register">
-                <Button className="h-11 rounded-full bg-teal-600 px-6 text-sm font-semibold text-white hover:bg-teal-500">
+                <Button className="h-11 rounded-full bg-indigo-600 px-6 text-sm font-semibold text-white hover:bg-indigo-500">
                   Create Free Profile
                 </Button>
               </Link>
@@ -141,7 +141,7 @@ export default function Home() {
             <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-sky-100/70 blur-3xl" />
             <div className="relative space-y-5">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Sales profile snapshot preview</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700">Sales profile snapshot preview</p>
                 <p className="mt-2 text-sm text-slate-600">Strong sales profile with quota history, deal size, and role clarity</p>
               </div>
               <div className="grid gap-4">
@@ -250,7 +250,7 @@ export default function Home() {
 
             return (
               <Card key={group.title} className="space-y-3 p-5">
-                <div className="inline-flex rounded-xl bg-emerald-50 p-2 text-emerald-700">
+                <div className="inline-flex rounded-xl bg-indigo-50 p-2 text-indigo-700">
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="space-y-2">
@@ -290,20 +290,20 @@ export default function Home() {
       </section>
 
       <section className="container-page py-14 md:py-16">
-        <Card className="relative overflow-hidden border-slate-200 bg-[linear-gradient(135deg,#0f766e_0%,#0891b2_55%,#0f172a_100%)] p-6 text-white shadow-[0_24px_90px_-45px_rgba(15,23,42,0.8)] md:p-8">
+        <Card className="relative overflow-hidden border-slate-200 bg-[linear-gradient(135deg,#12131A_0%,#3730B3_55%,#4F46E5_100%)] p-6 text-white shadow-[0_24px_90px_-45px_rgba(15,23,42,0.8)] md:p-8">
           <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
           <div className="relative space-y-6">
             <div className="space-y-2">
               <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight md:text-4xl">
                 Ready to be discovered?
               </h2>
-              <p className="max-w-2xl text-sm leading-6 text-teal-50 md:text-base">
+              <p className="max-w-2xl text-sm leading-6 text-indigo-50 md:text-base">
                 Create your free profile today. It goes live for verified hiring teams as soon as your details are complete.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Link href="/register">
-                <Button className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-teal-800 hover:bg-teal-50">
+                <Button className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-indigo-800 hover:bg-indigo-50">
                   Create Free Profile
                 </Button>
               </Link>

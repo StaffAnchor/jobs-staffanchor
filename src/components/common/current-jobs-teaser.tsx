@@ -23,12 +23,12 @@ export function CurrentJobsTeaser() {
       <div className="container-page py-14 md:py-16">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div className="max-w-2xl space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-800">
+            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-800">
               <Briefcase className="h-3.5 w-3.5" />
               Current jobs
             </div>
             <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
-              Open roles you can quick-apply to today
+              Open roles you can apply to today
             </h2>
           </div>
           <Link href="/jobs">
@@ -43,7 +43,7 @@ export function CurrentJobsTeaser() {
         <div className="grid gap-4 md:grid-cols-3">
           {jobs?.map((job) => (
             <Card key={job.id} className="p-5 transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-sky-700">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-indigo-700">
                 {categoryLabel(job.category)}
               </p>
               <h3 className="mt-1 text-lg font-bold text-slate-950">{job.role_title ?? "Sales Role"}</h3>
