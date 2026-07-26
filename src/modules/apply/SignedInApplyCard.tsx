@@ -7,6 +7,7 @@ import { CheckCircle2, LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } from "@/modules/candidate-portal/profile-score";
+import ApplicationTimeline from "./ApplicationTimeline";
 
 // Naukri (and every other persistent-session job site) recognizes a signed-in
 // visitor the moment they land on the site again -- no re-typing an email,
@@ -34,6 +35,7 @@ export default function SignedInApplyCard({
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pipelineStage, setPipelineStage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +74,19 @@ export default function SignedInApplyCard({
       cancelled = true;
     };
   }, [mandateId]);
+
+  useEffect(() => {
+    if (!alreadyApplied && !applied) return;
+    let cancelled = false;
+    supabase.rpc("get_my_pipeline").then(({ data, error }) => {
+      if (cancelled || error || !data) return;
+      const row = (data as { mandate_id: string; stage: string }[]).find((r) => r.mandate_id === mandateId);
+      if (row) setPipelineStage(row.stage);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [alreadyApplied, applied, mandateId]);
 
   async function handleApply() {
     if (!candidate?.email) return;
@@ -135,6 +150,7 @@ export default function SignedInApplyCard({
           </Link>
           .
         </p>
+        <ApplicationTimeline stage={pipelineStage} rejected={pipelineStage === "rejected"} />
       </div>
     );
   }

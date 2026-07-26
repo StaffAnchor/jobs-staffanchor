@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Briefcase, CheckCircle2, IndianRupee, MapPin, Zap } from "lucide-react";
+import { ArrowLeft, Briefcase, CheckCircle2, IndianRupee, MapPin, Zap, ShieldCheck, PhoneCall, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -251,6 +251,33 @@ export default function QuickApplyPage() {
                 <Zap className="h-4 w-4" /> Apply
               </a>
             )}
+          </div>
+
+          {/* Proof box -- addresses the skepticism a candidate has right at
+              the moment of applying ("is this recruiter for real, will
+              anyone actually get back to me"), instead of only making that
+              case on the marketing site where a job-seeker rarely lands
+              first. */}
+          <div className="mt-5 space-y-3 border-t border-slate-100 pt-5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Why apply through us</p>
+            <div className="flex items-start gap-2">
+              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" />
+              <p className="text-[12px] leading-5 text-slate-600">
+                Every profile is verified on a real call before it reaches an employer — not just a resume in a pile.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <PhoneCall className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" />
+              <p className="text-[12px] leading-5 text-slate-600">
+                A StaffAnchor recruiter reviews your application personally — no automated rejection emails.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" />
+              <p className="text-[12px] leading-5 text-slate-600">
+                We respond to every application within 1 business day, matched or not.
+              </p>
+            </div>
           </div>
         </div>
       </div>

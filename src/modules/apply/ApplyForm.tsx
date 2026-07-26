@@ -1823,8 +1823,17 @@ export default function ApplyForm({
   // spinner/toast/step-jump side effects that make sense for an explicit,
   // user-initiated submit but would be noisy/disruptive fired automatically
   // every time an optional Stage 4 field changes.
-  async function handleSubmit(opts?: { silent?: boolean }) {
+  async function handleSubmit(opts?: { silent?: boolean; fastPath?: boolean }) {
     const silent = !!opts?.silent;
+    // Cold-apply fast path (B3): a brand-new anonymous visitor on a job page
+    // can submit with just Stage 1A (name, phone, email, resume) instead of
+    // being walked through the full wizard first -- everything else stays
+    // blank and gets flagged for follow-up the same way an incomplete
+    // profile already is elsewhere (Priority Actions Inbox, Profile Score
+    // nudges). Only skips the *validation loop*; the actual save logic below
+    // is unchanged, so a fast-path submit is a completely normal, if sparse,
+    // candidate row -- not a special-cased record.
+    const stagesToValidate = opts?.fastPath ? [0] : stepSequence;
     if (!silent) {
       // Defensive re-check of every stage that applies to this candidate, not
       // just whichever one `step` currently points to. validateStep() alone
@@ -1835,7 +1844,7 @@ export default function ApplyForm({
       // unchecked at the moment of the actual save. This is what let some
       // profiles reach the database with those fields blank despite the
       // wizard supposedly requiring them at every step.
-      for (const i of stepSequence) {
+      for (const i of stagesToValidate) {
         const err = validateStep(i);
         if (err) {
           setErrorMsg(err.message);
@@ -3918,14 +3927,28 @@ export default function ApplyForm({
                 ← Previous
               </Button>
               {!isLastStage ? (
-                <Button
-                  type="button"
-                  onClick={goNext}
-                  disabled={!!existingCheck?.exists}
-                  className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
-                >
-                  Continue →
-                </Button>
+                <div className="flex items-center gap-2">
+                  {step === 0 && source === "quick_apply" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleSubmit({ fastPath: true })}
+                      disabled={submitting || !!existingCheck?.exists}
+                      className="rounded-xl"
+                      title="Submit now with just the basics -- finish the rest of your profile anytime from My Account."
+                    >
+                      {submitting ? "Submitting..." : "Apply now, finish later"}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    onClick={goNext}
+                    disabled={!!existingCheck?.exists}
+                    className="rounded-xl bg-blue-600 px-6 shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25"
+                  >
+                    Continue →
+                  </Button>
+                </div>
               ) : (
                 <Button
                   type="button"
