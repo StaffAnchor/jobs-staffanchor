@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Briefcase, MapPin, Building2, TrendingUp, Users, ChevronRight, X, Sparkles } from "lucide-react";
+import { Briefcase, MapPin, Building2, TrendingUp, Users, ChevronRight, X, Sparkles, Search, History } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,6 +14,7 @@ import {
   timeAgo,
   type JobListing,
 } from "@/modules/jobs/api";
+import { getRecentlyViewedJobs, type RecentlyViewedJob } from "@/lib/recentlyViewed";
 
 // Icon (not a letter initial) per function/domain -- reads calmer at a
 // glance across a dense list than a wall of colored letter avatars, and
@@ -46,11 +47,14 @@ export default function JobsPage() {
   const [industry, setIndustry] = useState("");
   const [location, setLocation] = useState("");
   const [experienceBand, setExperienceBand] = useState("");
+  const [search, setSearch] = useState("");
+  const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedJob[]>([]);
 
   useEffect(() => {
     listOpenJobs()
       .then(setJobs)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load jobs."));
+    setRecentlyViewed(getRecentlyViewedJobs());
   }, []);
 
   const locations = useMemo(() => {
@@ -61,6 +65,7 @@ export default function JobsPage() {
   const filtered = useMemo(() => {
     if (!jobs) return [];
     const band = EXPERIENCE_BANDS.find((b) => b.label === experienceBand);
+    const q = search.trim().toLowerCase();
     return jobs.filter((job) => {
       if (industry && job.category !== industry) return false;
       const jobCities = job.cities && job.cities.length ? job.cities : job.city ? [job.city] : [];
@@ -70,16 +75,36 @@ export default function JobsPage() {
         const jMax = job.experience_max ?? 99;
         if (jMax < band.min || jMin > band.max) return false;
       }
+      if (q) {
+        // Single free-text box searching across everything a candidate might
+        // type instead of forcing them to pick the right dropdown first --
+        // role, client, city, and sub-domain keywords all match. Plain
+        // substring match (no new search infra) is enough at this catalog
+        // size and gets most of the "just let me type what I want" benefit.
+        const subDomains = job.sub_domains?.length ? job.sub_domains : job.sub_domain ? [job.sub_domain] : [];
+        const haystack = [
+          job.role_title,
+          job.client_display,
+          categoryLabel(job.category),
+          ...jobCities,
+          ...subDomains,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       return true;
     });
-  }, [jobs, industry, location, experienceBand]);
+  }, [jobs, industry, location, experienceBand, search]);
 
-  const hasFilters = industry || location || experienceBand;
+  const hasFilters = industry || location || experienceBand || search;
 
   function clearFilters() {
     setIndustry("");
     setLocation("");
     setExperienceBand("");
+    setSearch("");
   }
 
   return (
@@ -116,8 +141,43 @@ export default function JobsPage() {
       </section>
 
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Filter toolbar */}
+        {/* Recently viewed -- localStorage only, no account/backend needed.
+            A candidate comparing a few roles across tabs can jump back
+            without re-filtering from scratch; disappears entirely once
+            there's nothing to show, so it never eats space for a
+            first-time visitor. */}
+        {recentlyViewed.length > 0 && (
+          <div className="mb-5">
+            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <History className="h-3.5 w-3.5" /> Recently viewed
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {recentlyViewed.map((j) => (
+                <Link
+                  key={j.id}
+                  href={`/jobs/${j.id}`}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-medium text-slate-600 shadow-sm transition hover:border-indigo-200 hover:text-indigo-700"
+                >
+                  {j.role_title ?? "Role"}
+                  {j.client_display ? ` — ${j.client_display}` : ""}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Search + filter toolbar */}
         <div className="mb-5 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.25)]">
+          <div className="relative flex-1 basis-full sm:basis-56">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search role, company, city, specialization..."
+              className="w-full rounded-full border border-slate-200 bg-slate-50/70 py-2 pl-9 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+            />
+          </div>
           <Select value={industry} onChange={(e) => setIndustry(e.target.value)} className="w-40 rounded-full border-slate-200 bg-slate-50/70 text-[13px] focus-visible:ring-indigo-500">
             <option value="">Industry</option>
             <option value="b2b_sales">B2B Sales</option>
@@ -143,6 +203,14 @@ export default function JobsPage() {
 
           {hasFilters && (
             <div className="ml-auto flex flex-wrap items-center gap-1.5">
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+                >
+                  &quot;{search}&quot; <X className="h-3 w-3" />
+                </button>
+              )}
               {industry && (
                 <button
                   onClick={() => setIndustry("")}

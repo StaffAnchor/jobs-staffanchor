@@ -7,11 +7,12 @@ import { ArrowLeft, Briefcase, CheckCircle2, IndianRupee, MapPin, Zap, ShieldChe
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { getOpenJob, logQuickApplyClick, categoryLabel, budgetLabel, experienceLabel, type JobListing } from "@/modules/jobs/api";
+import { getOpenJob, listOpenJobs, logQuickApplyClick, categoryLabel, budgetLabel, experienceLabel, timeAgo, type JobListing } from "@/modules/jobs/api";
 import ApplyForm from "@/modules/apply/ApplyForm";
 import SignedInApplyCard from "@/modules/apply/SignedInApplyCard";
 import EmailGate from "@/modules/apply/EmailGate";
 import { supabase } from "@/lib/supabaseClient";
+import { recordJobView } from "@/lib/recentlyViewed";
 
 function bulletList(value: string) {
   return value
@@ -41,12 +42,45 @@ export default function QuickApplyPage() {
   // no existing profile, so ApplyForm can mount pre-filled instead of asking
   // for the email a second time.
   const [gateEmail, setGateEmail] = useState<string | null>(null);
+  const [similarJobs, setSimilarJobs] = useState<JobListing[]>([]);
 
   useEffect(() => {
     getOpenJob(mandateId)
       .then(setJob)
       .catch(() => setJob(null));
   }, [mandateId]);
+
+  // Recently-viewed trail (localStorage) + a lightweight "Similar roles"
+  // rail -- both computed client-side off the same open-listings RPC the
+  // /jobs page already calls, so no new backend surface for either.
+  useEffect(() => {
+    if (!job) return;
+    recordJobView({
+      id: job.id,
+      role_title: job.role_title,
+      client_display: job.client_display,
+      city: job.city,
+    });
+    listOpenJobs()
+      .then((all) => {
+        const matches = all
+          .filter((j) => j.id !== job.id && j.category === job.category)
+          .sort((a, b) => {
+            const aSub = a.sub_domains?.length ? a.sub_domains : a.sub_domain ? [a.sub_domain] : [];
+            const bSub = b.sub_domains?.length ? b.sub_domains : b.sub_domain ? [b.sub_domain] : [];
+            const jobSub = job.sub_domains?.length ? job.sub_domains : job.sub_domain ? [job.sub_domain] : [];
+            const aOverlap = aSub.filter((s) => jobSub.includes(s)).length;
+            const bOverlap = bSub.filter((s) => jobSub.includes(s)).length;
+            return bOverlap - aOverlap;
+          })
+          .slice(0, 3);
+        setSimilarJobs(matches);
+      })
+      .catch(() => {
+        // non-critical
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -281,6 +315,33 @@ export default function QuickApplyPage() {
           </div>
         </div>
       </div>
+
+      {similarJobs.length > 0 && (
+        <div className="mt-6">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Similar roles</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {similarJobs.map((sj) => {
+              const sjCities = sj.cities?.length ? sj.cities : sj.city ? [sj.city] : [];
+              return (
+                <Link
+                  key={sj.id}
+                  href={`/jobs/${sj.id}`}
+                  className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+                >
+                  <p className="truncate text-[13.5px] font-semibold text-slate-900 group-hover:text-indigo-700">
+                    {sj.role_title ?? "Open Role"}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                    {sj.client_display ?? categoryLabel(sj.category)}
+                    {sjCities.length ? ` · ${sjCities.join(", ")}` : ""}
+                  </p>
+                  <p className="mt-1.5 text-[11px] font-medium text-slate-400">{timeAgo(sj.created_at)}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
 
     {/* Quick Apply intentionally breaks out of the max-w-6xl wrapper above --
