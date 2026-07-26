@@ -86,6 +86,17 @@ export default function Home() {
     <main className="bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent_36%),radial-gradient(circle_at_80%_10%,rgba(14,165,233,0.12),transparent_30%),linear-gradient(to_bottom,#f8fbff_0%,#ffffff_40%,#f8fafc_100%)] text-slate-900">
       <section className="relative overflow-hidden border-b border-slate-200/80">
         <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(15,23,42,0.02),transparent_45%,rgba(20,184,166,0.04))]" />
+        {/* Minimal dot-grid texture, same motif used on staffanchor.com's
+            hero, so the flat gradient reads as a deliberately-textured
+            surface rather than a plain tinted rectangle. */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage: "radial-gradient(rgba(15,23,42,0.14) 1px, transparent 1px)",
+            backgroundSize: "26px 26px",
+            maskImage: "linear-gradient(to bottom, black, transparent 80%)",
+          }}
+        />
         <div className="relative container-page grid gap-10 py-16 md:py-20 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:py-24">
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-800">
@@ -94,7 +105,10 @@ export default function Home() {
             </div>
             <div className="space-y-4">
               <h1 className="max-w-2xl font-(family-name:--font-space-grotesk) text-4xl font-black leading-tight tracking-tight text-slate-950 md:text-5xl lg:text-6xl">
-                We only recruit for sales. That&apos;s why hiring teams trust us to find you.
+                We only recruit for sales. That&apos;s why hiring teams{" "}
+                <span className="font-(family-name:--font-fraunces) italic font-medium text-indigo-600">
+                  trust us to find you.
+                </span>
               </h1>
               <p className="max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
                 StaffAnchor specializes in B2B sales and GTM hiring — with B2C sales expertise built in too. Build one structured sales profile, with quota history and deal context hiring teams actually evaluate, and get discovered directly. No cold outreach, no blind applications, no noise.
@@ -139,6 +153,7 @@ export default function Home() {
           <Card className="relative overflow-hidden border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
             <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-emerald-100/70 blur-3xl" />
             <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-sky-100/70 blur-3xl" />
+            <div className="absolute left-1/3 top-1/4 h-32 w-32 rounded-full bg-indigo-100/50 blur-3xl" />
             <div className="relative space-y-5">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700">Sales profile snapshot preview</p>

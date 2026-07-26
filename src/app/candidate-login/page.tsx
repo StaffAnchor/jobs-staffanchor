@@ -1,19 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, CheckCircle2 } from "lucide-react";
+import { Mail, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function CandidateLoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState<"email" | "code">("email");
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [returnTo, setReturnTo] = useState<string | null>(null);
+  const codeInputRef = useRef<HTMLInputElement>(null);
 
   // Prefills from ?email=... when arriving via the "sign up for future
   // openings" link after an Apply submission, or via the "Login" button on
@@ -21,9 +26,7 @@ export default function CandidateLoginPage() {
   // directly (rather than useSearchParams) so this plain client component
   // doesn't need a Suspense boundary for static export. ?returnTo=... carries
   // "which job were you trying to apply to" so, after verifying, they land
-  // back there instead of a generic dashboard -- same idea as EmailGate's own
-  // redirectTo, just for the case where they reached this standalone page
-  // directly rather than through the inline gate.
+  // back there instead of a generic dashboard.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const prefill = params.get("email");
@@ -32,15 +35,19 @@ export default function CandidateLoginPage() {
     if (rt && rt.startsWith("/")) setReturnTo(rt);
   }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    if (step === "code") codeInputRef.current?.focus();
+  }, [step]);
+
+  async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
     setSending(true);
     setError(null);
 
-    // Magic-link sign-in has no separate "sign up" step -- Supabase will
+    // Email-OTP sign-in has no separate "sign up" step -- Supabase will
     // happily create a brand-new account for any email typed here. So before
-    // ever sending a link, confirm a candidate record already exists for
+    // ever sending a code, confirm a candidate record already exists for
     // this email (from Build Your Profile, Apply, or a recruiter-created
     // profile). This is the login-side half of the same "no ambiguity" rule
     // as ApplyForm's email gate: no profile on file -> no account, no portal
@@ -61,41 +68,115 @@ export default function CandidateLoginPage() {
       return;
     }
 
+    // shouldCreateUser: false -- we've already confirmed a candidate record
+    // (and its linked auth user) exists, so this call only ever sends a code
+    // for an existing account, never silently provisions a new one.
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: {
-        emailRedirectTo: `${window.location.origin}${returnTo ?? "/candidate-portal"}`,
-      },
+      options: { shouldCreateUser: false },
     });
     setSending(false);
     if (error) {
       setError(error.message);
       return;
     }
-    setSent(true);
+    setStep("code");
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (code.trim().length < 6) return;
+    setVerifying(true);
+    setError(null);
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: "email",
+    });
+    setVerifying(false);
+    if (error) {
+      setError("That code didn't work — check it and try again, or request a new one.");
+      return;
+    }
+    router.push(returnTo ?? "/candidate-portal");
+  }
+
+  async function handleResend() {
+    setError(null);
+    setSending(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { shouldCreateUser: false },
+    });
+    setSending(false);
+    if (error) setError(error.message);
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-12 sm:px-6">
-      <Card>
+    <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center overflow-hidden px-4 py-12 sm:px-6">
+      {/* Soft textured backdrop -- two muted color blooms behind a subtle dot
+          grid, echoing the same treatment used on the homepage hero, so the
+          sign-in moment feels like part of the same product rather than a
+          bare utilitarian form. */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_1px_1px,theme(colors.slate.300)_1px,transparent_0)] bg-[length:22px_22px] opacity-40" />
+      <div className="pointer-events-none absolute -top-24 -left-16 -z-10 h-72 w-72 rounded-full bg-blue-200/50 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-16 -z-10 h-72 w-72 rounded-full bg-emerald-200/40 blur-3xl" />
+
+      <Card className="border-slate-200/80 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
         <CardContent className="p-6">
-          {sent ? (
-            <div className="text-center">
-              <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-500" />
-              <h1 className="text-lg font-semibold text-slate-900">Check your email</h1>
-              <p className="mt-2 text-sm text-slate-500">
-                We sent a sign-in link to <span className="font-medium text-slate-700">{email}</span>. Open it on
-                this device to manage your profile — no password needed.
+          {step === "code" ? (
+            <>
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Candidate Portal</p>
+              <h1 className="mt-1 text-xl font-semibold text-slate-900">Enter your code</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                We sent a 6-digit code to <span className="font-medium text-slate-700">{email}</span>. It expires
+                shortly, so enter it here to continue.
               </p>
-            </div>
+              <form onSubmit={handleVerifyCode} className="mt-5 space-y-3">
+                <div className="relative">
+                  <ShieldCheck className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    ref={codeInputRef}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    required
+                    placeholder="123456"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    className="pl-9 tracking-[0.3em] text-center text-lg font-medium"
+                  />
+                </div>
+                {error && <p className="text-xs text-red-600">{error}</p>}
+                <Button type="submit" disabled={verifying || code.length < 6} className="w-full">
+                  {verifying ? "Verifying..." : "Verify & continue"}
+                </Button>
+              </form>
+              <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("email");
+                    setCode("");
+                    setError(null);
+                  }}
+                  className="font-medium hover:text-slate-600"
+                >
+                  Use a different email
+                </button>
+                <button type="button" onClick={handleResend} disabled={sending} className="font-medium hover:text-slate-600">
+                  {sending ? "Sending..." : "Resend code"}
+                </button>
+              </div>
+            </>
           ) : (
             <>
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Candidate Portal</p>
               <h1 className="mt-1 text-xl font-semibold text-slate-900">Manage your profile</h1>
               <p className="mt-1 text-sm text-slate-500">
-                No password required — enter your email and we&apos;ll send you a sign-in link.
+                No password required — enter your email and we&apos;ll send you a one-time code.
               </p>
-              <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+              <form onSubmit={handleSendCode} className="mt-5 space-y-3">
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
@@ -109,7 +190,7 @@ export default function CandidateLoginPage() {
                 </div>
                 {error && <p className="text-xs text-red-600">{error}</p>}
                 <Button type="submit" disabled={sending} className="w-full">
-                  {sending ? "Sending link..." : "Send me a sign-in link"}
+                  {sending ? "Sending code..." : "Send me a code"}
                 </Button>
               </form>
               <p className="mt-4 text-center text-xs text-slate-400">

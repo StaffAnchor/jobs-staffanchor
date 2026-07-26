@@ -118,20 +118,11 @@ async function sendMagicLinkWelcomeEmail(admin: SupabaseClient, email: string) {
     return;
   }
 
-  // Matches the redirect target used by the existing candidate-login page's
-  // signInWithOtp() call, so a fresh signup's magic link lands in the same
-  // place a returning candidate's does.
-  const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://jobs.staffanchor.com"}/candidate-portal`;
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: "magiclink",
-    email,
-    options: { redirectTo },
-  });
-  if (error || !data?.properties?.action_link) {
-    throw new Error(error?.message ?? "Could not generate a magic-link login link.");
-  }
-
-  const actionLink = data.properties.action_link;
+  // Login moved from click-through magic links to a 6-digit email OTP (see
+  // candidate-login/page.tsx), so this welcome email no longer needs to
+  // generate/embed a one-time action link -- it just points the candidate at
+  // the login page, which sends its own fresh code when they get there.
+  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://jobs.staffanchor.com"}/candidate-login?email=${encodeURIComponent(email)}`;
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: { user: gmailUser, pass: gmailPass },
@@ -140,8 +131,8 @@ async function sendMagicLinkWelcomeEmail(admin: SupabaseClient, email: string) {
   await transporter.sendMail({
     from: `"StaffAnchor" <${gmailUser}>`,
     to: email,
-    subject: "Welcome to StaffAnchor — here's your sign-in link",
-    text: `Welcome to StaffAnchor!\n\nYour profile is on record. Use the link below any time to sign in and manage it -- no password needed:\n\n${actionLink}\n\nThanks,\nStaffAnchor Team`,
-    html: `<p>Welcome to StaffAnchor!</p><p>Your profile is on record. Use the link below any time to sign in and manage it — no password needed:</p><p><a href="${actionLink}">${actionLink}</a></p><p>Thanks,<br/>StaffAnchor Team</p>`,
+    subject: "Welcome to StaffAnchor — how to sign back in",
+    text: `Welcome to StaffAnchor!\n\nYour profile is on record. Any time you want to come back and manage it, visit ${loginUrl} and we'll email you a one-time sign-in code -- no password needed.\n\nThanks,\nStaffAnchor Team`,
+    html: `<p>Welcome to StaffAnchor!</p><p>Your profile is on record. Any time you want to come back and manage it, visit <a href="${loginUrl}">this link</a> and we'll email you a one-time sign-in code — no password needed.</p><p>Thanks,<br/>StaffAnchor Team</p>`,
   });
 }
