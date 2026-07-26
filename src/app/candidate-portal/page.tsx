@@ -9,7 +9,6 @@ import { type CandidateProfile } from "@/modules/candidate-portal/ProfileEditor"
 import ApplyForm from "@/modules/apply/ApplyForm";
 import MyPipeline from "@/modules/candidate-portal/MyPipeline";
 import ReferEarn from "@/modules/candidate-portal/ReferEarn";
-import MandatoryBasicsGate from "@/modules/candidate-portal/MandatoryBasicsGate";
 import PortalHome from "@/modules/candidate-portal/PortalHome";
 import { listOpenJobs, type JobListing } from "@/modules/jobs/api";
 
@@ -92,6 +91,11 @@ export default function CandidatePortalPage() {
   const [tab, setTab] = useState<TabKey>("home");
   const [pipelineCount, setPipelineCount] = useState<number | null>(null);
   const [activeReferralCount, setActiveReferralCount] = useState<number | null>(null);
+  // Tracks whether we've already auto-redirected an incomplete profile to
+  // the Profile tab once, so a candidate who deliberately clicks back to
+  // Home after starting to fill things in isn't yanked back to Profile on
+  // every background refetch (loadProfile() re-runs after saves).
+  const [autoRoutedToProfile, setAutoRoutedToProfile] = useState(false);
 
   async function loadProfile(cancelledRef?: { current: boolean }) {
     const {
@@ -161,17 +165,20 @@ export default function CandidatePortalPage() {
   }
 
   // See get_or_create_my_candidate_profile() -- the very first sign-in
-  // creates a candidates row with only an email address. Block the rest of
-  // the portal until name/phone/function are captured, so a drop-off after
-  // this point still leaves a usable lead instead of an empty row.
-  if (!profile.full_name?.trim() || !profile.phone?.trim() || !profile.category) {
-    return (
-      <MandatoryBasicsGate
-        candidateId={profile.id}
-        email={profile.email ?? ""}
-        onComplete={() => loadProfile()}
-      />
-    );
+  // creates a candidates row with only an email address. Rather than
+  // blocking the whole portal behind a separate one-off mini-form (a
+  // confusing third state next to "signed out -> login" and "signed in ->
+  // profile"), a signed-in candidate always lands in the portal itself --
+  // just routed straight to the My Profile tab (the same ApplyForm used
+  // everywhere else, which already validates these fields on save) when
+  // the core fields are still missing.
+  if (
+    !autoRoutedToProfile &&
+    tab === "home" &&
+    (!profile.full_name?.trim() || !profile.phone?.trim() || !profile.category)
+  ) {
+    setAutoRoutedToProfile(true);
+    setTab("profile");
   }
 
   const badgeFor = (key: TabKey) => {
