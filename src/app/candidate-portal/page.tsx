@@ -45,6 +45,20 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
+// Mirrors the shape returned by get_my_pipeline() -- also consumed by
+// MyPipeline.tsx. Duplicated here (rather than exported/shared) to avoid
+// touching that file's existing, already-shipped implementation.
+type PipelineRow = {
+  link_id: string;
+  mandate_id: string;
+  role_title: string;
+  stage: string;
+  client_display: string;
+  city: string | null;
+  in_shortlist: boolean;
+  linked_at: string;
+};
+
 const TAB_META: Record<
   TabKey,
   { icon: typeof Briefcase; iconClasses: string; title: string; subtitle: string }
@@ -90,6 +104,7 @@ export default function CandidatePortalPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("home");
   const [pipelineCount, setPipelineCount] = useState<number | null>(null);
+  const [pipelineRows, setPipelineRows] = useState<PipelineRow[]>([]);
   const [activeReferralCount, setActiveReferralCount] = useState<number | null>(null);
   // Tracks whether we've already auto-redirected an incomplete profile to
   // the Profile tab once, so a candidate who deliberately clicks back to
@@ -135,7 +150,9 @@ export default function CandidatePortalPage() {
       supabase.rpc("get_my_referrals"),
     ]);
     if (cancelledRef?.current) return;
-    setPipelineCount((pipeline ?? []).length);
+    const rows = (pipeline ?? []) as PipelineRow[];
+    setPipelineCount(rows.length);
+    setPipelineRows(rows);
     setActiveReferralCount((referrals ?? []).filter((r: { status: string }) => r.status !== "not_selected").length);
   }
 
@@ -247,6 +264,7 @@ export default function CandidatePortalPage() {
         <PortalHome
           candidate={profile}
           pipelineCount={pipelineCount}
+          pipelineRows={pipelineRows}
           activeReferralCount={activeReferralCount}
           openJobsCount={openJobs.length}
           onNavigate={(t) => setTab(t)}

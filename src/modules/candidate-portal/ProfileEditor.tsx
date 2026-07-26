@@ -94,6 +94,7 @@ export type CandidateProfile = {
   resume_text?: string | null;
   public_slug?: string | null;
   public_profile_enabled?: boolean | null;
+  ai_summary?: string | null;
 };
 
 function seg(data: Record<string, unknown> | null, key: string): string {
