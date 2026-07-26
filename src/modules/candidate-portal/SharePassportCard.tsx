@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Share2, Copy, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
+import { posthog } from "@/lib/posthog";
 
 const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://jobs.staffanchor.com";
 
@@ -32,10 +33,12 @@ export default function SharePassportCard({
       if (enabled) {
         const { error } = await supabase.rpc("disable_my_public_passport");
         if (error) throw error;
+        posthog.capture("passport_share_toggled", { enabled: false });
         onChange({ slug: slug ?? null, enabled: false });
       } else {
         const { data, error } = await supabase.rpc("enable_my_public_passport");
         if (error) throw error;
+        posthog.capture("passport_share_toggled", { enabled: true });
         onChange({ slug: data as string, enabled: true });
       }
     } catch (e) {

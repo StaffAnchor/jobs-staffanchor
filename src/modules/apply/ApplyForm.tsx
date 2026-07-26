@@ -18,6 +18,7 @@ import {
   User,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { posthog } from "@/lib/posthog";
 import {
   computeCareerGaps,
   computeStabilityScore,
@@ -2145,6 +2146,11 @@ export default function ApplyForm({
       } else {
         setSubmitted(true);
         toast.success("Your profile is on record. Thank you.");
+        posthog.capture("candidate_applied", {
+          source,
+          fastPath: !!opts?.fastPath,
+          mandateId: mandateId ?? null,
+        });
       }
     } catch (e) {
       if (silent) return; // best-effort autosave -- never surface an error toast for it

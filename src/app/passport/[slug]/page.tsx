@@ -7,6 +7,7 @@ import { BadgeCheck, MapPin, Briefcase, IndianRupee, ShieldCheck, Sparkles } fro
 import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
 import { categoryLabel } from "@/modules/jobs/api";
+import { posthog } from "@/lib/posthog";
 
 type PublicPassport = {
   full_name: string | null;
@@ -53,6 +54,7 @@ export default function PublicPassportPage() {
         return;
       }
       setPassport(data as PublicPassport);
+      posthog.capture("passport_viewed", { slug: params.slug });
     });
     return () => {
       cancelled = true;
