@@ -92,6 +92,8 @@ export type CandidateProfile = {
   stability_score?: number | null;
   domain_consistency_score?: number | null;
   resume_text?: string | null;
+  public_slug?: string | null;
+  public_profile_enabled?: boolean | null;
 };
 
 function seg(data: Record<string, unknown> | null, key: string): string {

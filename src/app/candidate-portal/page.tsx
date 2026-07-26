@@ -250,6 +250,11 @@ export default function CandidatePortalPage() {
           activeReferralCount={activeReferralCount}
           openJobsCount={openJobs.length}
           onNavigate={(t) => setTab(t)}
+          publicSlug={profile.public_slug}
+          publicEnabled={profile.public_profile_enabled}
+          onPassportChange={({ slug, enabled }) =>
+            setProfile((p) => (p ? { ...p, public_slug: slug ?? p.public_slug, public_profile_enabled: enabled } : p))
+          }
         />
       )}
 

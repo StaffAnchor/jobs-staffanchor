@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { UserCircle2, Briefcase, Gift, Search, ArrowRight, ChevronRight } from "lucide-react";
 import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } from "./profile-score";
+import MarketIntelligenceStrip from "./MarketIntelligenceStrip";
+import SharePassportCard from "./SharePassportCard";
 
 // The portal's actual landing screen -- previously "My Profile" (the full
 // onboarding wizard) was the default tab, which meant every return visit
@@ -20,18 +22,25 @@ export default function PortalHome({
   activeReferralCount,
   openJobsCount,
   onNavigate,
+  publicSlug,
+  publicEnabled,
+  onPassportChange,
 }: {
   candidate: ScoreCandidateRow;
   pipelineCount: number | null;
   activeReferralCount: number | null;
   openJobsCount: number;
   onNavigate: (tab: TabKey) => void;
+  publicSlug?: string | null;
+  publicEnabled?: boolean | null;
+  onPassportChange?: (next: { slug: string | null; enabled: boolean }) => void;
 }) {
   const { score, tier, missing } = computeProfileScore(candidate);
   const meta = PROFILE_SCORE_TIER_META[tier];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <MarketIntelligenceStrip category={candidate.category ?? null} subDomain={candidate.sub_domain ?? null} />
       <div className="grid gap-6 lg:grid-cols-3">
         {/* --- Profile Score --- */}
         {/* Tier colors scale with urgency (see profile-score.ts) -- Basic
@@ -117,6 +126,12 @@ export default function PortalHome({
           />
         </div>
       </div>
+
+      {onPassportChange && (
+        <div className="mt-6">
+          <SharePassportCard slug={publicSlug} enabled={publicEnabled} onChange={onPassportChange} />
+        </div>
+      )}
     </div>
   );
 }
