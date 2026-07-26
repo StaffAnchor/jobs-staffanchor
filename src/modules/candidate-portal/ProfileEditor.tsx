@@ -61,6 +61,7 @@ export type CandidateProfile = {
   full_name: string | null;
   email: string;
   phone: string | null;
+  whatsapp_opt_in?: boolean | null;
   current_location: string | null;
   linkedin_url: string | null;
   resume_file_url: string | null;

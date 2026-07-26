@@ -129,6 +129,7 @@ type FormState = {
   fullName: string;
   email: string;
   phone: string;
+  whatsappOptIn: boolean;
   currentLocation: string;
   cityChoice: string;
   customCity: string;
@@ -256,6 +257,7 @@ const initialState: FormState = {
   fullName: "",
   email: "",
   phone: "",
+  whatsappOptIn: true,
   currentLocation: "",
   cityChoice: "",
   customCity: "",
@@ -453,6 +455,7 @@ export type ExistingProfile = {
   full_name: string | null;
   email: string;
   phone: string | null;
+  whatsapp_opt_in?: boolean | null;
   current_location: string | null;
   linkedin_url: string | null;
   resume_file_url: string | null;
@@ -520,6 +523,7 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
     fullName: p.full_name ?? "",
     email: p.email ?? "",
     phone: p.phone ?? "",
+    whatsappOptIn: p.whatsapp_opt_in ?? true,
     currentLocation: p.current_location ?? "",
     cityChoice: knownCity ? (p.current_location as string) : p.current_location ? "Other" : "",
     customCity: !knownCity && p.current_location ? p.current_location.split(",")[0].trim() : "",
@@ -1013,6 +1017,7 @@ export default function ApplyForm({
           full_name: values.fullName.trim(),
           email: values.email.trim(),
           phone: values.phone.trim(),
+          whatsapp_opt_in: values.whatsappOptIn,
           current_location: values.currentLocation || undefined,
           category: values.category || undefined,
           sub_domain: values.subDomain || undefined,
@@ -2034,6 +2039,7 @@ export default function ApplyForm({
         full_name: values.fullName.trim(),
         email: values.email.trim(),
         phone: values.phone.trim(),
+        whatsapp_opt_in: values.whatsappOptIn,
         current_location: values.currentLocation || null,
         linkedin_url: values.linkedinUrl || null,
         resume_file_url: resumeFileUrl,
@@ -2655,6 +2661,23 @@ export default function ApplyForm({
                   onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
                 />
               </FormField>
+              {/* Consented WhatsApp channel -- profile-completion nudges,
+                  interview reminders, and the quarterly "still at this comp/
+                  notice period?" pulse all route here once WhatsApp outreach
+                  ships. Opt-in, on by default (candidates can uncheck), never
+                  hidden inside a settings screen. */}
+              <label className="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={values.whatsappOptIn}
+                  onChange={(e) => update("whatsappOptIn", e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span>
+                  Send me updates on WhatsApp — new matching roles, interview reminders, and a quick check-in every
+                  few months to keep my profile current.
+                </span>
+              </label>
               <FormField label="Current City" required>
                 <Select
                   value={values.cityChoice}
