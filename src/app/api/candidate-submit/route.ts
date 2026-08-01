@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import nodemailer from "nodemailer";
 import { generateAiPassportForCandidate } from "@/lib/ai-passport";
 import { generateCareerTimelineForCandidate } from "@/lib/generate-career-timeline-from-resume";
+import { waitUntil } from "@vercel/functions";
 
 export const runtime = "nodejs";
 
@@ -87,13 +88,24 @@ export async function POST(req: NextRequest) {
       // timeline rather than racing it. Never awaited -- this response
       // shouldn't wait on two Gemini calls, and both functions already
       // catch their own errors internally.
-      generateCareerTimelineForCandidate(candidateId as string, admin)
-        .catch((err) => console.error("Auto career-timeline generation failed for new candidate", candidateId, err))
-        .finally(() => {
-          generateAiPassportForCandidate(candidateId as string, admin, { note: "auto_generated_on_submit" }).catch(
-            (err) => console.error("Auto AI passport generation failed for new candidate", candidateId, err)
-          );
-        });
+      //
+      // IMPORTANT: must be registered with waitUntil(). A Vercel Node.js
+      // serverless function's execution environment can be frozen the
+      // instant the HTTP response is flushed -- a bare un-awaited promise
+      // (just .catch(), no waitUntil) is not guaranteed to finish running.
+      // That's why some candidates who applied here ended up with no
+      // ai_summary/stability_score despite having a resume: the generation
+      // was getting cut off mid-flight. waitUntil() keeps the invocation
+      // alive until the promise settles, even after the response returns.
+      waitUntil(
+        generateCareerTimelineForCandidate(candidateId as string, admin)
+          .catch((err) => console.error("Auto career-timeline generation failed for new candidate", candidateId, err))
+          .finally(() => {
+            return generateAiPassportForCandidate(candidateId as string, admin, {
+              note: "auto_generated_on_submit",
+            }).catch((err) => console.error("Auto AI passport generation failed for new candidate", candidateId, err));
+          })
+      );
     }
 
     if (isNewSignup) {
