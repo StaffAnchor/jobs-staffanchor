@@ -8,11 +8,6 @@ import {
   type ResumeTimelineEntry,
 } from "@/lib/career-timeline";
 
-// Ported verbatim from staffanchor-crm's src/lib/ai-passport.ts so a candidate
-// who registers/applies here on jobs.staffanchor.com gets an AI summary
-// immediately from whatever they've filled in plus their resume, instead of
-// waiting for the CRM's twice-weekly auto-summarize cron sweep.
-
 export type AiPassport = {
   headline?: string;
   compensation_line?: string;
@@ -26,20 +21,60 @@ export type AiPassport = {
   profile_incomplete?: boolean;
 };
 
+// Internal-only decision-support output. Deliberately a SEPARATE type/column
+// from AiPassport -- ai_passport/ai_summary are also read by get_client_shortlist
+// and the candidate-facing portal, so an AI's private "this candidate looks
+// like a job-hopper" risk assessment must never live in that object or it
+// would leak straight through those already-existing client-facing queries.
+// Only ever select ai_decision_flags from internal, staff-authenticated code.
+export type AiDecisionFlags = {
+  green_flags?: string[];
+  red_flags?: string[];
+  watch_areas?: string[];
+  recommendation?: "Strong Fit" | "Fit with Reservations" | "Not a Fit";
+};
+
 export type GenerateAiPassportResult =
-  | { ok: true; summary: string; passport: AiPassport | null }
+  | { ok: true; summary: string; passport: AiPassport | null; decisionFlags: AiDecisionFlags | null }
   | { ok: false; status: number; error: string };
 
-function parsePassportJson(raw: string): AiPassport | null {
+// Everything the model is asked to return in one JSON object (cheaper than a
+// second Gemini call) -- immediately split into the client-safe AiPassport
+// subset and the internal-only AiDecisionFlags subset before anything is
+// persisted or returned up the call stack.
+type RawAiOutput = AiPassport & AiDecisionFlags;
+
+function parsePassportJson(raw: string): RawAiOutput | null {
   // Gemini sometimes wraps JSON in a ```json fence despite instructions not to.
   const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   try {
     const parsed = JSON.parse(cleaned);
-    if (parsed && typeof parsed === "object") return parsed as AiPassport;
+    if (parsed && typeof parsed === "object") return parsed as RawAiOutput;
   } catch {
     // fall through
   }
   return null;
+}
+
+// Explicit allowlist split -- never spread the raw model output into either
+// stored object, so an unexpected/extra key the model invents can never
+// accidentally cross from the internal side to the client-visible side.
+function splitRawOutput(raw: RawAiOutput): { passport: AiPassport; decisionFlags: AiDecisionFlags } {
+  return {
+    passport: {
+      headline: raw.headline,
+      compensation_line: raw.compensation_line,
+      targets_line: raw.targets_line,
+      stability_line: raw.stability_line,
+      resume_highlights: raw.resume_highlights,
+    },
+    decisionFlags: {
+      green_flags: raw.green_flags,
+      red_flags: raw.red_flags,
+      watch_areas: raw.watch_areas,
+      recommendation: raw.recommendation,
+    },
+  };
 }
 
 function passportToSummary(p: AiPassport): string {
@@ -47,9 +82,12 @@ function passportToSummary(p: AiPassport): string {
 }
 
 /**
- * Generates (and persists) a candidate's AI passport. Needs a Supabase client
- * with enough privilege to read/update the candidate row (service-role;
- * RLS otherwise blocks writes to candidates).
+ * Generates (and persists) a candidate's AI passport. Shared by the
+ * staff-triggered route (api/ai-summary) and the client-triggered route
+ * (api/public-ai-summary) -- both already authorize the caller before
+ * reaching here, this function just needs a Supabase client with enough
+ * privilege to read/update the candidate row (service-role or a staff
+ * session; RLS otherwise blocks writes to candidates).
  */
 export async function generateAiPassportForCandidate(
   candidateId: string,
@@ -171,6 +209,12 @@ Return ONLY a JSON object (no markdown fence, no commentary) with exactly these 
 - Note on "best"/"lost" self-assessment write-ups: these are the candidate's own words about a specific win/loss, not resume content. If used, fold the concrete fact (e.g. a named client or deal size mentioned there) into "targets_line" rather than "resume_highlights", since "resume_highlights" is reserved for facts pulled from the actual resume excerpt below.
 - "resume_highlights": an array of 2-4 short bullet-point strings pulled from the resume excerpt below -- concrete, factual points only (notable employers/clients, tenure pattern, certifications, named achievements) that AREN'T already covered by the headline/compensation/targets lines. Omit key (or return empty array) if no resume excerpt is provided or nothing factual/notable is extractable.
 
+The following four keys are for INTERNAL recruiter decision-support only -- never shown to clients or the candidate, so be direct and unsparing here even where the lines above stay diplomatic:
+- "green_flags": array of 1-4 short phrases, each a concrete factual reason this candidate is a strong match (e.g. "Consistently exceeded quota for 6 straight quarters", "5+ years in the exact same sub-domain and industry as this hiring need"). Grounded only in the structured data / resume / career_stability -- never invent.
+- "red_flags": array of 0-4 short phrases naming concrete risks a recruiter should probe before shortlisting (e.g. "Two roles under 3 months each in the last 18 months", "No quota/achievement data provided", "Expected CTC is a large jump over current fixed CTC with no context given"). Empty array if genuinely nothing stands out -- do not invent a red flag to fill the array.
+- "watch_areas": array of 0-3 short phrases for genuinely ambiguous/uncertain points that are neither clearly good nor bad and need a human judgment call or a clarifying question in the interview (e.g. "Reason for leaving current role not stated", "Industry experience is adjacent but not identical to this mandate's domain"). Empty array if none.
+- "recommendation": your own overall read as exactly one of "Strong Fit", "Fit with Reservations", or "Not a Fit" -- the same three-way scale recruiters use in their own manual scorecard (recruiter_scorecard.overall_recommendation below, if already filled in) -- based on weighing green_flags against red_flags/watch_areas. This is a second, independent opinion sitting alongside the recruiter's own call, not a replacement for it.
+
 Structured candidate data (JSON):
 ${JSON.stringify(factSheet, null, 2)}
 
@@ -189,7 +233,10 @@ ${resumeExcerpt ?? "(no resume text available)"}`;
       const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       const raw = result.response.text().trim();
-      const passport = parsePassportJson(raw);
+      const rawOutput = parsePassportJson(raw);
+      const { passport, decisionFlags } = rawOutput
+        ? splitRawOutput(rawOutput)
+        : { passport: null, decisionFlags: null };
 
       // Fall back to treating the raw response as plain prose if JSON parsing
       // fails for some reason -- better a slightly-off summary than none.
@@ -211,6 +258,7 @@ ${resumeExcerpt ?? "(no resume text available)"}`;
         .update({
           ai_summary: summary,
           ai_passport: finalPassport,
+          ai_decision_flags: decisionFlags,
           ai_summary_generated_status: candidateStatus,
         })
         .eq("id", candidateId);
@@ -223,7 +271,7 @@ ${resumeExcerpt ?? "(no resume text available)"}`;
         detail: { model: modelName, used_resume_text: !!resumeExcerpt, note: auditActor.note },
       });
 
-      return { ok: true, summary, passport: finalPassport };
+      return { ok: true, summary, passport: finalPassport, decisionFlags };
     } catch (err) {
       lastError = err;
       console.error(`Gemini summary generation failed with model ${modelName}`, err);
