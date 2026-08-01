@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import nodemailer from "nodemailer";
 import { generateAiPassportForCandidate } from "@/lib/ai-passport";
-import { generateCareerTimelineForCandidate } from "@/lib/generate-career-timeline-from-resume";
 import { waitUntil } from "@vercel/functions";
 
 export const runtime = "nodejs";
@@ -79,15 +78,14 @@ export async function POST(req: NextRequest) {
         console.error("Failed to link candidates.user_id after submit", linkError);
       }
 
-      // Fire-and-forget: generate the career timeline (computes
-      // stability_score from the resume) and then the AI summary/passport,
-      // so a candidate who just applied/registered here sees a Stability
-      // Score and AI summary in the CRM right away instead of waiting up to
-      // 3-4 days for the CRM's twice-weekly cron sweeps. Sequenced (timeline
-      // first) so the passport's stability_line reads the freshly-extracted
-      // timeline rather than racing it. Never awaited -- this response
-      // shouldn't wait on two Gemini calls, and both functions already
-      // catch their own errors internally.
+      // Fire-and-forget: generateAiPassportForCandidate now runs the career-
+      // timeline extraction (stability_score) itself first, then the
+      // summary/passport/decision-flags/skill-inventory -- one call does the
+      // whole job, so a candidate who just applied/registered here sees a
+      // Stability Score and AI summary in the CRM right away instead of
+      // waiting up to 3-4 days for the CRM's twice-weekly cron sweeps. Never
+      // awaited -- this response shouldn't wait on Gemini, and it catches
+      // its own errors internally.
       //
       // IMPORTANT: must be registered with waitUntil(). A Vercel Node.js
       // serverless function's execution environment can be frozen the
@@ -98,13 +96,9 @@ export async function POST(req: NextRequest) {
       // was getting cut off mid-flight. waitUntil() keeps the invocation
       // alive until the promise settles, even after the response returns.
       waitUntil(
-        generateCareerTimelineForCandidate(candidateId as string, admin)
-          .catch((err) => console.error("Auto career-timeline generation failed for new candidate", candidateId, err))
-          .finally(() => {
-            return generateAiPassportForCandidate(candidateId as string, admin, {
-              note: "auto_generated_on_submit",
-            }).catch((err) => console.error("Auto AI passport generation failed for new candidate", candidateId, err));
-          })
+        generateAiPassportForCandidate(candidateId as string, admin, { note: "auto_generated_on_submit" }).catch(
+          (err) => console.error("Auto AI passport generation failed for new candidate", candidateId, err)
+        )
       );
     }
 
