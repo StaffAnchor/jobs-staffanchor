@@ -8,7 +8,10 @@ import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
 import PriorityPackPicker from "@/components/priority/priority-pack-picker";
+import PriorityEmailGate from "@/components/priority/priority-email-gate";
 import type { PurchaseResult } from "@/components/priority/use-priority-checkout";
+
+type JobListing = { role_title: string | null; client_display: string | null };
 
 // Canonical explainer + purchase surface for Priority Applicant. Every
 // promotional placement (job page, apply-flow upsell, confirmation card,
@@ -30,6 +33,26 @@ function PriorityApplicantContent() {
   const [candidateId, setCandidateId] = useState<string | null>(candidateIdParam);
   const [resolving, setResolving] = useState(!candidateIdParam);
   const [result, setResult] = useState<PurchaseResult | null>(null);
+  const [jobListing, setJobListing] = useState<JobListing | null>(null);
+
+  // Best-effort -- lets both the pack-picker headline and the post-payment
+  // confirmation name the actual job ("...for Chief Revenue Officer at
+  // Acme") instead of a generic "credits added" message. Public RPC, no
+  // auth needed, same one the job detail page itself uses.
+  useEffect(() => {
+    if (!mandateId) return;
+    let cancelled = false;
+    supabase
+      .rpc("get_open_job_listing", { p_mandate_id: mandateId })
+      .then(({ data }) => {
+        if (cancelled) return;
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row) setJobListing(row as JobListing);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mandateId]);
 
   useEffect(() => {
     if (candidateIdParam) return;
@@ -72,11 +95,15 @@ function PriorityApplicantContent() {
           <CheckCircle2 className="h-7 w-7" />
         </div>
         <h1 className="text-xl font-bold text-slate-950">
-          {result.autoAppliedToLinkId ? "This application is now Priority." : "Credits added to your account."}
+          {result.autoAppliedToLinkId
+            ? jobListing?.role_title
+              ? `Your application for ${jobListing.role_title}${jobListing.client_display ? ` at ${jobListing.client_display}` : ""} is now Priority.`
+              : "This application is now Priority."
+            : "Credits added to your account."}
         </h1>
         <p className="mt-2 text-sm text-slate-600">
           {result.autoAppliedToLinkId
-            ? `You have ${result.remainingBalance} priority credit${result.remainingBalance === 1 ? "" : "s"} left for future applications.`
+            ? `1 credit consumed. You have ${result.remainingBalance} left for future applications.`
             : `You now have ${result.remainingBalance} priority credit${result.remainingBalance === 1 ? "" : "s"} to use on any application, now or later.`}
         </p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
@@ -99,39 +126,14 @@ function PriorityApplicantContent() {
 
   if (!candidateId) {
     // No profile on file yet -- this used to be a dead end ("go log in" /
-    // "go apply to a role"), which for a visitor with no existing account
-    // meant bouncing to candidate-login and hitting a second dead end
-    // there ("we don't have a profile for this email"). The fix: put
-    // registration itself front and center, with a returnTo straight back
-    // here, so building a profile is the fast on-ramp to checkout instead
-    // of a detour -- payment stays the priority, not login.
+    // "go build a full profile first"), which for a brand-new visitor meant
+    // a multi-field form before they could even reach checkout. Payment is
+    // the priority: one email field resolves to a candidateId in a single
+    // round trip (see PriorityEmailGate for why that's schema-safe), then
+    // it's the exact same pack picker as every other entry point.
     return (
-      <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
-        <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
-          <Zap className="h-3.5 w-3.5" /> Priority Applicant
-        </span>
-        <h1 className="mt-3 text-xl font-bold text-slate-950">One quick step before checkout</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Priority credits are tied to your StaffAnchor profile. Build one now — it only takes a minute — and you&apos;ll
-          land right back here to pay. Already have a profile? Log in instead.
-        </p>
-        <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
-          <Link
-            href={`/register?returnTo=${encodeURIComponent("/priority-applicant")}`}
-            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-6 text-sm font-semibold text-white shadow-sm shadow-indigo-500/25 transition hover:shadow-md hover:shadow-indigo-500/35"
-          >
-            <Zap className="h-4 w-4" /> Build My Profile
-          </Link>
-          <Link
-            href={`/candidate-login?returnTo=${encodeURIComponent("/priority-applicant")}`}
-            className="inline-flex h-11 items-center justify-center rounded-full border border-slate-300 px-6 text-sm font-medium text-slate-900 hover:bg-slate-100"
-          >
-            Log In
-          </Link>
-        </div>
-        <Link href="/jobs" className="mt-4 inline-block text-xs font-medium text-slate-400 hover:text-slate-600">
-          or just browse open roles
-        </Link>
+      <div className="mx-auto max-w-lg px-4 py-16 sm:px-6">
+        <PriorityEmailGate mandateId={mandateId} onReady={setCandidateId} />
       </div>
     );
   }
@@ -143,7 +145,9 @@ function PriorityApplicantContent() {
           <Zap className="h-3.5 w-3.5" /> Priority Applicant
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-          Get your application flagged for the recruiter&apos;s first pass
+          {jobListing?.role_title
+            ? `Flag your application for ${jobListing.role_title}${jobListing.client_display ? ` at ${jobListing.client_display}` : ""}`
+            : "Get your application flagged for the recruiter's first pass"}
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-slate-600">
           Every application is reviewed either way. Priority Applicant flags yours so a recruiter sees it before the
