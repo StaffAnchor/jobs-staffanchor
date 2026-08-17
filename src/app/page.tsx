@@ -3,6 +3,7 @@ import { ArrowRight, BadgeCheck, Briefcase, ChartColumn, MapPin, ShieldCheck, Sp
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CurrentJobsTeaser } from "@/components/common/current-jobs-teaser";
+import { LiveRolesTicker } from "@/components/common/live-roles-ticker";
 
 const profileHighlights = [
   {
@@ -182,6 +183,8 @@ export default function Home() {
           </Card>
         </div>
       </section>
+
+      <LiveRolesTicker />
 
       <CurrentJobsTeaser />
 
