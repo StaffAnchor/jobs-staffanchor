@@ -76,9 +76,15 @@ export default function EmailGate({
     setSending(true);
     setError(null);
     try {
+      // emailRedirectTo brings a clicked sign-in link back to this exact
+      // page (job page or register) instead of Supabase's default Site
+      // URL -- the parent already watches for a session via
+      // onAuthStateChange, so this is enough for it to swap straight to
+      // the signed-in view without the candidate needing to do anything
+      // else once they click the link.
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: { shouldCreateUser: false },
+        options: { shouldCreateUser: false, emailRedirectTo: window.location.href },
       });
       if (otpError) throw new Error(otpError.message);
       setCodeStep(true);
@@ -115,9 +121,10 @@ export default function EmailGate({
     return (
       <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Welcome back</p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-900">Enter your code</h2>
+        <h2 className="mt-1 text-lg font-semibold text-slate-900">Check your email</h2>
         <p className="mt-2 text-sm text-slate-500">
-          We sent a 6-digit code to <span className="font-medium text-slate-700">{email}</span>.
+          We sent a sign-in link to <span className="font-medium text-slate-700">{email}</span> — click it to
+          continue, or enter the 6-digit code below if that&apos;s what you got instead.
         </p>
         <form onSubmit={handleVerifyCode} className="mt-4 space-y-3">
           <div className="relative">

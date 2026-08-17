@@ -39,6 +39,30 @@ export default function CandidateLoginPage() {
     if (step === "code") codeInputRef.current?.focus();
   }, [step]);
 
+  // Supabase's email-OTP template sends a clickable sign-in link alongside
+  // (sometimes instead of, depending on how the template renders) the
+  // 6-digit code this screen asks for -- candidates who click that link
+  // instead of typing a code were landing back here fully authenticated
+  // but with no acknowledgment of it, still staring at an empty code box.
+  // The client's detectSessionInUrl already turns that link click into a
+  // real session on load; this just notices it and finishes the job by
+  // moving them along, and keeps working if a session shows up for any
+  // other reason (e.g. this tab was already signed in).
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled && data.session) router.replace(returnTo ?? "/candidate-portal");
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) router.replace(returnTo ?? "/candidate-portal");
+    });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returnTo]);
+
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
@@ -71,9 +95,13 @@ export default function CandidateLoginPage() {
     // shouldCreateUser: false -- we've already confirmed a candidate record
     // (and its linked auth user) exists, so this call only ever sends a code
     // for an existing account, never silently provisions a new one.
+    // emailRedirectTo brings a clicked link back to this exact page (with
+    // returnTo intact) instead of Supabase's configured Site URL default --
+    // without it, clicking the link silently signs the candidate in but
+    // drops them on the bare homepage with no sign of what just happened.
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: false },
+      options: { shouldCreateUser: false, emailRedirectTo: window.location.href },
     });
     setSending(false);
     if (error) {
@@ -106,7 +134,7 @@ export default function CandidateLoginPage() {
     setSending(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: false },
+      options: { shouldCreateUser: false, emailRedirectTo: window.location.href },
     });
     setSending(false);
     if (error) setError(error.message);
@@ -127,10 +155,11 @@ export default function CandidateLoginPage() {
           {step === "code" ? (
             <>
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Candidate Portal</p>
-              <h1 className="mt-1 text-xl font-semibold text-slate-900">Enter your code</h1>
+              <h1 className="mt-1 text-xl font-semibold text-slate-900">Check your email</h1>
               <p className="mt-1 text-sm text-slate-500">
-                We sent a 6-digit code to <span className="font-medium text-slate-700">{email}</span>. It expires
-                shortly, so enter it here to continue.
+                We sent a sign-in link to <span className="font-medium text-slate-700">{email}</span> — click it and
+                you&apos;ll land straight back here signed in. If it shows a 6-digit code instead, enter that below.
+                Either way it expires shortly.
               </p>
               <form onSubmit={handleVerifyCode} className="mt-5 space-y-3">
                 <div className="relative">
@@ -174,7 +203,7 @@ export default function CandidateLoginPage() {
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Candidate Portal</p>
               <h1 className="mt-1 text-xl font-semibold text-slate-900">Manage your profile</h1>
               <p className="mt-1 text-sm text-slate-500">
-                No password required — enter your email and we&apos;ll send you a one-time code.
+                No password required — enter your email and we&apos;ll send you a one-time sign-in link (or code).
               </p>
               <form onSubmit={handleSendCode} className="mt-5 space-y-3">
                 <div className="relative">
