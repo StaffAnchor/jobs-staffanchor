@@ -90,6 +90,9 @@ export function Navbar() {
           <Link href="/mock-interview" className="hidden sm:block">
             <Button variant={pathname.startsWith("/mock-interview") ? "default" : "ghost"}>Mock Interview</Button>
           </Link>
+          <Link href="/ats-score" className="hidden sm:block">
+            <Button variant={pathname.startsWith("/ats-score") ? "default" : "ghost"}>ATS Score</Button>
+          </Link>
           {candidateSignedIn ? (
             <Link href="/candidate-portal">
               <Button variant={pathname.startsWith("/candidate-portal") ? "default" : "ghost"}>My Account</Button>
