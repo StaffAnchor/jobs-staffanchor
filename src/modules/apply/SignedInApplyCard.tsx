@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } from "@/modules/candidate-portal/profile-score";
 import ApplicationTimeline from "./ApplicationTimeline";
+import PriorityApplicantCard from "@/components/priority/priority-applicant-card";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
 import { logQuickApplyFormOpened } from "@/modules/jobs/api";
@@ -166,21 +167,31 @@ export default function SignedInApplyCard({
 
   if (applied || alreadyApplied) {
     return (
-      <div className="mx-auto max-w-lg rounded-2xl border border-emerald-200 bg-emerald-50/60 px-6 py-10 text-center">
-        <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-600" />
-        <h2 className="text-xl font-bold text-slate-950">
-          {applied ? `Thanks, ${firstName} — you're all set` : `You've already applied, ${firstName}`}
-          {mandateTitle ? ` for ${mandateTitle}` : ""}.
-        </h2>
-        <p className="mt-3 text-sm text-slate-600">
-          A StaffAnchor recruiter will review your profile and reach out if there&apos;s a fit. You can update your
-          profile any time from{" "}
-          <Link href="/candidate-portal" className="font-medium text-blue-700 hover:underline">
-            My Account
-          </Link>
-          .
-        </p>
-        <ApplicationTimeline stage={pipelineStage} rejected={pipelineStage === "rejected"} />
+      <div className="mx-auto max-w-lg space-y-4">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-6 py-10 text-center">
+          <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-600" />
+          <h2 className="text-xl font-bold text-slate-950">
+            {applied ? `Thanks, ${firstName} — you're all set` : `You've already applied, ${firstName}`}
+            {mandateTitle ? ` for ${mandateTitle}` : ""}.
+          </h2>
+          <p className="mt-3 text-sm text-slate-600">
+            A StaffAnchor recruiter will review your profile and reach out if there&apos;s a fit. You can update your
+            profile any time from{" "}
+            <Link href="/candidate-portal" className="font-medium text-blue-700 hover:underline">
+              My Account
+            </Link>
+            .
+          </p>
+          <ApplicationTimeline stage={pipelineStage} rejected={pipelineStage === "rejected"} />
+        </div>
+        {/* Signed-in candidates skip ApplyForm's own confirmation screen
+            entirely (this card renders instead), so its Priority Applicant
+            card has to be repeated here -- otherwise a signed-in applicant,
+            probably the more common case for a repeat visitor, never sees
+            the nudge at all. */}
+        {pipelineStage !== "rejected" && (
+          <PriorityApplicantCard candidateId={candidate.id} mandateId={mandateId} />
+        )}
       </div>
     );
   }

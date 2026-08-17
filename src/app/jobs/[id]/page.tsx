@@ -316,18 +316,30 @@ export default function QuickApplyPage() {
 
           {/* Teaser for Priority Applicant -- plants the idea before the
               candidate applies, without competing with the main Apply CTA
-              above. Gradient + pulse to actually earn a glance instead of
-              blending into the flat proof-box list right above it. Full
-              explainer + purchase lives on the dedicated page every
-              placement links to. */}
+              above. Deliberately louder than the flat proof-box list right
+              above it (bigger icon badge, a real price pill, a distinct
+              CTA chip) since a plain tinted strip reads as just more fine
+              print next to that list -- this needs to look like an offer,
+              not a disclaimer. Full explainer + purchase lives on the
+              dedicated page every placement links to. */}
           <Link
             href="/priority-applicant"
-            className="group relative mt-4 flex items-center gap-2.5 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-3.5 py-3 text-[12px] font-semibold text-white shadow-sm shadow-indigo-500/25 transition hover:shadow-md hover:shadow-indigo-500/35"
+            className="group relative mt-4 block overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-fuchsia-600 p-4 shadow-md shadow-indigo-500/30 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/40"
           >
-            <div className="pointer-events-none absolute -right-4 -top-4 h-14 w-14 rounded-full bg-white/10 blur-lg" />
-            <Zap className="h-4 w-4 shrink-0 animate-pulse" />
-            <span className="flex-1">Want to be seen first? Priority Applicant packs from ₹79</span>
-            <span className="text-white/80 transition-transform group-hover:translate-x-0.5">→</span>
+            <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/15 blur-xl" />
+            <div className="pointer-events-none absolute -bottom-8 left-10 h-16 w-16 rounded-full bg-white/10 blur-lg" />
+            <div className="relative flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20">
+                <Zap className="h-5 w-5 text-white" fill="currentColor" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-bold text-white">Want to be seen first?</p>
+                <p className="text-[11.5px] text-white/85">Get flagged for the recruiter&apos;s first review pass</p>
+              </div>
+              <span className="flex shrink-0 items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[11.5px] font-bold text-indigo-700 shadow-sm transition-transform group-hover:scale-105">
+                From ₹79
+              </span>
+            </div>
           </Link>
         </div>
       </div>
