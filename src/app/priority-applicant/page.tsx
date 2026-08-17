@@ -98,27 +98,40 @@ function PriorityApplicantContent() {
   }
 
   if (!candidateId) {
+    // No profile on file yet -- this used to be a dead end ("go log in" /
+    // "go apply to a role"), which for a visitor with no existing account
+    // meant bouncing to candidate-login and hitting a second dead end
+    // there ("we don't have a profile for this email"). The fix: put
+    // registration itself front and center, with a returnTo straight back
+    // here, so building a profile is the fast on-ramp to checkout instead
+    // of a detour -- payment stays the priority, not login.
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
-        <h1 className="text-xl font-bold text-slate-950">Log in or apply first</h1>
+        <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
+          <Zap className="h-3.5 w-3.5" /> Priority Applicant
+        </span>
+        <h1 className="mt-3 text-xl font-bold text-slate-950">One quick step before checkout</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Priority credits are tied to your StaffAnchor profile. Log in if you already have one, or apply to a role
-          to create one — then come back here.
+          Priority credits are tied to your StaffAnchor profile. Build one now — it only takes a minute — and you&apos;ll
+          land right back here to pay. Already have a profile? Log in instead.
         </p>
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+        <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
+          <Link
+            href={`/register?returnTo=${encodeURIComponent("/priority-applicant")}`}
+            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-6 text-sm font-semibold text-white shadow-sm shadow-indigo-500/25 transition hover:shadow-md hover:shadow-indigo-500/35"
+          >
+            <Zap className="h-4 w-4" /> Build My Profile
+          </Link>
           <Link
             href={`/candidate-login?returnTo=${encodeURIComponent("/priority-applicant")}`}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-5 text-sm font-medium text-white hover:bg-slate-800"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-slate-300 px-6 text-sm font-medium text-slate-900 hover:bg-slate-100"
           >
             Log In
           </Link>
-          <Link
-            href="/jobs"
-            className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 px-5 text-sm font-medium text-slate-900 hover:bg-slate-100"
-          >
-            Browse Open Roles
-          </Link>
         </div>
+        <Link href="/jobs" className="mt-4 inline-block text-xs font-medium text-slate-400 hover:text-slate-600">
+          or just browse open roles
+        </Link>
       </div>
     );
   }

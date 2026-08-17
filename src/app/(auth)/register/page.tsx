@@ -25,6 +25,11 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const ref = searchParams.get("ref");
+  // Where to send the candidate right after a successful registration --
+  // e.g. Priority Applicant linking here (`/register?returnTo=/priority-applicant`)
+  // so "build a profile" is a fast on-ramp back to checkout instead of a
+  // dead end that stops at the plain confirmation screen.
+  const returnTo = searchParams.get("returnTo");
 
   const [loading, setLoading] = useState(true);
   const [existingProfile, setExistingProfile] = useState<ExistingProfile | undefined>(undefined);
@@ -45,7 +50,7 @@ function RegisterForm() {
     supabase.auth.getUser().then(({ data }) => {
       if (cancelled) return;
       if (data.user) {
-        router.replace("/candidate-portal");
+        router.replace(returnTo || "/candidate-portal");
         return;
       }
       if (!ref) {
@@ -83,5 +88,11 @@ function RegisterForm() {
     );
   }
 
-  return <ApplyForm existingProfile={existingProfile} initialEmail={gateEmail ?? undefined} />;
+  return (
+    <ApplyForm
+      existingProfile={existingProfile}
+      initialEmail={gateEmail ?? undefined}
+      returnTo={returnTo ?? undefined}
+    />
+  );
 }

@@ -884,12 +884,21 @@ export default function ApplyForm({
   mandateTitle,
   mandateId,
   initialEmail,
+  returnTo,
 }: {
   existingProfile?: ExistingProfile;
   onSaved?: () => void;
   source?: ApplyFormSource;
   mandateTitle?: string;
   mandateId?: string;
+  // Standalone registration only (no mandateId): where to send the browser
+  // immediately after a successful submit, with ?candidateId= appended --
+  // e.g. Priority Applicant linking here when a visitor has no profile yet,
+  // so "build a profile" is a fast on-ramp to payment rather than a dead
+  // end that strands them on the plain confirmation screen. Skipped
+  // whenever a mandateId is present (Quick Apply already has its own
+  // confirmation + Priority Applicant card).
+  returnTo?: string;
   // Seeds Stage 1A's email field. Used by EmailGate -- by the time this
   // component mounts for an anonymous visitor, the gate has already
   // confirmed this email has no existing profile, so there's no need to
@@ -2188,6 +2197,15 @@ export default function ApplyForm({
       } else if (isEditMode) {
         toast.success("Profile saved.");
         onSaved?.();
+      } else if (returnTo && !mandateId && submitJson?.candidateId) {
+        // Standalone registration with a return destination in hand (e.g.
+        // from Priority Applicant) -- skip the inline confirmation screen
+        // entirely and go straight back so payment stays the next step,
+        // not a second navigation the candidate has to find on their own.
+        toast.success("Your profile is on record. Thank you.");
+        posthog.capture("candidate_applied", { source, fastPath: !!opts?.fastPath, mandateId: null });
+        const separator = returnTo.includes("?") ? "&" : "?";
+        router.push(`${returnTo}${separator}candidateId=${encodeURIComponent(submitJson.candidateId)}`);
       } else {
         setSubmitted(true);
         setSubmittedCandidateId(submitJson?.candidateId ?? null);

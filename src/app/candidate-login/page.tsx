@@ -188,14 +188,31 @@ export default function CandidateLoginPage() {
                     className="pl-9"
                   />
                 </div>
-                {error && <p className="text-xs text-red-600">{error}</p>}
+                {error && (
+                  <div className="rounded-lg bg-red-50 px-3 py-2.5">
+                    <p className="text-xs text-red-600">{error}</p>
+                    {/* No-profile-on-file case: this used to be a dead end.
+                        Carry returnTo through so, e.g., a visitor bounced
+                        here from Priority Applicant lands right back there
+                        after registering, instead of losing their place. */}
+                    <Link
+                      href={`/register${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
+                      className="mt-1 inline-block text-xs font-semibold text-blue-700 hover:underline"
+                    >
+                      Build my profile now →
+                    </Link>
+                  </div>
+                )}
                 <Button type="submit" disabled={sending} className="w-full">
                   {sending ? "Sending code..." : "Send me a code"}
                 </Button>
               </form>
               <p className="mt-4 text-center text-xs text-slate-400">
                 No profile yet?{" "}
-                <Link href="/register" className="text-blue-600 hover:underline">
+                <Link
+                  href={`/register${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
+                  className="text-blue-600 hover:underline"
+                >
                   Build your profile
                 </Link>{" "}
                 or{" "}
