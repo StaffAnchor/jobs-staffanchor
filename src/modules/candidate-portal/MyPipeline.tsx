@@ -142,9 +142,9 @@ export default function MyPipeline({ candidateId }: { candidateId: string }) {
         </p>
         <Link
           href="/priority-applicant"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-indigo-500/25 transition hover:shadow-md hover:shadow-indigo-500/35"
         >
-          <Zap className="h-3.5 w-3.5" />
+          <Zap className="h-3.5 w-3.5 animate-pulse" />
           {balance > 0 ? `${balance} priority credit${balance === 1 ? "" : "s"}` : "Get Priority credits"}
         </Link>
       </div>

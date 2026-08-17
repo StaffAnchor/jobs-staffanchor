@@ -24,25 +24,26 @@ export default function PriorityApplicantCard({ candidateId, mandateId }: { cand
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-indigo-200 bg-indigo-50/50">
+    <div className="overflow-hidden rounded-2xl shadow-sm shadow-indigo-500/10">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+        className="relative flex w-full items-center justify-between gap-3 overflow-hidden bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 text-left"
       >
+        <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-xl" />
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white">
-            <Zap className="h-4 w-4" />
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white">
+            <Zap className="h-4.5 w-4.5 animate-pulse" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-slate-900">Make this application Priority</p>
-            <p className="text-xs text-slate-500">Get flagged for the recruiter&apos;s first review pass — from ₹79.</p>
+            <p className="text-sm font-semibold text-white">Make this application Priority</p>
+            <p className="text-xs text-white/80">Get flagged for the recruiter&apos;s first review pass — from ₹79.</p>
           </div>
         </div>
-        {expanded ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+        {expanded ? <ChevronUp className="h-4 w-4 shrink-0 text-white/80" /> : <ChevronDown className="h-4 w-4 shrink-0 text-white/80" />}
       </button>
       {expanded && (
-        <div className="border-t border-indigo-100 px-5 py-4">
+        <div className="border border-t-0 border-indigo-100 bg-indigo-50/50 px-5 py-4">
           <PriorityPackPicker candidateId={candidateId} mandateId={mandateId} onPurchased={() => setDone(true)} compact />
         </div>
       )}

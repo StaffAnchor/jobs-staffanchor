@@ -205,6 +205,7 @@ export default function PortalHome({
           title="Priority Applicant"
           subtitle="Get an application flagged for the recruiter's first review pass — from ₹79."
           href="/priority-applicant"
+          highlight
         />
       </div>
 
@@ -297,6 +298,7 @@ function HomeBlock({
   badge,
   onClick,
   href,
+  highlight = false,
 }: {
   icon: typeof UserCircle2;
   iconClasses: string;
@@ -305,8 +307,31 @@ function HomeBlock({
   badge?: number;
   onClick?: () => void;
   href?: string;
+  // Distinct gradient treatment for the one tile that should out-compete
+  // the others for attention (Priority Applicant) -- same "standout pill"
+  // idea used for the Free Tools nav item on staffanchor.com, so a paid
+  // upsell doesn't just blend into a wall of identical white cards.
+  highlight?: boolean;
 }) {
-  const content = (
+  const content = highlight ? (
+    <>
+      <div className="flex items-start justify-between">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
+          <Icon className="h-5 w-5 animate-pulse" />
+        </div>
+        {badge != null && (
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-bold text-indigo-700">
+            {badge}
+          </span>
+        )}
+      </div>
+      <p className="mt-3 text-sm font-semibold text-white">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-white/80">{subtitle}</p>
+      <span className="mt-3 inline-flex items-center gap-0.5 text-xs font-semibold text-white/90 transition-colors group-hover:text-white">
+        Get Priority <ChevronRight className="h-3 w-3" />
+      </span>
+    </>
+  ) : (
     <>
       <div className="flex items-start justify-between">
         <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconClasses}`}>
@@ -326,18 +351,23 @@ function HomeBlock({
     </>
   );
 
-  const className =
-    "group block rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md";
+  const className = highlight
+    ? "group relative block overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 p-5 text-left shadow-md shadow-indigo-500/25 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/35"
+    : "group block rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md";
 
   if (href) {
     return (
       <Link href={href} className={className}>
+        {highlight && (
+          <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+        )}
         {content}
       </Link>
     );
   }
   return (
     <button onClick={onClick} className={className}>
+      {highlight && <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-xl" />}
       {content}
     </button>
   );

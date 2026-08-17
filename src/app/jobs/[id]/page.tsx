@@ -314,16 +314,20 @@ export default function QuickApplyPage() {
             </div>
           </div>
 
-          {/* Low-key teaser for Priority Applicant -- plants the idea before
-              the candidate applies, without competing with the main Apply
-              CTA above. Full explainer + purchase lives on the dedicated
-              page every placement links to. */}
+          {/* Teaser for Priority Applicant -- plants the idea before the
+              candidate applies, without competing with the main Apply CTA
+              above. Gradient + pulse to actually earn a glance instead of
+              blending into the flat proof-box list right above it. Full
+              explainer + purchase lives on the dedicated page every
+              placement links to. */}
           <Link
             href="/priority-applicant"
-            className="mt-4 flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50/50 px-3 py-2.5 text-[12px] font-medium text-indigo-700 transition hover:border-indigo-200 hover:bg-indigo-50"
+            className="group relative mt-4 flex items-center gap-2.5 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-3.5 py-3 text-[12px] font-semibold text-white shadow-sm shadow-indigo-500/25 transition hover:shadow-md hover:shadow-indigo-500/35"
           >
-            <Zap className="h-3.5 w-3.5 shrink-0" />
-            Want to be seen first? Priority Applicant packs from ₹79
+            <div className="pointer-events-none absolute -right-4 -top-4 h-14 w-14 rounded-full bg-white/10 blur-lg" />
+            <Zap className="h-4 w-4 shrink-0 animate-pulse" />
+            <span className="flex-1">Want to be seen first? Priority Applicant packs from ₹79</span>
+            <span className="text-white/80 transition-transform group-hover:translate-x-0.5">→</span>
           </Link>
         </div>
       </div>
