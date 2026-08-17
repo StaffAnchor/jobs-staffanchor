@@ -6,6 +6,7 @@ import ApplyForm, { type ExistingProfile } from "@/modules/apply/ApplyForm";
 import EmailGate from "@/modules/apply/EmailGate";
 import { supabase } from "@/lib/supabaseClient";
 import { Spinner } from "@/components/ui/spinner";
+import PriorityFloatingNudge from "@/components/priority/priority-floating-nudge";
 
 export default function RegisterPage() {
   return (
@@ -80,19 +81,28 @@ function RegisterForm() {
     );
   }
 
+  // Already mid-way through the Priority Applicant flow -- the pitch that
+  // sent them here already made the case, repeating it while they're
+  // filling out the profile it requires would just be noise.
+  const showPriorityNudge = !returnTo?.startsWith("/priority-applicant");
+
   if (!ref && !existingProfile && gateEmail === null) {
     return (
       <div className="px-4 py-12 sm:px-6">
         <EmailGate onNewCandidate={setGateEmail} />
+        {showPriorityNudge && <PriorityFloatingNudge />}
       </div>
     );
   }
 
   return (
-    <ApplyForm
-      existingProfile={existingProfile}
-      initialEmail={gateEmail ?? undefined}
-      returnTo={returnTo ?? undefined}
-    />
+    <>
+      <ApplyForm
+        existingProfile={existingProfile}
+        initialEmail={gateEmail ?? undefined}
+        returnTo={returnTo ?? undefined}
+      />
+      {showPriorityNudge && <PriorityFloatingNudge />}
+    </>
   );
 }

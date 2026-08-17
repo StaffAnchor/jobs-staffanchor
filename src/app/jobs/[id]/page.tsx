@@ -11,6 +11,7 @@ import { getOpenJob, listOpenJobs, logQuickApplyClick, categoryLabel, budgetLabe
 import ApplyForm from "@/modules/apply/ApplyForm";
 import SignedInApplyCard from "@/modules/apply/SignedInApplyCard";
 import EmailGate from "@/modules/apply/EmailGate";
+import PriorityFloatingNudge from "@/components/priority/priority-floating-nudge";
 import { supabase } from "@/lib/supabaseClient";
 import { recordJobView } from "@/lib/recentlyViewed";
 
@@ -399,6 +400,14 @@ export default function QuickApplyPage() {
         </CardContent>
       </Card>
     </div>
+
+    {/* Same offer as the sidebar teaser above, but the sidebar scrolls out
+        of view long before the candidate reaches the apply form below --
+        exactly the stretch where they're spending the most time on the
+        page (typing an email, filling multi-step fields) and the sidebar
+        pitch has already disappeared. Fixed positioning keeps it on
+        screen through that whole stretch instead. */}
+    <PriorityFloatingNudge mandateId={mandateId} />
     </>
   );
 }
