@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { posthog } from "@/lib/posthog";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion, type ApplicationAnswerPayload } from "./applicationQuestions";
+import { logQuickApplyFormOpened } from "@/modules/jobs/api";
 import {
   computeCareerGaps,
   computeStabilityScore,
@@ -935,6 +936,15 @@ export default function ApplyForm({
   useEffect(() => {
     if (!mandateId) return;
     fetchApplicationQuestions(mandateId).then(setScreeningQuestions);
+  }, [mandateId]);
+
+  // Funnel: this form mounting is the "form opened" stage -- the candidate
+  // actually saw the apply wizard, distinct from just clicking the Quick
+  // Apply CTA on the listing page (logQuickApplyClick, fired before this
+  // component ever renders).
+  useEffect(() => {
+    if (!mandateId) return;
+    void logQuickApplyFormOpened(mandateId);
   }, [mandateId]);
   // "Already registered?" check -- see the real-time email lookup effect
   // below. Runs for both Apply and Build Your Profile (any candidate-

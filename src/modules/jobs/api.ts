@@ -60,10 +60,17 @@ export async function listOpenJobs(): Promise<JobListing[]> {
   return (data ?? []) as JobListing[];
 }
 
-// Fire-and-forget click beacon for the "Quick Apply" CTAs on a mandate's
-// public listing page -- lets the CRM show a Clicks -> Submitted -> Profile
-// Completed funnel per mandate. Never blocks navigation to the form, and
-// never throws.
+// Fire-and-forget event beacon for the Quick Apply funnel on a mandate's
+// public listing/apply pages -- lets the CRM show a Clicked -> Form opened ->
+// Submitted -> Profile Completed funnel per mandate, broken down by location,
+// referrer/UTM source, and device/browser. Never blocks navigation to the
+// form, and never throws.
+//
+// The actual insert (and the header-derived enrichment: IP geolocation,
+// referrer, user-agent) happens server-side in /api/log-click, since Vercel's
+// geo headers and a reliable Referer header are only available there -- see
+// that route for details. This function's own job is just the staff-skip
+// check and reading whatever UTM params are on the current URL.
 //
 // Recruiters/admins have no login flow on this public site at all (their
 // accounts live in the CRM), so in practice every visitor here is a genuine
@@ -71,19 +78,44 @@ export async function listOpenJobs(): Promise<JobListing[]> {
 // happens to also be signed in as a candidate on this device -- we skip
 // logging if the current session's own `profiles` row (readable only via
 // the "read own profile" RLS policy) resolves to a recruiter/admin role.
-export async function logQuickApplyClick(mandateId: string) {
+async function logQuickApplyEvent(mandateId: string, eventType: "click" | "form_opened") {
   try {
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (user) {
       const { data: ownProfile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-      if (ownProfile) return; // signed in as staff -- don't count this click
+      if (ownProfile) return; // signed in as staff -- don't count this event
     }
-    await supabase.from("quick_apply_clicks").insert({ mandate_id: mandateId });
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    await fetch("/api/log-click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mandateId,
+        eventType,
+        utmSource: params?.get("utm_source") ?? undefined,
+        utmMedium: params?.get("utm_medium") ?? undefined,
+        utmCampaign: params?.get("utm_campaign") ?? undefined,
+      }),
+      keepalive: true,
+    });
   } catch {
-    // Best-effort only -- a failed click log should never break the page.
+    // Best-effort only -- a failed event log should never break the page.
   }
+}
+
+export async function logQuickApplyClick(mandateId: string) {
+  await logQuickApplyEvent(mandateId, "click");
+}
+
+// New funnel stage: fired once when the candidate's actual apply form/card
+// mounts (ApplyForm.tsx / SignedInApplyCard.tsx), distinct from the CTA
+// click above -- lets the CRM show candidates who clicked but never even saw
+// the form (slow load, bounced) separately from those who saw it but didn't
+// submit.
+export async function logQuickApplyFormOpened(mandateId: string) {
+  await logQuickApplyEvent(mandateId, "form_opened");
 }
 
 export async function getOpenJob(mandateId: string): Promise<JobListing | null> {

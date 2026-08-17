@@ -10,6 +10,7 @@ import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } 
 import ApplicationTimeline from "./ApplicationTimeline";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
+import { logQuickApplyFormOpened } from "@/modules/jobs/api";
 
 // Naukri (and every other persistent-session job site) recognizes a signed-in
 // visitor the moment they land on the site again -- no re-typing an email,
@@ -43,6 +44,12 @@ export default function SignedInApplyCard({
 
   useEffect(() => {
     fetchApplicationQuestions(mandateId).then(setQuestions);
+  }, [mandateId]);
+
+  // Funnel: this card mounting is the "form opened" stage -- the candidate
+  // actually saw the apply UI, distinct from just clicking the CTA.
+  useEffect(() => {
+    void logQuickApplyFormOpened(mandateId);
   }, [mandateId]);
 
   useEffect(() => {
