@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserCircle2, Gift, Search, ArrowRight, ChevronRight, Sparkles, Briefcase, MapPin, MessageCircleQuestion, FileCheck2 } from "lucide-react";
+import { UserCircle2, Gift, Search, ArrowRight, ChevronRight, Sparkles, Briefcase, MapPin, MessageCircleQuestion, FileCheck2, Zap } from "lucide-react";
 import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } from "./profile-score";
 import MarketIntelligenceStrip from "./MarketIntelligenceStrip";
 import SharePassportCard from "./SharePassportCard";
@@ -161,7 +161,7 @@ export default function PortalHome({
 
       {/* --- Quick links: secondary now that Recent Activity covers the
           most common "why am I here" reason for a return visit. --- */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <HomeBlock
           icon={UserCircle2}
           iconClasses="bg-emerald-50 text-emerald-600"
@@ -198,6 +198,13 @@ export default function PortalHome({
           title="Check My ATS Score"
           subtitle="Upload your resume and see how it scores for keyword match and ATS-parsability."
           href="/ats-score"
+        />
+        <HomeBlock
+          icon={Zap}
+          iconClasses="bg-indigo-50 text-indigo-600"
+          title="Priority Applicant"
+          subtitle="Get an application flagged for the recruiter's first review pass — from ₹79."
+          href="/priority-applicant"
         />
       </div>
 

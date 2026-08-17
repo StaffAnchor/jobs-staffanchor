@@ -313,6 +313,18 @@ export default function QuickApplyPage() {
               </p>
             </div>
           </div>
+
+          {/* Low-key teaser for Priority Applicant -- plants the idea before
+              the candidate applies, without competing with the main Apply
+              CTA above. Full explainer + purchase lives on the dedicated
+              page every placement links to. */}
+          <Link
+            href="/priority-applicant"
+            className="mt-4 flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50/50 px-3 py-2.5 text-[12px] font-medium text-indigo-700 transition hover:border-indigo-200 hover:bg-indigo-50"
+          >
+            <Zap className="h-3.5 w-3.5 shrink-0" />
+            Want to be seen first? Priority Applicant packs from ₹79
+          </Link>
         </div>
       </div>
 

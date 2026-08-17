@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Briefcase, MapPin } from "lucide-react";
+import Link from "next/link";
+import { Briefcase, MapPin, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -14,6 +15,7 @@ type PipelineRow = {
   city: string | null;
   in_shortlist: boolean;
   linked_at: string;
+  is_priority: boolean;
 };
 
 const STAGE_ORDER = ["sourced", "screened", "shortlisted", "submitted", "client_interview", "offer", "placed"];
@@ -43,25 +45,60 @@ const STAGE_COLORS: Record<string, string> = {
 const CARD_CLASSES =
   "rounded-2xl border-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_14px_32px_-18px_rgba(15,23,42,0.14)] transition-shadow duration-300 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_42px_-18px_rgba(15,23,42,0.18)]";
 
-export default function MyPipeline() {
+// candidateId is threaded down from candidate-portal/page.tsx (already
+// resolved there via get_or_create_my_candidate_profile) so this list can
+// spend a priority credit directly against a row's link_id without a
+// second round trip just to find out who's logged in.
+export default function MyPipeline({ candidateId }: { candidateId: string }) {
   const [rows, setRows] = useState<PipelineRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [balance, setBalance] = useState<number>(0);
+  const [spendingId, setSpendingId] = useState<string | null>(null);
+
+  async function loadPipeline() {
+    const [{ data, error }, { data: bal }] = await Promise.all([
+      supabase.rpc("get_my_pipeline"),
+      supabase.rpc("get_my_priority_balance"),
+    ]);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setRows((data ?? []) as PipelineRow[]);
+    const balRow = Array.isArray(bal) ? bal[0] : bal;
+    setBalance(balRow?.priority_credits ?? 0);
+  }
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const { data, error } = await supabase.rpc("get_my_pipeline");
-      if (cancelled) return;
-      if (error) {
-        setError(error.message);
-        return;
-      }
-      setRows((data ?? []) as PipelineRow[]);
-    })();
+    loadPipeline().catch((e) => {
+      if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load.");
+    });
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function makePriority(linkId: string) {
+    if (balance < 1) return;
+    setSpendingId(linkId);
+    try {
+      const res = await fetch("/api/priority/apply-credit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId, linkId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Couldn't apply priority.");
+      setRows((prev) => (prev ? prev.map((r) => (r.link_id === linkId ? { ...r, is_priority: true } : r)) : prev));
+      setBalance(data.remainingBalance ?? balance - 1);
+    } catch {
+      // Non-fatal -- row just stays non-priority, candidate can retry.
+    } finally {
+      setSpendingId(null);
+    }
+  }
 
   if (error) {
     return <p className="text-sm text-red-600">{error}</p>;
@@ -99,9 +136,18 @@ export default function MyPipeline() {
 
   return (
     <div className="space-y-3.5">
-      <p className="text-sm text-slate-500">
-        Every role a StaffAnchor recruiter has matched you to, and exactly where things stand.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-slate-500">
+          Every role a StaffAnchor recruiter has matched you to, and exactly where things stand.
+        </p>
+        <Link
+          href="/priority-applicant"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+        >
+          <Zap className="h-3.5 w-3.5" />
+          {balance > 0 ? `${balance} priority credit${balance === 1 ? "" : "s"}` : "Get Priority credits"}
+        </Link>
+      </div>
       {rows.map((r) => {
         const stageIdx = STAGE_ORDER.indexOf(r.stage);
         const maxIdx = STAGE_ORDER.length - 1;
@@ -111,7 +157,14 @@ export default function MyPipeline() {
             <CardContent className="space-y-3 py-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[15px] font-semibold text-slate-900">{r.role_title}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-[15px] font-semibold text-slate-900">{r.role_title}</p>
+                    {r.is_priority && (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                        <Zap className="h-2.5 w-2.5" /> Priority
+                      </span>
+                    )}
+                  </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                     <span>{r.client_display}</span>
                     {r.city && (
@@ -137,6 +190,25 @@ export default function MyPipeline() {
                   />
                 </div>
               )}
+              {!r.is_priority &&
+                (balance > 0 ? (
+                  <button
+                    onClick={() => makePriority(r.link_id)}
+                    disabled={spendingId === r.link_id}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+                  >
+                    <Zap className="h-3 w-3" />
+                    {spendingId === r.link_id ? "Applying…" : "Use 1 credit to make Priority"}
+                  </button>
+                ) : (
+                  <Link
+                    href={`/priority-applicant?mandateId=${r.mandate_id}`}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                  >
+                    <Zap className="h-3 w-3" />
+                    Make Priority
+                  </Link>
+                ))}
             </CardContent>
           </Card>
         );

@@ -22,6 +22,7 @@ import { posthog } from "@/lib/posthog";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion, type ApplicationAnswerPayload } from "./applicationQuestions";
 import { logQuickApplyFormOpened } from "@/modules/jobs/api";
+import PriorityApplicantCard from "@/components/priority/priority-applicant-card";
 import {
   computeCareerGaps,
   computeStabilityScore,
@@ -922,6 +923,11 @@ export default function ApplyForm({
   const [triageStepIndex, setTriageStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  // Captured from /api/candidate-submit's response so the post-submit
+  // confirmation screen can offer "Make This Application Priority" without
+  // requiring the candidate to be logged in yet (they often aren't -- the
+  // account is created server-side on submit, session comes later).
+  const [submittedCandidateId, setSubmittedCandidateId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   // Mandate-specific candidate-facing screening questions (CRM: mandate ->
   // Sharing & Public Listing -> Application Questions). Fetched once if this
@@ -2184,6 +2190,7 @@ export default function ApplyForm({
         onSaved?.();
       } else {
         setSubmitted(true);
+        setSubmittedCandidateId(submitJson?.candidateId ?? null);
         toast.success("Your profile is on record. Thank you.");
         posthog.capture("candidate_applied", {
           source,
@@ -4206,6 +4213,12 @@ export default function ApplyForm({
               A StaffAnchor recruiter will review your profile and reach out if there&apos;s a mandate fit. A couple
               more optional things below boost your shortlisting odds.
             </p>
+          </div>
+        )}
+
+        {submitted && !isEditMode && mandateId && submittedCandidateId && (
+          <div className="mx-auto mb-6 max-w-3xl">
+            <PriorityApplicantCard candidateId={submittedCandidateId} mandateId={mandateId} />
           </div>
         )}
 

@@ -295,7 +295,7 @@ export default function CandidatePortalPage() {
               <p className="mt-0.5 text-sm text-slate-500">{meta.subtitle}</p>
             </div>
           </div>
-          {tab === "pipeline" && <MyPipeline />}
+          {tab === "pipeline" && <MyPipeline candidateId={profile.id} />}
           {tab === "refer" && <ReferEarn openJobs={openJobs} />}
         </div>
       )}
