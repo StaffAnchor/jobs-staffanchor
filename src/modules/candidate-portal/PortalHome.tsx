@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserCircle2, Gift, Search, ArrowRight, ChevronRight, Sparkles, Briefcase, MapPin } from "lucide-react";
+import { UserCircle2, Gift, Search, ArrowRight, ChevronRight, Sparkles, Briefcase, MapPin, MessageCircleQuestion } from "lucide-react";
 import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } from "./profile-score";
 import MarketIntelligenceStrip from "./MarketIntelligenceStrip";
 import SharePassportCard from "./SharePassportCard";
@@ -161,7 +161,7 @@ export default function PortalHome({
 
       {/* --- Quick links: secondary now that Recent Activity covers the
           most common "why am I here" reason for a return visit. --- */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <HomeBlock
           icon={UserCircle2}
           iconClasses="bg-emerald-50 text-emerald-600"
@@ -184,6 +184,13 @@ export default function PortalHome({
           subtitle="See every open sales role currently being staffed through StaffAnchor."
           badge={openJobsCount > 0 ? openJobsCount : undefined}
           href="/jobs"
+        />
+        <HomeBlock
+          icon={MessageCircleQuestion}
+          iconClasses="bg-indigo-50 text-indigo-600"
+          title="Practice Mock Interview"
+          subtitle="Answer real sales interview questions and get instant AI feedback before your next call."
+          href="/mock-interview"
         />
       </div>
 
