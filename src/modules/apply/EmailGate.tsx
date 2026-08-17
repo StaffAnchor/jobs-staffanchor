@@ -206,7 +206,12 @@ export default function EmailGate({
           <Input
             type="email"
             required
-            autoFocus
+            // No autoFocus: this card mounts far down the job detail page
+            // (below the JD, "Similar roles", etc.). A newly-focused input
+            // makes the browser auto-scroll it into view, which was
+            // yanking every visitor straight from the job listing down to
+            // this form instead of letting them land at the top of the
+            // page and read the role first.
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
