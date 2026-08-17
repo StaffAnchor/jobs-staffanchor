@@ -8,6 +8,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } from "@/modules/candidate-portal/profile-score";
 import ApplicationTimeline from "./ApplicationTimeline";
+import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
+import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
 
 // Naukri (and every other persistent-session job site) recognizes a signed-in
 // visitor the moment they land on the site again -- no re-typing an email,
@@ -36,6 +38,12 @@ export default function SignedInApplyCard({
   const [applied, setApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pipelineStage, setPipelineStage] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<ApplicationQuestion[]>([]);
+  const [showQuestions, setShowQuestions] = useState(false);
+
+  useEffect(() => {
+    fetchApplicationQuestions(mandateId).then(setQuestions);
+  }, [mandateId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +96,17 @@ export default function SignedInApplyCard({
     };
   }, [alreadyApplied, applied, mandateId]);
 
-  async function handleApply() {
+  function handleApply() {
+    // If this mandate has custom screening questions, collect answers first
+    // -- submitApplication() (below) does the actual work either way.
+    if (questions.length > 0) {
+      setShowQuestions(true);
+      return;
+    }
+    void submitApplication([]);
+  }
+
+  async function submitApplication(screeningAnswers: ReturnType<typeof buildAnswerPayload>) {
     if (!candidate?.email) return;
     setApplying(true);
     setError(null);
@@ -96,10 +114,15 @@ export default function SignedInApplyCard({
       const res = await fetch("/api/candidate-submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: { email: candidate.email }, mandateId }),
+        body: JSON.stringify({
+          payload: { email: candidate.email },
+          mandateId,
+          ...(screeningAnswers.length ? { screeningAnswers } : {}),
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error ?? "Something went wrong. Please try again.");
+      setShowQuestions(false);
       setApplied(true);
       toast.success("You're all set -- your profile has been submitted for this role.");
     } catch (e) {
@@ -223,6 +246,16 @@ export default function SignedInApplyCard({
           </div>
         </div>
       </div>
+
+      {showQuestions && (
+        <ApplicationQuestionsModal
+          mandateTitle={mandateTitle}
+          questions={questions}
+          submitting={applying}
+          onCancel={() => setShowQuestions(false)}
+          onSubmit={(answers) => void submitApplication(buildAnswerPayload(questions, answers))}
+        />
+      )}
     </div>
   );
 }

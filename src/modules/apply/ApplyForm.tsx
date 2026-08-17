@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { posthog } from "@/lib/posthog";
+import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
+import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion, type ApplicationAnswerPayload } from "./applicationQuestions";
 import {
   computeCareerGaps,
   computeStabilityScore,
@@ -920,6 +922,20 @@ export default function ApplyForm({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Mandate-specific candidate-facing screening questions (CRM: mandate ->
+  // Sharing & Public Listing -> Application Questions). Fetched once if this
+  // form is attached to a mandate; gates the real submit (see handleSubmit)
+  // behind ApplicationQuestionsModal the first time a non-silent submit is
+  // attempted, then never again for the rest of this session.
+  const [screeningQuestions, setScreeningQuestions] = useState<ApplicationQuestion[]>([]);
+  const [showScreeningModal, setShowScreeningModal] = useState(false);
+  const screeningAnswersRef = useRef<ApplicationAnswerPayload[] | null>(null);
+  const pendingSubmitOptsRef = useRef<{ silent?: boolean; fastPath?: boolean } | undefined>(undefined);
+
+  useEffect(() => {
+    if (!mandateId) return;
+    fetchApplicationQuestions(mandateId).then(setScreeningQuestions);
+  }, [mandateId]);
   // "Already registered?" check -- see the real-time email lookup effect
   // below. Runs for both Apply and Build Your Profile (any candidate-
   // initiated entry point); deliberately excludes Recruiter Created (that's
@@ -1866,6 +1882,15 @@ export default function ApplyForm({
         setStep(0);
         return;
       }
+      // This mandate has custom screening questions and they haven't been
+      // collected yet for this submit -- pause here, show the modal, and
+      // let its onSubmit re-invoke handleSubmit (with the same opts) once
+      // screeningAnswersRef is populated, which skips this gate.
+      if (screeningQuestions.length > 0 && screeningAnswersRef.current === null) {
+        pendingSubmitOptsRef.current = opts;
+        setShowScreeningModal(true);
+        return;
+      }
       setSubmitting(true);
       setErrorMsg(null);
     }
@@ -2133,7 +2158,11 @@ export default function ApplyForm({
       const submitRes = await fetch("/api/candidate-submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload, mandateId }),
+        body: JSON.stringify({
+          payload,
+          mandateId,
+          ...(screeningAnswersRef.current?.length ? { screeningAnswers: screeningAnswersRef.current } : {}),
+        }),
       });
       const submitJson = await submitRes.json().catch(() => ({}));
       if (!submitRes.ok) throw new Error(submitJson?.error ?? "Something went wrong. Please try again.");
@@ -4535,6 +4564,19 @@ export default function ApplyForm({
           </div>
         </div>
       </div>
+    )}
+    {showScreeningModal && (
+      <ApplicationQuestionsModal
+        mandateTitle={mandateTitle}
+        questions={screeningQuestions}
+        submitting={submitting}
+        onCancel={() => setShowScreeningModal(false)}
+        onSubmit={(answers) => {
+          screeningAnswersRef.current = buildAnswerPayload(screeningQuestions, answers);
+          setShowScreeningModal(false);
+          void handleSubmit(pendingSubmitOptsRef.current);
+        }}
+      />
     )}
     </>
   );

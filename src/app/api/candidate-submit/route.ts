@@ -26,14 +26,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { payload?: Record<string, unknown>; mandateId?: string };
+  let body: {
+    payload?: Record<string, unknown>;
+    mandateId?: string;
+    // Answers to this mandate's custom Application Questions (CRM: mandate ->
+    // Sharing & Public Listing -> Application Questions), collected via
+    // ApplicationQuestionsModal on either apply path. Ignored when there's no
+    // mandateId -- quick_apply is the only RPC that accepts them.
+    screeningAnswers?: { question_id: string; answer_text: string | null; answer_number: number | null; answer_bool: boolean | null }[];
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { payload, mandateId } = body;
+  const { payload, mandateId, screeningAnswers } = body;
   if (!payload || typeof payload !== "object") {
     return NextResponse.json({ error: "payload is required." }, { status: 400 });
   }
@@ -64,7 +72,9 @@ export async function POST(req: NextRequest) {
     }
 
     const rpcName = mandateId ? "quick_apply" : "submit_candidate";
-    const rpcArgs = mandateId ? { payload, p_mandate_id: mandateId } : { payload };
+    const rpcArgs = mandateId
+      ? { payload, p_mandate_id: mandateId, p_screening_answers: screeningAnswers?.length ? screeningAnswers : null }
+      : { payload };
     const { data: candidateId, error: rpcError } = await admin.rpc(rpcName, rpcArgs);
     if (rpcError) {
       return NextResponse.json({ error: rpcError.message }, { status: 400 });

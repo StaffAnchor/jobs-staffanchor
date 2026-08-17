@@ -42,24 +42,31 @@ export function CurrentJobsTeaser() {
 
         <div className="grid gap-4 md:grid-cols-3">
           {jobs?.map((job) => (
-            <Card key={job.id} className="p-5 transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-indigo-700">
-                {categoryLabel(job.category)}
-              </p>
-              <h3 className="mt-1 text-lg font-bold text-slate-950">{job.role_title ?? "Sales Role"}</h3>
-              {job.client_display && <p className="text-sm font-medium text-slate-600">{job.client_display}</p>}
-              <div className="mt-3 flex flex-wrap gap-3 text-[13px] text-slate-500">
-                {job.city && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" /> {job.city}
-                  </span>
-                )}
-                <span>{budgetLabel(job.budget_min, job.budget_max)}</span>
-              </div>
-              <Link href={`/jobs/${job.id}`} className="mt-4 block">
-                <Button className="w-full rounded-full">Apply</Button>
-              </Link>
-            </Card>
+            // The whole card is the click target (not just Apply) -- it used
+            // to only be tappable via the Apply button, so clicking the
+            // title/company/location area did nothing, confusing candidates
+            // who expected any part of a job card to open the details.
+            <Link key={job.id} href={`/jobs/${job.id}`} className="block">
+              <Card className="p-5 transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-indigo-700">
+                  {categoryLabel(job.category)}
+                </p>
+                <h3 className="mt-1 text-lg font-bold text-slate-950">{job.role_title ?? "Sales Role"}</h3>
+                {job.client_display && <p className="text-sm font-medium text-slate-600">{job.client_display}</p>}
+                <div className="mt-3 flex flex-wrap gap-3 text-[13px] text-slate-500">
+                  {job.city && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" /> {job.city}
+                    </span>
+                  )}
+                  <span>{budgetLabel(job.budget_min, job.budget_max)}</span>
+                </div>
+                {/* Not its own <Link> -- it would nest inside the card's Link
+                    above, which is invalid HTML and breaks click behavior in
+                    some browsers. The whole card already navigates here. */}
+                <Button className="mt-4 w-full rounded-full">Apply</Button>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>
