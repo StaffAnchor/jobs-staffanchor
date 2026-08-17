@@ -1367,6 +1367,13 @@ export default function ApplyForm({
       if (!isIncomplete) return;
       const anchor = (e.target as HTMLElement | null)?.closest("a");
       if (!anchor) return;
+      // Links that are themselves the correct next step for an "incomplete"
+      // profile -- e.g. the "Login" button on the already-registered notice
+      // -- must bypass this guard entirely. Without this, the guard's own
+      // "you may not get matched, are you sure you want to leave?" modal
+      // pops up on top of a message that just told the candidate to log in,
+      // contradicting itself and blocking the one action being offered.
+      if (anchor.hasAttribute("data-skip-leave-guard")) return;
       const href = anchor.getAttribute("href");
       if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
       if (anchor.target === "_blank") return;
@@ -2725,6 +2732,7 @@ export default function ApplyForm({
                       ...(values.email.trim() ? { email: values.email.trim() } : {}),
                       ...(mandateId ? { returnTo: `/jobs/${mandateId}` } : {}),
                     }).toString()}`}
+                    data-skip-leave-guard
                     className="mt-3 inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
                   >
                     Login
