@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Briefcase, MapPin, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/lib/supabaseClient";
+import { logPriorityClick } from "@/lib/priority-click";
 
 type PipelineRow = {
   link_id: string;
@@ -80,8 +81,9 @@ export default function MyPipeline({ candidateId }: { candidateId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function makePriority(linkId: string) {
+  async function makePriority(linkId: string, mandateId: string) {
     if (balance < 1) return;
+    logPriorityClick("my_pipeline_spend_credit", { mandateId, candidateId });
     setSpendingId(linkId);
     try {
       const res = await fetch("/api/priority/apply-credit", {
@@ -142,6 +144,7 @@ export default function MyPipeline({ candidateId }: { candidateId: string }) {
         </p>
         <Link
           href="/priority-applicant"
+          onClick={() => logPriorityClick("my_pipeline_cta", { candidateId })}
           className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-indigo-500/25 transition hover:shadow-md hover:shadow-indigo-500/35"
         >
           <Zap className="h-3.5 w-3.5 animate-pulse" />
@@ -193,7 +196,7 @@ export default function MyPipeline({ candidateId }: { candidateId: string }) {
               {!r.is_priority &&
                 (balance > 0 ? (
                   <button
-                    onClick={() => makePriority(r.link_id)}
+                    onClick={() => makePriority(r.link_id, r.mandate_id)}
                     disabled={spendingId === r.link_id}
                     className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
                   >
@@ -203,6 +206,7 @@ export default function MyPipeline({ candidateId }: { candidateId: string }) {
                 ) : (
                   <Link
                     href={`/priority-applicant?mandateId=${r.mandate_id}`}
+                    onClick={() => logPriorityClick("my_pipeline_cta", { mandateId: r.mandate_id, candidateId })}
                     className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
                   >
                     <Zap className="h-3 w-3" />

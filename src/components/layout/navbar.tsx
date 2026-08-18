@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Zap } from "lucide-react";
+import { logPriorityClick } from "@/lib/priority-click";
 import { useAuthStore } from "@/modules/auth/store";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
@@ -101,6 +102,7 @@ export function Navbar() {
               a bar of otherwise plain-text buttons. */}
           <Link
             href="/priority-applicant"
+            onClick={() => logPriorityClick("nav_pill")}
             className="group relative mx-0.5 hidden items-center gap-1.5 overflow-hidden rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/25 transition-transform duration-200 hover:scale-105 hover:shadow-md hover:shadow-indigo-500/35 sm:flex"
           >
             <Zap className="h-3.5 w-3.5 animate-pulse" />

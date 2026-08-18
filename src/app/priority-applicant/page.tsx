@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabaseClient";
 import PriorityPackPicker from "@/components/priority/priority-pack-picker";
 import PriorityEmailGate from "@/components/priority/priority-email-gate";
 import type { PurchaseResult } from "@/components/priority/use-priority-checkout";
+import { logPriorityClick } from "@/lib/priority-click";
 
 type JobListing = { role_title: string | null; client_display: string | null };
 
@@ -34,6 +35,19 @@ function PriorityApplicantContent() {
   const [resolving, setResolving] = useState(!candidateIdParam);
   const [result, setResult] = useState<PurchaseResult | null>(null);
   const [jobListing, setJobListing] = useState<JobListing | null>(null);
+
+  // Funnel visibility: log that a candidate actually landed on the checkout
+  // page itself (distinct from the upstream CTA click that got them here) --
+  // lets Reports show how many people bounce between clicking a promo and
+  // seeing the real pack picker/price.
+  useEffect(() => {
+    logPriorityClick("checkout_landed", {
+      mandateId,
+      candidateId: candidateIdParam,
+      eventType: "checkout_started",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Best-effort -- lets both the pack-picker headline and the post-payment
   // confirmation name the actual job ("...for Chief Revenue Officer at

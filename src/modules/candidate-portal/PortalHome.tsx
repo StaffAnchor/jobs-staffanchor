@@ -5,6 +5,7 @@ import { UserCircle2, Gift, Search, ArrowRight, ChevronRight, Sparkles, Briefcas
 import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } from "./profile-score";
 import MarketIntelligenceStrip from "./MarketIntelligenceStrip";
 import SharePassportCard from "./SharePassportCard";
+import { logPriorityClick } from "@/lib/priority-click";
 
 // The portal's actual landing screen -- previously "My Profile" (the full
 // onboarding wizard) was the default tab, which meant every return visit
@@ -205,6 +206,7 @@ export default function PortalHome({
           title="Priority Applicant"
           subtitle="Get an application flagged for the recruiter's first review pass — from ₹79."
           href="/priority-applicant"
+          onClick={() => logPriorityClick("portal_home")}
           highlight
         />
       </div>

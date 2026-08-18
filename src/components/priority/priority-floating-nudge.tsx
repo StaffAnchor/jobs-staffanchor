@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { X, Zap } from "lucide-react";
+import { logPriorityClick } from "@/lib/priority-click";
 
 // The sidebar teaser on the job detail page only lives near the top --
 // once a candidate scrolls down into the actual apply form (or, on
@@ -42,7 +43,11 @@ export default function PriorityFloatingNudge({ mandateId }: { mandateId?: strin
         >
           <X className="h-3.5 w-3.5" />
         </button>
-        <Link href={`/priority-applicant${mandateId ? `?mandateId=${mandateId}` : ""}`} className="block pr-4">
+        <Link
+          href={`/priority-applicant${mandateId ? `?mandateId=${mandateId}` : ""}`}
+          onClick={() => logPriorityClick("floating_nudge", { mandateId })}
+          className="block pr-4"
+        >
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
               <Zap className="h-4 w-4 text-white" fill="currentColor" />

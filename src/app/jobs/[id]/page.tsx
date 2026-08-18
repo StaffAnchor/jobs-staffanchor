@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Briefcase, CheckCircle2, IndianRupee, MapPin, Zap, ShieldCheck, PhoneCall, Clock } from "lucide-react";
+import { logPriorityClick } from "@/lib/priority-click";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -325,6 +326,7 @@ export default function QuickApplyPage() {
               dedicated page every placement links to. */}
           <Link
             href={`/priority-applicant?mandateId=${mandateId}`}
+            onClick={() => logPriorityClick("job_teaser", { mandateId })}
             className="group relative mt-4 block overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-fuchsia-600 p-4 shadow-md shadow-indigo-500/30 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/40"
           >
             <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/15 blur-xl" />

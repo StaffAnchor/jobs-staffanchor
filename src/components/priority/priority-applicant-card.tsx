@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Zap, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import PriorityPackPicker from "./priority-pack-picker";
+import { logPriorityClick } from "@/lib/priority-click";
 
 // The retroactive-conversion surface: a candidate who just submitted an
 // application (and may not even have a session yet -- their account is
@@ -27,7 +28,13 @@ export default function PriorityApplicantCard({ candidateId, mandateId }: { cand
     <div className="overflow-hidden rounded-2xl shadow-sm shadow-indigo-500/10">
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => {
+          setExpanded((v) => {
+            const next = !v;
+            if (next) logPriorityClick("apply_confirmation", { mandateId, candidateId });
+            return next;
+          });
+        }}
         className="relative flex w-full items-center justify-between gap-3 overflow-hidden bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 text-left"
       >
         <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-xl" />
