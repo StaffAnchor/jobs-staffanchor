@@ -92,16 +92,29 @@ export default function CandidateLoginPage() {
       return;
     }
 
-    // shouldCreateUser: false -- we've already confirmed a candidate record
-    // (and its linked auth user) exists, so this call only ever sends a code
-    // for an existing account, never silently provisions a new one.
+    // shouldCreateUser: true -- candidate_email_exists (above) only proves a
+    // *candidates* row exists, not that this person ever finished a Supabase
+    // Auth signup. Most candidate rows are created by a recruiter, bulk
+    // upload, LinkedIn sourcing, or the old anonymous Apply flow -- none of
+    // which provision an auth.users account. With shouldCreateUser: false,
+    // those candidates hit a real dead end here: ApplyForm blocks them for
+    // having an existing profile and tells them to log in, then login
+    // silently fails to ever send a code because there's no auth account to
+    // sign into (confirmed live: itsejaz4u@gmail.com had a candidates row
+    // from Sep 9 but no auth.users row, and a DB check found 709 candidates
+    // in the same state). We've already gated this call on
+    // candidate_email_exists returning true, so allowing Supabase to
+    // provision the missing auth account here is safe -- it can only ever
+    // attach to an email we've confirmed is a real existing candidate.
+    // get_or_create_my_candidate_profile() then links the new auth user to
+    // that existing candidates row by email on first successful login.
     // emailRedirectTo brings a clicked link back to this exact page (with
     // returnTo intact) instead of Supabase's configured Site URL default --
     // without it, clicking the link silently signs the candidate in but
     // drops them on the bare homepage with no sign of what just happened.
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: false, emailRedirectTo: window.location.href },
+      options: { shouldCreateUser: true, emailRedirectTo: window.location.href },
     });
     setSending(false);
     if (error) {
