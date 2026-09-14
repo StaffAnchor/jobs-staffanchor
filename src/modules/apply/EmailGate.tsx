@@ -76,6 +76,19 @@ export default function EmailGate({
     setSending(true);
     setError(null);
     try {
+      // shouldCreateUser: true -- this function only ever runs once
+      // checkEmail (above) has already set `existing` from
+      // /api/candidate-lookup, i.e. a candidates row is confirmed to exist
+      // for this email. That row can predate any Supabase Auth account
+      // (recruiter-created, bulk upload, LinkedIn sourcing, or the old
+      // anonymous Apply flow all create it without one), so shouldCreateUser:
+      // false silently refused to ever send a code for 709 such candidates
+      // -- same dead end fixed in candidate-login/page.tsx (commit 828b3e2)
+      // for the dedicated login page, just reachable through this second
+      // entry point (Quick Apply / Register) too. get_or_create_my_candidate_profile()
+      // links the new auth user back to the existing row by email on first
+      // login either way.
+      //
       // emailRedirectTo brings a clicked sign-in link back to this exact
       // page (job page or register) instead of Supabase's default Site
       // URL -- the parent already watches for a session via
@@ -84,7 +97,7 @@ export default function EmailGate({
       // else once they click the link.
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: { shouldCreateUser: false, emailRedirectTo: window.location.href },
+        options: { shouldCreateUser: true, emailRedirectTo: window.location.href },
       });
       if (otpError) throw new Error(otpError.message);
       setCodeStep(true);

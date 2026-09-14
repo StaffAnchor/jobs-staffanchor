@@ -27,12 +27,43 @@ export default function ClientLoginPage() {
     if (!email.trim()) return;
     setSending(true);
     setError(null);
-    // shouldCreateUser: false -- client portal accounts are provisioned by a
-    // recruiter invite, never self-serve, so a code should only ever go out
-    // for an email that's already been granted access.
+
+    // Client portal accounts are provisioned by a recruiter invite, never
+    // self-serve -- so before sending a code we check client_invite_email_exists()
+    // (a SECURITY DEFINER RPC mirroring candidate_email_exists) for an
+    // unconsumed client_invites row matching this email. This mirrors the
+    // check-then-create pattern already used in candidate-login/page.tsx and
+    // EmailGate.tsx: shouldCreateUser: true only fires once we've confirmed
+    // there's a real invite, rather than either (a) shouldCreateUser: false,
+    // which would silently dead-end every invited client whose first sign-in
+    // has no pre-existing auth.users row (the exact bug already fixed for
+    // candidates in commit 828b3e2), or (b) blindly flipping to
+    // shouldCreateUser: true with no upstream check at all, which would let
+    // signInWithOtp create an auth account for literally any typed-in email.
+    // get_or_create_my_client_user() still does the real gating on data
+    // access downstream (an unconsumed client_invites row for the
+    // authenticated user's email), so this is a defense-in-depth UX fix, not
+    // the only thing standing between an uninvited email and the portal.
+    const { data: invited, error: lookupError } = await supabase.rpc(
+      "client_invite_email_exists",
+      { p_email: email.trim() }
+    );
+    if (lookupError) {
+      setSending(false);
+      setError(lookupError.message);
+      return;
+    }
+    if (!invited) {
+      setSending(false);
+      setError(
+        "We don't have client portal access set up for this email yet. Please contact your StaffAnchor recruiter."
+      );
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: false },
+      options: { shouldCreateUser: true },
     });
     setSending(false);
     if (error) {
@@ -63,9 +94,13 @@ export default function ClientLoginPage() {
   async function handleResend() {
     setError(null);
     setSending(true);
+    // shouldCreateUser: true is safe here unconditionally -- handleResend
+    // only runs from the "code" step, which is only reachable after
+    // handleSendCode already passed the client_invite_email_exists() check
+    // above for this same email.
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: false },
+      options: { shouldCreateUser: true },
     });
     setSending(false);
     if (error) setError(error.message);
