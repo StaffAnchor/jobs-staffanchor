@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getOpenJob, listOpenJobs, logQuickApplyClick, categoryLabel, budgetLabel, experienceLabel, timeAgo, type JobListing } from "@/modules/jobs/api";
-import ApplyForm from "@/modules/apply/ApplyForm";
+import QuickApplyForm from "@/modules/apply/QuickApplyForm";
 import SignedInApplyCard from "@/modules/apply/SignedInApplyCard";
 import EmailGate from "@/modules/apply/EmailGate";
 import PriorityFloatingNudge from "@/components/priority/priority-floating-nudge";
@@ -392,8 +392,7 @@ export default function QuickApplyPage() {
           ) : gateEmail === null ? (
             <EmailGate mandateId={mandateId} mandateTitle={job.role_title ?? undefined} onNewCandidate={setGateEmail} />
           ) : (
-            <ApplyForm
-              source="quick_apply"
+            <QuickApplyForm
               mandateId={mandateId}
               mandateTitle={job.role_title ?? undefined}
               initialEmail={gateEmail}
