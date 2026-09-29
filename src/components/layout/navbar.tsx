@@ -23,7 +23,7 @@ export function Navbar() {
 
   // Client Portal pages (client-login, client-portal/*) are a completely
   // separate audience from candidates -- they should never see candidate-
-  // facing nav items (All Jobs, Sign Up/Login, Build My Profile). Routed
+  // facing nav items (Current Openings, Sign Up/Login, Build My Profile). Routed
   // purely off the URL namespace rather than session type, since both
   // candidates and clients authenticate through the same Supabase Auth
   // users table and telling them apart would need an extra client_users
@@ -87,7 +87,7 @@ export function Navbar() {
         </Link>
         <nav className="flex items-center gap-2">
           <Link href="/jobs">
-            <Button variant={pathname.startsWith("/jobs") ? "default" : "ghost"}>All Jobs</Button>
+            <Button variant={pathname.startsWith("/jobs") ? "default" : "ghost"}>Current Openings</Button>
           </Link>
           <Link href="/mock-interview" className="hidden sm:block">
             <Button variant={pathname.startsWith("/mock-interview") ? "default" : "ghost"}>Mock Interview</Button>
