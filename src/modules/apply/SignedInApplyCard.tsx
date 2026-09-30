@@ -12,6 +12,7 @@ import PriorityApplicantCard from "@/components/priority/priority-applicant-card
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
 import { logQuickApplyFormOpened } from "@/modules/jobs/api";
+import CandidateIntakeForm, { intakeMissingFields, type IntakeExistingRow } from "./CandidateIntakeForm";
 
 // Naukri (and every other persistent-session job site) recognizes a signed-in
 // visitor the moment they land on the site again -- no re-typing an email,
@@ -158,6 +159,39 @@ export default function SignedInApplyCard({
   if (!candidate) {
     return (
       <p className="py-8 text-center text-sm text-red-600">{error ?? "Could not load your profile."}</p>
+    );
+  }
+
+  // A signed-in candidate whose row is missing any of the core intake fields
+  // (typically: signed up with just an email, or a recruiter-created profile)
+  // gets the short form pre-filled instead of a one-click apply that would
+  // submit a near-empty profile to the recruiter.
+  const intakeGaps = intakeMissingFields(candidate as IntakeExistingRow);
+  if (!applied && !alreadyApplied && intakeGaps.length > 0 && candidate.email) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="mb-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Signed in as {candidate.email}</p>
+          <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
+            {mandateTitle ? `Apply for ${mandateTitle}` : "Complete your details"}
+          </h2>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600"
+          >
+            <LogOut className="h-3 w-3" /> Not you? Log out
+          </button>
+        </div>
+        <CandidateIntakeForm
+          mandateId={mandateId}
+          mandateTitle={mandateTitle}
+          email={candidate.email}
+          existing={candidate as IntakeExistingRow}
+          signedIn
+          onDone={() => setApplied(true)}
+        />
+      </div>
     );
   }
 

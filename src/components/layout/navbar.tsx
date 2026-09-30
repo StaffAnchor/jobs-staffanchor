@@ -109,9 +109,20 @@ export function Navbar() {
             Priority Applicant
           </Link>
           {candidateSignedIn ? (
-            <Link href="/candidate-portal">
-              <Button variant={pathname.startsWith("/candidate-portal") ? "default" : "ghost"}>My Account</Button>
-            </Link>
+            <>
+              <Link href="/candidate-portal">
+                <Button variant={pathname.startsWith("/candidate-portal") ? "default" : "ghost"}>My Account</Button>
+              </Link>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  window.location.href = "/candidate-login";
+                }}
+              >
+                Log out
+              </Button>
+            </>
           ) : (
             <Link href="/candidate-login">
               <Button variant={pathname.startsWith("/candidate-login") ? "default" : "ghost"}>Sign Up / Login</Button>

@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
 import { type CandidateProfile } from "@/modules/candidate-portal/ProfileEditor";
 import ApplyForm from "@/modules/apply/ApplyForm";
+import CandidateIntakeForm, { type IntakeExistingRow } from "@/modules/apply/CandidateIntakeForm";
 import MyPipeline from "@/modules/candidate-portal/MyPipeline";
 import ReferEarn from "@/modules/candidate-portal/ReferEarn";
 import PortalHome from "@/modules/candidate-portal/PortalHome";
@@ -106,11 +107,11 @@ export default function CandidatePortalPage() {
   const [pipelineCount, setPipelineCount] = useState<number | null>(null);
   const [pipelineRows, setPipelineRows] = useState<PipelineRow[]>([]);
   const [activeReferralCount, setActiveReferralCount] = useState<number | null>(null);
-  // Tracks whether we've already auto-redirected an incomplete profile to
-  // the Profile tab once, so a candidate who deliberately clicks back to
-  // Home after starting to fill things in isn't yanked back to Profile on
-  // every background refetch (loadProfile() re-runs after saves).
-  const [autoRoutedToProfile, setAutoRoutedToProfile] = useState(false);
+  // A brand-new sign-in creates a row with only an email; until the ~12 core
+  // fields exist we show the short intake form first (instead of dropping the
+  // candidate into the long profile wizard). Skippable -- the portal is fully
+  // usable without it.
+  const [intakeSkipped, setIntakeSkipped] = useState(false);
 
   async function loadProfile(cancelledRef?: { current: boolean }) {
     const {
@@ -182,20 +183,38 @@ export default function CandidatePortalPage() {
   }
 
   // See get_or_create_my_candidate_profile() -- the very first sign-in
-  // creates a candidates row with only an email address. Rather than
-  // blocking the whole portal behind a separate one-off mini-form (a
-  // confusing third state next to "signed out -> login" and "signed in ->
-  // profile"), a signed-in candidate always lands in the portal itself --
-  // just routed straight to the My Profile tab (the same ApplyForm used
-  // everywhere else, which already validates these fields on save) when
-  // the core fields are still missing.
-  if (
-    !autoRoutedToProfile &&
-    tab === "home" &&
-    (!profile.full_name?.trim() || !profile.phone?.trim() || !profile.category)
-  ) {
-    setAutoRoutedToProfile(true);
-    setTab("profile");
+  // creates a candidates row with only an email address.
+  if (!intakeSkipped && profile.email && (!profile.full_name?.trim() || !profile.phone?.trim() || !profile.category)) {
+    return (
+      <div className="bg-[#f7f9fc] px-4 py-10 sm:px-6">
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-6 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Welcome to StaffAnchor</p>
+            <h1 className="mt-1 text-2xl font-bold text-slate-900">Let&apos;s finish your profile</h1>
+            <p className="mt-1 text-sm text-slate-500">A minute now means recruiters can match you to the right roles.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <CandidateIntakeForm
+              email={profile.email}
+              existing={profile as unknown as IntakeExistingRow}
+              signedIn
+              onDone={() => {
+                void loadProfile();
+              }}
+            />
+          </div>
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setIntakeSkipped(true)}
+              className="text-xs font-medium text-slate-400 hover:text-slate-600"
+            >
+              I&apos;ll do this later
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const badgeFor = (key: TabKey) => {

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ApplyForm, { type ExistingProfile } from "@/modules/apply/ApplyForm";
+import CandidateIntakeForm from "@/modules/apply/CandidateIntakeForm";
 import EmailGate from "@/modules/apply/EmailGate";
 import { supabase } from "@/lib/supabaseClient";
 import { Spinner } from "@/components/ui/spinner";
@@ -26,26 +27,19 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const ref = searchParams.get("ref");
-  // Where to send the candidate right after a successful registration --
-  // e.g. Priority Applicant linking here (`/register?returnTo=/priority-applicant`)
-  // so "build a profile" is a fast on-ramp back to checkout instead of a
-  // dead end that stops at the plain confirmation screen.
+  // Where to send the candidate right after registration -- e.g. Priority
+  // Applicant linking here (`/register?returnTo=/priority-applicant`) so
+  // "build a profile" is a fast on-ramp back to checkout.
   const returnTo = searchParams.get("returnTo");
+  // Arrives pre-filled from the sign-in page when that email had no profile.
+  const emailParam = searchParams.get("email")?.trim() ?? "";
 
   const [loading, setLoading] = useState(true);
   const [existingProfile, setExistingProfile] = useState<ExistingProfile | undefined>(undefined);
-  // Same email-first gate as the job Apply flow (EmailGate.tsx) -- only
-  // relevant for the plain, no-`ref` visit (a `ref` link is a recruiter
-  // handing a specific candidate a direct completion link, which already
-  // knows who they are and shouldn't re-ask).
   const [gateEmail, setGateEmail] = useState<string | null>(null);
 
-  // A signed-in candidate landing here (old bookmark, the "sign up for
-  // future openings" link, whatever) has already registered -- send them to
-  // My Account instead of the anonymous Register form, same as the navbar
-  // already hides "Build My Profile" once signed in (see navbar.tsx). This
-  // is the register-page half of the same "recognize a persisted session"
-  // fix applied to the job Apply flow.
+  // A signed-in candidate landing here has already registered -- send them to
+  // My Account instead of the anonymous form.
   useEffect(() => {
     let cancelled = false;
     supabase.auth.getUser().then(({ data }) => {
@@ -81,15 +75,26 @@ function RegisterForm() {
     );
   }
 
-  // Already mid-way through the Priority Applicant flow -- the pitch that
-  // sent them here already made the case, repeating it while they're
-  // filling out the profile it requires would just be noise.
   const showPriorityNudge = !returnTo?.startsWith("/priority-applicant");
 
-  if (!ref && !existingProfile && gateEmail === null) {
+  // A `ref` link is a recruiter handing a specific candidate a direct
+  // completion link for their existing record -- that keeps the full profile
+  // form, since the recruiter is asking for the detailed version.
+  if (ref && existingProfile) {
+    return (
+      <>
+        <ApplyForm existingProfile={existingProfile} returnTo={returnTo ?? undefined} />
+        {showPriorityNudge && <PriorityFloatingNudge />}
+      </>
+    );
+  }
+
+  const email = gateEmail ?? (/^\S+@\S+\.\S+$/.test(emailParam) ? emailParam : null);
+
+  if (email === null) {
     return (
       <div className="px-4 py-12 sm:px-6">
-        <EmailGate onNewCandidate={setGateEmail} />
+        <EmailGate initialEmail={emailParam} onNewCandidate={setGateEmail} />
         {showPriorityNudge && <PriorityFloatingNudge />}
       </div>
     );
@@ -97,11 +102,15 @@ function RegisterForm() {
 
   return (
     <>
-      <ApplyForm
-        existingProfile={existingProfile}
-        initialEmail={gateEmail ?? undefined}
-        returnTo={returnTo ?? undefined}
-      />
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <div className="mb-6 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Create your profile</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">Let&apos;s get you in front of the right roles</h1>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <CandidateIntakeForm email={email} returnTo={returnTo ?? undefined} />
+        </div>
+      </div>
       {showPriorityNudge && <PriorityFloatingNudge />}
     </>
   );

@@ -34,6 +34,10 @@ export async function POST(req: NextRequest) {
     // ApplicationQuestionsModal on either apply path. Ignored when there's no
     // mandateId -- quick_apply is the only RPC that accepts them.
     screeningAnswers?: { question_id: string; answer_text: string | null; answer_number: number | null; answer_bool: boolean | null }[];
+    // Set by the intake form when it's about to send the candidate a sign-in
+    // code itself, so the separate welcome email would be a redundant second
+    // message a few seconds later.
+    skipWelcomeEmail?: boolean;
   };
   try {
     body = await req.json();
@@ -41,7 +45,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { payload, mandateId, screeningAnswers } = body;
+  const { payload, mandateId, screeningAnswers, skipWelcomeEmail } = body;
   if (!payload || typeof payload !== "object") {
     return NextResponse.json({ error: "payload is required." }, { status: 400 });
   }
@@ -112,7 +116,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (isNewSignup) {
+    if (isNewSignup && !skipWelcomeEmail) {
       // Best-effort -- a failed welcome email should never fail the submit
       // that already succeeded above.
       await sendMagicLinkWelcomeEmail(admin, email).catch((err) => {

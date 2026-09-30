@@ -5,6 +5,7 @@ import { UserCircle2, Gift, Search, ArrowRight, ChevronRight, Sparkles, Briefcas
 import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } from "./profile-score";
 import MarketIntelligenceStrip from "./MarketIntelligenceStrip";
 import SharePassportCard from "./SharePassportCard";
+import AccountSecurityCard from "./AccountSecurityCard";
 import { logPriorityClick } from "@/lib/priority-click";
 
 // The portal's actual landing screen -- previously "My Profile" (the full
@@ -216,6 +217,10 @@ export default function PortalHome({
           <SharePassportCard slug={publicSlug} enabled={publicEnabled} onChange={onPassportChange} />
         </div>
       )}
+
+      <div className="mt-6">
+        <AccountSecurityCard email={candidate.email} />
+      </div>
     </div>
   );
 }
