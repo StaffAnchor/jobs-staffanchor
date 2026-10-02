@@ -32,3 +32,24 @@ body {
   padding-left: 1rem;
   padding-right: 1rem;
 }
+
+/* Homepage motion: gentle float for the hero cards and a scroll reveal.
+   Everything is switched off for people who prefer reduced motion. */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float { animation: float-y 6s ease-in-out infinite; }
+.animate-float-slow { animation: float-y 8s ease-in-out infinite; animation-delay: -2.5s; }
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.is-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float, .animate-float-slow { animation: none; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+}

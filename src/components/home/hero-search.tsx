@@ -8,7 +8,7 @@ import { Search } from "lucide-react";
 const QUICK_SEARCHES = ["B2B Sales", "B2C Sales", "SaaS", "Team Lead", "Remote", "Delhi", "Bangalore"];
 
 // The first thing a visitor can DO: type what they want and land on the jobs
-// list already filtered (the jobs page reads ?q=).
+// list already filtered (the jobs page reads ?q=). Styled for the dark hero.
 export default function HeroSearch() {
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -21,7 +21,10 @@ export default function HeroSearch() {
 
   return (
     <div>
-      <form onSubmit={submit} className="flex gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.35)]">
+      <form
+        onSubmit={submit}
+        className="flex gap-2 rounded-2xl border border-white/15 bg-white p-2 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)]"
+      >
         <div className="flex flex-1 items-center gap-3 px-3">
           <Search className="h-5 w-5 shrink-0 text-slate-400" />
           <input
@@ -34,18 +37,18 @@ export default function HeroSearch() {
         </div>
         <button
           type="submit"
-          className="h-12 shrink-0 rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white transition hover:bg-blue-700"
+          className="h-12 shrink-0 rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white transition hover:bg-blue-500"
         >
           Search jobs
         </button>
       </form>
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-slate-400">Popular:</span>
+        <span className="text-xs font-medium text-blue-200/70">Popular:</span>
         {QUICK_SEARCHES.map((s) => (
           <Link
             key={s}
             href={`/jobs?q=${encodeURIComponent(s)}`}
-            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+            className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-blue-100 transition hover:bg-white/15 hover:text-white"
           >
             {s}
           </Link>

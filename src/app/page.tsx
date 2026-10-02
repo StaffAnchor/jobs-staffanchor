@@ -12,67 +12,11 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { LiveRolesTicker } from "@/components/common/live-roles-ticker";
 import HeroSearch from "@/components/home/hero-search";
-import HeroLiveCard from "@/components/home/hero-live-card";
+import HeroVisual from "@/components/home/hero-visual";
 import OpenRolesCount from "@/components/home/open-roles-count";
-
-const steps = [
-  {
-    icon: UserPlus,
-    title: "Create your profile in a minute",
-    description: "Upload your resume, pick from a few dropdowns, and you are in. We read your resume to fill in what we can.",
-  },
-  {
-    icon: Target,
-    title: "See roles ranked by fit",
-    description: "Every role shows how well it matches you and why — your specialisation, city, experience and pay band.",
-  },
-  {
-    icon: Activity,
-    title: "Follow every step",
-    description: "From applied to interview to offer, your application status updates live. No more silence after you apply.",
-  },
-];
-
-const features = [
-  {
-    icon: Target,
-    title: "Know why a role fits",
-    description: "Match scores come with plain reasons, so you apply where you actually have a shot.",
-  },
-  {
-    icon: Activity,
-    title: "Live application tracking",
-    description: "A clear timeline for each application, and an update the moment it moves.",
-  },
-  {
-    icon: BellRing,
-    title: "Saved roles and alerts",
-    description: "Heart the roles you like and set an alert for the kind of job you want next.",
-    href: "/jobs",
-    cta: "Browse roles",
-  },
-  {
-    icon: Mic,
-    title: "Practise your interview",
-    description: "Run a mock interview before the real one and get feedback on your answers.",
-    href: "/mock-interview",
-    cta: "Try Mock Interview",
-  },
-  {
-    icon: FileCheck2,
-    title: "Check your resume",
-    description: "See how your resume scores with applicant tracking systems and what to fix.",
-    href: "/ats-score",
-    cta: "Check my resume",
-  },
-  {
-    icon: ShieldCheck,
-    title: "You stay in control",
-    description: "Free for candidates. Your details go to hiring teams for matching only, never sold.",
-  },
-];
+import OpenRolesGrid from "@/components/home/open-roles-grid";
+import Reveal from "@/components/home/reveal";
 
 const audience = [
   { title: "BDRs and AEs", description: "Show quota history and selling approach in a format hiring teams actually read." },
@@ -81,192 +25,288 @@ const audience = [
   { title: "Career switchers", description: "Map what you have achieved to the sales skills hiring teams look for." },
 ];
 
+const SECTION_TITLE = "font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight md:text-4xl";
+
 export default function Home() {
   return (
     <main className="bg-white text-slate-900">
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-b from-[#f4f7ff] via-white to-white">
+      {/* ───────── Hero ───────── */}
+      <section className="relative overflow-hidden bg-[#0A1630] pb-28 text-white md:pb-32">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_85%_10%,rgba(76,123,255,0.35),transparent_60%),radial-gradient(40%_50%_at_0%_100%,rgba(16,185,129,0.14),transparent_60%)]" />
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          className="pointer-events-none absolute inset-0 opacity-[0.22]"
           style={{
-            backgroundImage: "radial-gradient(rgba(15,23,42,0.12) 1px, transparent 1px)",
-            backgroundSize: "26px 26px",
-            maskImage: "linear-gradient(to bottom, black, transparent 75%)",
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+            maskImage: "radial-gradient(70% 70% at 50% 30%, black, transparent)",
           }}
         />
-        <div className="relative container-page grid gap-12 py-14 md:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:py-24">
+        <div className="relative container-page grid gap-14 pt-14 md:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:pt-24">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-blue-800">
-              <Sparkles className="h-3.5 w-3.5" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-blue-100 backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5 text-amber-300" />
               Sales careers, handled by specialists
             </div>
-            <h1 className="mt-5 max-w-2xl font-(family-name:--font-space-grotesk) text-4xl font-black leading-[1.05] tracking-tight text-slate-950 md:text-5xl lg:text-6xl">
+            <h1 className="mt-6 max-w-2xl font-(family-name:--font-space-grotesk) text-5xl font-black leading-[1.02] tracking-tight md:text-6xl lg:text-7xl">
               Find your next sales role. We do the{" "}
-              <span className="font-(family-name:--font-fraunces) font-medium italic text-blue-600">chasing.</span>
+              <span className="font-(family-name:--font-fraunces) font-medium italic text-[#8FB0FF]">chasing.</span>
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 md:text-lg">
-              Create a profile in about a minute, see roles ranked by how well they fit you, and follow every step of
-              your application.
+            <p className="mt-6 max-w-xl text-base leading-7 text-blue-100/80 md:text-lg">
+              Create a profile in about a minute, see roles ranked by how well they fit you, and follow every step of your application.
             </p>
 
-            <div className="mt-8 max-w-xl">
+            <div className="mt-9 max-w-xl">
               <HeroSearch />
             </div>
 
-            <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3">
+            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
               <Link
                 href="/register"
-                className="inline-flex h-12 items-center rounded-full bg-slate-950 px-7 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="inline-flex h-12 items-center rounded-full bg-white px-7 text-sm font-bold text-slate-950 shadow-lg shadow-black/20 transition hover:bg-blue-50"
               >
                 Create free profile
               </Link>
-              <Link href="/candidate-login" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
+              <Link href="/candidate-login" className="text-sm font-semibold text-blue-100 underline-offset-4 hover:text-white hover:underline">
                 Already registered? Sign in
               </Link>
             </div>
 
-            <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
+            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-blue-100/80">
               {["Free for candidates", "Profile in about a minute", "Updates at every step"].map((t) => (
                 <li key={t} className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-600" /> {t}
+                  <Check className="h-4 w-4 text-emerald-400" /> {t}
                 </li>
               ))}
             </ul>
           </div>
 
-          <HeroLiveCard />
+          <HeroVisual />
         </div>
       </section>
 
-      <LiveRolesTicker />
-
-      {/* Facts (all real or process facts, no invented statistics) */}
-      <section className="border-b border-slate-200 bg-slate-50/60">
-        <div className="container-page grid grid-cols-2 gap-6 py-8 md:grid-cols-4 md:py-10">
+      {/* ───────── Floating facts (real or process facts only) ───────── */}
+      <section className="container-page relative z-10 -mt-14 md:-mt-16">
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-slate-200 bg-slate-200 shadow-[0_30px_70px_-35px_rgba(10,22,48,0.5)] md:grid-cols-4">
           {[
             { value: <OpenRolesCount />, label: "open roles right now" },
             { value: "1 min", label: "to create your profile" },
             { value: "Free", label: "always, for candidates" },
             { value: "Live", label: "status on every application" },
           ].map((s) => (
-            <div key={s.label}>
-              <p className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950">{s.value}</p>
-              <p className="mt-1 text-sm text-slate-500">{s.label}</p>
+            <div key={s.label} className="bg-white px-6 py-7 text-center">
+              <p className="font-(family-name:--font-space-grotesk) text-4xl font-black tracking-tight text-slate-950">{s.value}</p>
+              <p className="mt-1.5 text-sm text-slate-500">{s.label}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="workflow" className="container-page py-16 md:py-20">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
-          <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
-            Three steps. No black hole.
-          </h2>
-          <p className="mt-3 text-slate-600">From signing up to your first interview, you always know where you stand.</p>
-        </div>
-        <div className="grid gap-5 md:grid-cols-3">
-          {steps.map((s, i) => {
-            const Icon = s.icon;
-            return (
-              <div key={s.title} className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                    <Icon className="h-6 w-6" />
-                  </span>
-                  <span className="font-(family-name:--font-space-grotesk) text-4xl font-black text-slate-100">0{i + 1}</span>
+      {/* ───────── Live roles ───────── */}
+      <OpenRolesGrid />
+
+      {/* ───────── How it works ───────── */}
+      <section id="workflow" className="border-y border-slate-200 bg-gradient-to-b from-slate-50 to-white">
+        <div className="container-page py-16 md:py-24">
+          <Reveal className="mx-auto mb-14 max-w-2xl text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">How it works</p>
+            <h2 className={`${SECTION_TITLE} mt-3 text-slate-950`}>Three steps. No black hole.</h2>
+            <p className="mt-3 text-slate-600">From signing up to your first interview, you always know where you stand.</p>
+          </Reveal>
+
+          <div className="relative grid gap-6 md:grid-cols-3">
+            <div className="pointer-events-none absolute left-[16%] right-[16%] top-14 hidden h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent md:block" />
+
+            <Reveal>
+              <div className="relative h-full rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-600/30">
+                  <UserPlus className="h-6 w-6" />
+                </span>
+                <h3 className="mt-6 text-xl font-extrabold tracking-tight text-slate-950">Create your profile in a minute</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">Upload your resume and pick from a few dropdowns. We read your resume to fill in what we can.</p>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {["Resume uploaded", "B2B Sales", "Delhi", "5–9 yrs"].map((c, i) => (
+                    <span key={c} className={`rounded-full px-3 py-1 text-xs font-semibold ${i === 0 ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                      {i === 0 && "✓ "}
+                      {c}
+                    </span>
+                  ))}
                 </div>
-                <h3 className="mt-5 text-lg font-bold text-slate-950">{s.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{s.description}</p>
               </div>
-            );
-          })}
+            </Reveal>
+
+            <Reveal delay={120}>
+              <div className="relative h-full rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-600/30">
+                  <Target className="h-6 w-6" />
+                </span>
+                <h3 className="mt-6 text-xl font-extrabold tracking-tight text-slate-950">See roles ranked by fit</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">Every role shows how well it matches you and why: specialisation, city, experience and pay band.</p>
+                <div className="mt-6 space-y-3">
+                  {[
+                    ["Specialisation", 92],
+                    ["City", 100],
+                    ["Experience", 78],
+                  ].map(([label, pct]) => (
+                    <div key={label as string}>
+                      <div className="flex justify-between text-[11px] font-semibold text-slate-500">
+                        <span>{label}</span>
+                        <span>{pct}%</span>
+                      </div>
+                      <div className="mt-1 h-1.5 rounded-full bg-slate-100">
+                        <div className="h-1.5 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+
+            <Reveal delay={240}>
+              <div className="relative h-full rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/30">
+                  <Activity className="h-6 w-6" />
+                </span>
+                <h3 className="mt-6 text-xl font-extrabold tracking-tight text-slate-950">Follow every step</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">From applied to interview to offer, your status updates live. No more silence after you apply.</p>
+                <ol className="mt-6 space-y-3">
+                  {[
+                    ["Profile shared with the client", true],
+                    ["Client shortlisted you", true],
+                    ["Interview scheduled", false],
+                  ].map(([t, done]) => (
+                    <li key={t as string} className="flex items-center gap-3 text-[13px] font-medium text-slate-700">
+                      <span className={`flex h-5 w-5 items-center justify-center rounded-full ${done ? "bg-blue-600 text-white" : "border-2 border-blue-300 bg-white"}`}>
+                        {done && <Check className="h-3 w-3" />}
+                      </span>
+                      {t}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </Reveal>
+          </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="border-y border-slate-200 bg-slate-50/70">
-        <div className="container-page py-16 md:py-20">
-          <div className="mb-10 max-w-2xl">
-            <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
-              Everything a job search needs, in one place
-            </h2>
-            <p className="mt-3 text-slate-600">Built around what candidates actually ask for: clarity, speed and a fair shot.</p>
-          </div>
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => {
+      {/* ───────── Feature bento (dark) ───────── */}
+      <section className="relative overflow-hidden bg-[#0A1630] text-white">
+        <div className="pointer-events-none absolute -left-24 top-0 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
+        <div className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="relative container-page py-16 md:py-24">
+          <Reveal className="mb-12 max-w-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">Built for candidates</p>
+            <h2 className={`${SECTION_TITLE} mt-3`}>Everything a job search needs, in one place</h2>
+            <p className="mt-3 text-blue-100/70">Clarity, speed and a fair shot, built around what candidates actually ask for.</p>
+          </Reveal>
+
+          <div className="grid gap-5 md:grid-cols-4">
+            <Reveal className="md:col-span-2">
+              <div className="h-full rounded-3xl border border-white/10 bg-white/[0.06] p-7 backdrop-blur">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300"><Target className="h-5 w-5" /></span>
+                <h3 className="mt-5 text-xl font-extrabold tracking-tight">Know why a role fits</h3>
+                <p className="mt-2 text-sm leading-6 text-blue-100/70">Match scores come with plain reasons, so you apply where you actually have a shot.</p>
+                <div className="mt-6 rounded-2xl bg-white p-4 text-slate-900">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-extrabold">Key Account Manager</p>
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">Strong match · 88%</span>
+                  </div>
+                  <p className="mt-2 text-[12px] font-medium text-emerald-700">Matches your specialisation · In your city · Pay band fits</p>
+                </div>
+              </div>
+            </Reveal>
+
+            <Reveal className="md:col-span-2" delay={100}>
+              <div className="h-full rounded-3xl border border-white/10 bg-white/[0.06] p-7 backdrop-blur">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300"><Activity className="h-5 w-5" /></span>
+                <h3 className="mt-5 text-xl font-extrabold tracking-tight">Live application tracking</h3>
+                <p className="mt-2 text-sm leading-6 text-blue-100/70">A clear timeline for each application, and an update the moment it moves.</p>
+                <div className="mt-6 rounded-2xl bg-white p-4 text-slate-900">
+                  <div className="flex items-center justify-between text-sm font-extrabold">
+                    <span>Team Lead</span>
+                    <span className="text-xs font-bold text-blue-700">Interview stage</span>
+                  </div>
+                  <div className="mt-3 flex gap-1.5">
+                    {[true, true, true, true, false].map((on, i) => (
+                      <span key={i} className={`h-1.5 flex-1 rounded-full ${on ? "bg-blue-600" : "bg-slate-200"}`} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+
+            {[
+              { icon: BellRing, tone: "bg-amber-500/15 text-amber-300", title: "Saved roles and alerts", text: "Heart the roles you like and set an alert for the kind of job you want next.", href: "/jobs", cta: "Browse roles" },
+              { icon: Mic, tone: "bg-violet-500/15 text-violet-300", title: "Practise your interview", text: "Run a mock interview before the real one and get feedback on your answers.", href: "/mock-interview", cta: "Try Mock Interview" },
+              { icon: FileCheck2, tone: "bg-sky-500/15 text-sky-300", title: "Check your resume", text: "See how your resume scores with applicant tracking systems and what to fix.", href: "/ats-score", cta: "Check my resume" },
+              { icon: ShieldCheck, tone: "bg-emerald-500/15 text-emerald-300", title: "You stay in control", text: "Free for candidates. Your details go to hiring teams for matching only, never sold." },
+            ].map((f, i) => {
               const Icon = f.icon;
-              const body = (
-                <>
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950 text-white">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <h3 className="mt-5 text-lg font-bold text-slate-950">{f.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{f.description}</p>
+              const inner = (
+                <div className="group h-full rounded-3xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur transition hover:bg-white/[0.1]">
+                  <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${f.tone}`}><Icon className="h-5 w-5" /></span>
+                  <h3 className="mt-5 text-lg font-extrabold tracking-tight">{f.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-blue-100/70">{f.text}</p>
                   {f.cta && (
-                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-blue-600">
+                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-blue-300 transition group-hover:gap-2">
                       {f.cta} <ArrowRight className="h-3.5 w-3.5" />
                     </span>
                   )}
-                </>
-              );
-              return f.href ? (
-                <Link
-                  key={f.title}
-                  href={f.href}
-                  className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-                >
-                  {body}
-                </Link>
-              ) : (
-                <div key={f.title} className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-                  {body}
                 </div>
+              );
+              return (
+                <Reveal key={f.title} delay={i * 80}>
+                  {f.href ? <Link href={f.href} className="block h-full">{inner}</Link> : inner}
+                </Reveal>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* Audience */}
-      <section className="container-page py-16 md:py-20">
-        <div className="mb-10 max-w-2xl">
-          <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
-            Built for sales people at every stage
-          </h2>
-        </div>
+      {/* ───────── Audience ───────── */}
+      <section className="container-page py-16 md:py-24">
+        <Reveal className="mb-12 max-w-2xl">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Who it is for</p>
+          <h2 className={`${SECTION_TITLE} mt-3 text-slate-950`}>Built for sales people at every stage</h2>
+        </Reveal>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {audience.map((a) => (
-            <div key={a.title} className="rounded-3xl border border-slate-200 p-6">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <Users className="h-5 w-5" />
-              </span>
-              <h3 className="mt-4 font-bold text-slate-950">{a.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{a.description}</p>
-            </div>
+          {audience.map((a, i) => (
+            <Reveal key={a.title} delay={i * 80}>
+              <div className="h-full rounded-3xl border border-slate-200 bg-white p-6 transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <Users className="h-5 w-5" />
+                </span>
+                <h3 className="mt-5 font-extrabold tracking-tight text-slate-950">{a.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{a.description}</p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="container-page pb-16 md:pb-20">
-        <div className="relative overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,#0a1630_0%,#14306b_60%,#2557e6_100%)] p-8 text-white md:p-12">
-          <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative max-w-2xl">
-            <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight md:text-4xl">
-              Ready for a search that keeps you in the loop?
-            </h2>
-            <p className="mt-3 text-blue-100">Create your free profile now. It takes about a minute, and you can add more detail whenever you like.</p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="/register" className="inline-flex h-12 items-center rounded-full bg-white px-7 text-sm font-semibold text-blue-900 hover:bg-blue-50">
-                Create free profile
-              </Link>
-              <Link href="/jobs" className="inline-flex h-12 items-center rounded-full border border-white/30 px-7 text-sm font-semibold text-white hover:bg-white/10">
-                Browse current openings
-              </Link>
+      {/* ───────── Final CTA ───────── */}
+      <section className="container-page pb-16 md:pb-24">
+        <Reveal>
+          <div className="relative overflow-hidden rounded-[2.25rem] bg-[linear-gradient(135deg,#0a1630_0%,#14306b_55%,#2557e6_100%)] px-8 py-14 text-center text-white md:px-16 md:py-20">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-72 w-72 rounded-full bg-emerald-400/15 blur-3xl" />
+            <div className="relative mx-auto max-w-2xl">
+              <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight md:text-5xl">
+                Ready for a search that keeps you{" "}
+                <span className="font-(family-name:--font-fraunces) font-medium italic text-[#8FB0FF]">in the loop?</span>
+              </h2>
+              <p className="mt-4 text-blue-100/80">Create your free profile now. It takes about a minute, and you can add more detail whenever you like.</p>
+              <div className="mt-8 flex flex-wrap justify-center gap-3">
+                <Link href="/register" className="inline-flex h-12 items-center rounded-full bg-white px-8 text-sm font-bold text-blue-900 shadow-lg shadow-black/20 hover:bg-blue-50">
+                  Create free profile
+                </Link>
+                <Link href="/jobs" className="inline-flex h-12 items-center rounded-full border border-white/30 px-8 text-sm font-semibold text-white hover:bg-white/10">
+                  Browse current openings
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
     </main>
   );
