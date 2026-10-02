@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import nodemailer from "nodemailer";
 import { generateAiPassportForCandidate } from "@/lib/ai-passport";
 import { waitUntil } from "@vercel/functions";
+import { decideSubmitAccess } from "@/lib/submit-access";
 
 export const runtime = "nodejs";
 
@@ -38,6 +39,10 @@ export async function POST(req: NextRequest) {
     // code itself, so the separate welcome email would be a redundant second
     // message a few seconds later.
     skipWelcomeEmail?: boolean;
+    // candidates.id the caller holds a recruiter-sent completion link for
+    // (/register?ref=<id>). Lets that link holder -- and only them -- update
+    // the profile it points at without signing in.
+    completionRef?: string;
   };
   try {
     body = await req.json();
@@ -45,7 +50,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { payload, mandateId, screeningAnswers, skipWelcomeEmail } = body;
+  const { payload, mandateId, screeningAnswers, skipWelcomeEmail, completionRef } = body;
   if (!payload || typeof payload !== "object") {
     return NextResponse.json({ error: "payload is required." }, { status: 400 });
   }
@@ -58,6 +63,34 @@ export async function POST(req: NextRequest) {
 
   try {
     const existingUser = await findAuthUserByEmail(admin, email);
+
+    // Ownership check -- see src/lib/submit-access.ts. Without it, anyone who
+    // knew an email could overwrite that candidate's profile and receive their
+    // candidate id back.
+    const { data: existingRow } = await admin
+      .from("candidates")
+      .select("id")
+      .ilike("email", email.replace(/[\\%_]/g, "\\$&"))
+      .limit(1)
+      .maybeSingle();
+    const callerEmail = await getCallerEmail(req, admin);
+    const access = decideSubmitAccess({
+      emailInUse: !!existingRow || !!existingUser,
+      callerEmail,
+      payloadEmail: email,
+      existingCandidateId: existingRow?.id ?? null,
+      completionRef: typeof completionRef === "string" ? completionRef : null,
+    });
+    if (!access.allowed) {
+      return NextResponse.json(
+        {
+          error: "You already have a StaffAnchor profile with this email. Please sign in to continue.",
+          code: "PROFILE_EXISTS",
+        },
+        { status: 409 }
+      );
+    }
+
     let userId: string;
     let isNewSignup = false;
 
@@ -128,6 +161,22 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// The verified email of the signed-in caller, from their session token (sent as
+// "Authorization: Bearer <access_token>"). Validated against Supabase Auth, never
+// trusted from the request body. Null for anonymous callers or a bad token.
+async function getCallerEmail(req: NextRequest, admin: SupabaseClient): Promise<string | null> {
+  const header = req.headers.get("authorization") ?? "";
+  const token = header.toLowerCase().startsWith("bearer ") ? header.slice(7).trim() : "";
+  if (!token) return null;
+  try {
+    const { data, error } = await admin.auth.getUser(token);
+    if (error || !data.user?.email) return null;
+    return data.user.email.toLowerCase();
+  } catch {
+    return null;
   }
 }
 

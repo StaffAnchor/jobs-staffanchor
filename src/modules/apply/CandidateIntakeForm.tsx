@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CheckCircle2, FileText, Phone, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { posthog } from "@/lib/posthog";
+import { authHeaders } from "@/lib/auth-headers";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -174,6 +175,7 @@ export default function CandidateIntakeForm({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [skippedVerify, setSkippedVerify] = useState(false);
+  const [profileExists, setProfileExists] = useState(false);
 
   const extractionRef = useRef<ResumeExtraction | null>(null);
   const [screeningQuestions, setScreeningQuestions] = useState<ApplicationQuestion[]>([]);
@@ -303,7 +305,7 @@ export default function CandidateIntakeForm({
 
       const submitRes = await fetch("/api/candidate-submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authHeaders(),
         body: JSON.stringify({
           payload,
           ...(mandateId ? { mandateId } : {}),
@@ -315,7 +317,12 @@ export default function CandidateIntakeForm({
         }),
       });
       const submitJson = await submitRes.json().catch(() => ({}));
-      if (!submitRes.ok) throw new Error(submitJson?.error ?? "Something went wrong. Please try again.");
+      if (!submitRes.ok) {
+        // The email already has a profile and the caller isn't signed in as its
+        // owner: send them to sign in instead of showing a dead-end error.
+        if (submitJson?.code === "PROFILE_EXISTS") setProfileExists(true);
+        throw new Error(submitJson?.error ?? "Something went wrong. Please try again.");
+      }
 
       posthog.capture(mandateId ? "candidate_applied" : "candidate_registered", {
         source: "intake_form",
@@ -606,7 +613,22 @@ export default function CandidateIntakeForm({
           I consent to StaffAnchor storing and sharing my profile with relevant employers.
         </label>
 
-        {errorMsg && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{errorMsg}</p>}
+        {errorMsg && (
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+            {errorMsg}
+            {profileExists && (
+              <>
+                {" "}
+                <a
+                  href={`/candidate-login?email=${encodeURIComponent(email)}${mandateId ? `&returnTo=${encodeURIComponent(`/jobs/${mandateId}`)}` : ""}`}
+                  className="font-semibold underline"
+                >
+                  Sign in
+                </a>
+              </>
+            )}
+          </p>
+        )}
 
         <Button type="submit" disabled={submitting || resumeParsing} className="w-full">
           {submitting ? "Submitting…" : mandateId ? "Submit Application" : "Create My Profile"}

@@ -19,8 +19,10 @@ import { Button } from "@/components/ui/button";
 // (they create a minimal "lead"-stage candidate row when that's all they're
 // given -- see submit_candidate/quick_apply in Postgres: full_name, phone,
 // resume etc. are all nullable, only email is required). So:
-//  - Email belongs to an existing candidate -> their existing profile is
-//    reused as-is, no data is overwritten with blanks.
+//  - Email belongs to an existing candidate -> the server refuses (409): an
+//    anonymous visitor must not receive someone else's candidate id or touch
+//    their profile. They are asked to sign in, and the signed-in Priority
+//    flow takes over from there.
 //  - Email is brand new -> a minimal lead record is created on the spot,
 //    just enough for Priority credits (and, with a mandateId, an actual
 //    application) to attach to. No resume, no phone, no long form.
@@ -56,6 +58,15 @@ export default function PriorityEmailGate({
         }),
       });
       const json = await res.json().catch(() => ({}));
+      if (res.status === 409 && json?.code === "PROFILE_EXISTS") {
+        // Send them to the one place that proves who they are, then back here.
+        window.location.assign(
+          `/candidate-login?email=${encodeURIComponent(trimmed)}&returnTo=${encodeURIComponent(
+            mandateId ? `/priority-applicant?mandateId=${mandateId}` : "/priority-applicant"
+          )}`
+        );
+        return;
+      }
       if (!res.ok || !json?.candidateId) {
         throw new Error(json?.error ?? "Something went wrong. Please try again.");
       }

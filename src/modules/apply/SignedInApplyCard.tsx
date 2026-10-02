@@ -12,6 +12,7 @@ import PriorityApplicantCard from "@/components/priority/priority-applicant-card
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
 import { logQuickApplyFormOpened } from "@/modules/jobs/api";
+import { authHeaders } from "@/lib/auth-headers";
 import CandidateIntakeForm, { intakeMissingFields, type IntakeExistingRow } from "./CandidateIntakeForm";
 
 // Naukri (and every other persistent-session job site) recognizes a signed-in
@@ -122,7 +123,7 @@ export default function SignedInApplyCard({
     try {
       const res = await fetch("/api/candidate-submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authHeaders(),
         body: JSON.stringify({
           payload: { email: candidate.email },
           mandateId,

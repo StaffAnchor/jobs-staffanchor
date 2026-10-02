@@ -18,6 +18,7 @@ import {
   User,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { authHeaders } from "@/lib/auth-headers";
 import { posthog } from "@/lib/posthog";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion, type ApplicationAnswerPayload } from "./applicationQuestions";
@@ -2189,10 +2190,14 @@ export default function ApplyForm({
       // Stage 4 silent-autosave behavior below are unchanged.
       const submitRes = await fetch("/api/candidate-submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authHeaders(),
         body: JSON.stringify({
           payload,
           mandateId,
+          // A recruiter-sent completion link (/register?ref=<id>) proves the
+          // holder may update that profile without signing in; a signed-in
+          // candidate editing their own profile is verified by their session.
+          ...(existingProfile?.id ? { completionRef: existingProfile.id } : {}),
           ...(screeningAnswersRef.current?.length ? { screeningAnswers: screeningAnswersRef.current } : {}),
         }),
       });
