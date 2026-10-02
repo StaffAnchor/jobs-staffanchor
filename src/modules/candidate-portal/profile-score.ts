@@ -146,3 +146,77 @@ export const PROFILE_SCORE_TIER_META: Record<
     blurb: "Complete profile — you're in the top tier of what recruiters see.",
   },
 };
+
+// ---- Profile coach -------------------------------------------------------
+// The same completeness model as computeProfileScore, turned into a ranked
+// to-do list: what to add next, why it matters, and roughly how many points it
+// is worth. Weights mirror computeProfileScore (each base field is worth
+// 60/16 = 3.75 points, the career timeline 25, sales profile details 15).
+
+export type CoachStep = {
+  id: string;
+  label: string;
+  why: string;
+  impact: number; // approximate score points
+};
+
+const BASE_POINTS = Math.round((60 / BASE_FIELDS.length) * 10) / 10;
+
+// Highest-value / most useful for matching first.
+const COACH_COPY: Record<string, { label: string; why: string }> = {
+  resume_file_url: { label: "Upload your resume", why: "Recruiters read your resume first, and matching uses it." },
+  skills: { label: "Add your key skills", why: "Skills power your job matches." },
+  expected_fixed_ctc: { label: "Add your expected CTC", why: "So we only show roles that fit your pay." },
+  linkedin_url: { label: "Link your LinkedIn", why: "Lets hiring teams verify your background quickly." },
+  current_industry: { label: "Add your current industry", why: "Helps match you with similar companies." },
+  work_mode: { label: "Set your work mode", why: "Onsite, hybrid or remote: avoid roles you would not take." },
+  highest_qualification: { label: "Add your qualification", why: "Some roles filter on it." },
+  open_to_relocation: { label: "Say if you can relocate", why: "Opens roles in other cities." },
+  current_fixed_ctc: { label: "Add your current CTC", why: "Keeps matches realistic." },
+  total_experience_years: { label: "Add your total experience", why: "Used to match the experience range." },
+  sub_domain: { label: "Choose your main specialisation", why: "The strongest signal for matching." },
+  category: { label: "Choose your profile type", why: "B2B, B2C or non-sales decides which roles you see." },
+  current_location: { label: "Add your current city", why: "Roles in your city rank higher." },
+  current_employment_status: { label: "Add your employment status", why: "Shows how soon you can move." },
+  phone: { label: "Add your phone number", why: "So a recruiter can reach you." },
+  full_name: { label: "Add your name", why: "Recruiters need to know who you are." },
+};
+
+const COACH_ORDER = [
+  "resume_file_url",
+  "skills",
+  "expected_fixed_ctc",
+  "linkedin_url",
+  "current_industry",
+  "work_mode",
+  "highest_qualification",
+  "open_to_relocation",
+  "current_fixed_ctc",
+  "total_experience_years",
+  "sub_domain",
+  "category",
+  "current_location",
+  "current_employment_status",
+  "phone",
+  "full_name",
+];
+
+export function computeCoachSteps(candidate: ScoreCandidateRow): CoachStep[] {
+  const steps: CoachStep[] = [];
+
+  const timelineEntries = Array.isArray(candidate.career_timeline_profile) ? candidate.career_timeline_profile : [];
+  if (timelineEntries.length === 0) {
+    steps.push({ id: "career_timeline", label: "Add your last two roles", why: "Recruiters read your career story first.", impact: 25 });
+  }
+  const segmentFilled = Object.values(candidate.segment_data ?? {}).some((v) => filled(v));
+  if (!segmentFilled) {
+    steps.push({ id: "sales_details", label: "Add your sales details", why: "Quota, deal size and sales motion set you apart.", impact: 15 });
+  }
+  for (const key of COACH_ORDER) {
+    if (!filled(candidate[key as keyof ScoreCandidateRow])) {
+      const copy = COACH_COPY[key];
+      if (copy) steps.push({ id: key, label: copy.label, why: copy.why, impact: Math.round(BASE_POINTS) });
+    }
+  }
+  return steps;
+}

@@ -27,7 +27,7 @@ export default function LatestUpdates({ onSeeAll }: { onSeeAll: () => void }) {
   if (items.length === 0) return null;
 
   return (
-    <section className="mb-6 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 to-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 to-white p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
           <BellRing className="h-4 w-4 text-blue-600" /> Latest updates

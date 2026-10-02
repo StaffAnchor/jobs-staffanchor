@@ -43,7 +43,7 @@ export default function MarketIntelligenceStrip({
   if (!category || !snapshot) return null;
 
   return (
-    <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white shadow-sm">
       <p className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
         <TrendingUp className="h-3.5 w-3.5" /> Market snapshot — {categoryLabel(category)}
         {subDomain ? ` · ${subDomain}` : ""}

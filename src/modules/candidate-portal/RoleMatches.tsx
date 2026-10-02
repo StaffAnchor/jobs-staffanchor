@@ -36,7 +36,7 @@ export default function RoleMatches() {
   if (!picks || picks.length === 0) return null;
 
   return (
-    <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-base font-semibold text-slate-900">Roles picked for you</h2>
         <Link href="/jobs" className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:underline">
