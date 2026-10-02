@@ -1,333 +1,272 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Briefcase, ChartColumn, MapPin, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { CurrentJobsTeaser } from "@/components/common/current-jobs-teaser";
+import {
+  Activity,
+  ArrowRight,
+  BellRing,
+  Check,
+  FileCheck2,
+  Mic,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { LiveRolesTicker } from "@/components/common/live-roles-ticker";
+import HeroSearch from "@/components/home/hero-search";
+import HeroLiveCard from "@/components/home/hero-live-card";
+import OpenRolesCount from "@/components/home/open-roles-count";
 
-const profileHighlights = [
+const steps = [
   {
-    title: "Sales role history, decoded",
-    description:
-      "IC or team lead, B2B or B2C, inside sales or field — capture the role type, sub-domain, and sales motion so hiring teams understand the story behind the resume, not just the job titles.",
-    icon: ChartColumn,
+    icon: UserPlus,
+    title: "Create your profile in a minute",
+    description: "Upload your resume, pick from a few dropdowns, and you are in. We read your resume to fill in what we can.",
   },
   {
-    title: "Quota, deal size, and attainment",
-    description:
-      "Report your last four quarters of target vs. achievement, typical deal or ticket size, and sales cycle — the specifics generic job boards never ask for.",
-    icon: BadgeCheck,
+    icon: Target,
+    title: "See roles ranked by fit",
+    description: "Every role shows how well it matches you and why — your specialisation, city, experience and pay band.",
   },
   {
-    title: "Skills, location, and salary intent",
-    description:
-      "Show the sales skills and CRMs you know, industries you've sold into, where you want to work, and expected compensation for better role matching.",
-    icon: MapPin,
+    icon: Activity,
+    title: "Follow every step",
+    description: "From applied to interview to offer, your application status updates live. No more silence after you apply.",
   },
 ];
 
-const journey = [
+const features = [
   {
-    step: "01",
-    title: "Share your basics",
-    description: "No account or password needed — share your details in one guided flow, in about 10 minutes.",
+    icon: Target,
+    title: "Know why a role fits",
+    description: "Match scores come with plain reasons, so you apply where you actually have a shot.",
   },
   {
-    step: "02",
-    title: "Add your sales story",
-    description: "Add experience, metrics, skills, preferred locations, and salary expectations in one structured flow.",
+    icon: Activity,
+    title: "Live application tracking",
+    description: "A clear timeline for each application, and an update the moment it moves.",
   },
   {
-    step: "03",
-    title: "Get discovered by hiring teams",
-    description: "Verified hiring teams find you through filters and reach out directly when there is a strong match.",
+    icon: BellRing,
+    title: "Saved roles and alerts",
+    description: "Heart the roles you like and set an alert for the kind of job you want next.",
+    href: "/jobs",
+    cta: "Browse roles",
+  },
+  {
+    icon: Mic,
+    title: "Practise your interview",
+    description: "Run a mock interview before the real one and get feedback on your answers.",
+    href: "/mock-interview",
+    cta: "Try Mock Interview",
+  },
+  {
+    icon: FileCheck2,
+    title: "Check your resume",
+    description: "See how your resume scores with applicant tracking systems and what to fix.",
+    href: "/ats-score",
+    cta: "Check my resume",
+  },
+  {
+    icon: ShieldCheck,
+    title: "You stay in control",
+    description: "Free for candidates. Your details go to hiring teams for matching only, never sold.",
   },
 ];
 
 const audience = [
-  {
-    title: "BDRs, AEs, and sales managers",
-    description: "Highlight quota history, pipeline impact, and selling approach in a hiring-team-friendly format.",
-    icon: Users,
-  },
-  {
-    title: "Early-career jobseekers",
-    description: "Show internships, transferable skills, and potential with a profile designed for first roles.",
-    icon: Sparkles,
-  },
-  {
-    title: "Career transition candidates",
-    description: "Map previous achievements to sales competencies hiring teams actively search for.",
-    icon: ArrowRight,
-  },
-  {
-    title: "Experienced passive talent",
-    description: "Stay visible to serious opportunities without applying to dozens of unrelated jobs.",
-    icon: ShieldCheck,
-  },
-];
-
-const trustPoints = [
-  {
-    title: "Always free for candidates",
-    description: "You can create, maintain, and update your profile at no cost.",
-  },
-  {
-    title: "Verified hiring teams only",
-    description: "Profiles are visible to screened hiring teams, not random browsers.",
-  },
-  {
-    title: "You control visibility",
-    description: "Pause discovery when needed and reactivate whenever you are ready.",
-  },
+  { title: "BDRs and AEs", description: "Show quota history and selling approach in a format hiring teams actually read." },
+  { title: "Sales managers and leaders", description: "Stay visible to serious opportunities without applying to dozens of unrelated jobs." },
+  { title: "Early-career jobseekers", description: "Show internships, transferable skills and potential with a profile built for first roles." },
+  { title: "Career switchers", description: "Map what you have achieved to the sales skills hiring teams look for." },
 ];
 
 export default function Home() {
   return (
-    <main className="bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent_36%),radial-gradient(circle_at_80%_10%,rgba(14,165,233,0.12),transparent_30%),linear-gradient(to_bottom,#f8fbff_0%,#ffffff_40%,#f8fafc_100%)] text-slate-900">
-      <section className="relative overflow-hidden border-b border-slate-200/80">
-        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(15,23,42,0.02),transparent_45%,rgba(20,184,166,0.04))]" />
-        {/* Minimal dot-grid texture, same motif used on staffanchor.com's
-            hero, so the flat gradient reads as a deliberately-textured
-            surface rather than a plain tinted rectangle. */}
+    <main className="bg-white text-slate-900">
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-b from-[#f4f7ff] via-white to-white">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.35]"
           style={{
-            backgroundImage: "radial-gradient(rgba(15,23,42,0.14) 1px, transparent 1px)",
+            backgroundImage: "radial-gradient(rgba(15,23,42,0.12) 1px, transparent 1px)",
             backgroundSize: "26px 26px",
-            maskImage: "linear-gradient(to bottom, black, transparent 80%)",
+            maskImage: "linear-gradient(to bottom, black, transparent 75%)",
           }}
         />
-        <div className="relative container-page grid gap-10 py-16 md:py-20 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:py-24">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-800">
+        <div className="relative container-page grid gap-12 py-14 md:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:py-24">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-blue-800">
               <Sparkles className="h-3.5 w-3.5" />
-              B2B sales recruitment specialists
+              Sales careers, handled by specialists
             </div>
-            <div className="space-y-4">
-              <h1 className="max-w-2xl font-(family-name:--font-space-grotesk) text-4xl font-black leading-tight tracking-tight text-slate-950 md:text-5xl lg:text-6xl">
-                We only recruit for sales. That&apos;s why hiring teams{" "}
-                <span className="font-(family-name:--font-fraunces) italic font-medium text-indigo-600">
-                  trust us to find you.
-                </span>
-              </h1>
-              <p className="max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
-                StaffAnchor specializes in B2B sales and GTM hiring — with B2C sales expertise built in too. Build one structured sales profile, with quota history and deal context hiring teams actually evaluate, and get discovered directly. No cold outreach, no blind applications, no noise.
-              </p>
+            <h1 className="mt-5 max-w-2xl font-(family-name:--font-space-grotesk) text-4xl font-black leading-[1.05] tracking-tight text-slate-950 md:text-5xl lg:text-6xl">
+              Find your next sales role. We do the{" "}
+              <span className="font-(family-name:--font-fraunces) font-medium italic text-blue-600">chasing.</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 md:text-lg">
+              Create a profile in about a minute, see roles ranked by how well they fit you, and follow every step of
+              your application.
+            </p>
+
+            <div className="mt-8 max-w-xl">
+              <HeroSearch />
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Link href="/register">
-                <Button className="h-11 rounded-full bg-indigo-600 px-6 text-sm font-semibold text-white hover:bg-indigo-500">
-                  Create Free Profile
-                </Button>
+            <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3">
+              <Link
+                href="/register"
+                className="inline-flex h-12 items-center rounded-full bg-slate-950 px-7 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                Create free profile
               </Link>
-              <Link href="/jobs">
-                <Button variant="outline" className="h-11 rounded-full border-slate-300 bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                  <Briefcase className="mr-1.5 h-4 w-4" />
-                  Current Jobs
-                </Button>
+              <Link href="/candidate-login" className="text-sm font-semibold text-slate-600 hover:text-slate-900">
+                Already registered? Sign in
               </Link>
-              <a href="#workflow">
-                <Button variant="ghost" className="h-11 rounded-full px-6 text-sm font-semibold text-slate-600 hover:bg-slate-100">
-                  See How It Works
-                </Button>
-              </a>
             </div>
 
-            <div className="flex flex-wrap gap-5 text-sm text-slate-600">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                Free for candidates
-              </div>
-              <div className="flex items-center gap-2">
-                <BadgeCheck className="h-4 w-4 text-sky-600" />
-                Verified hiring teams only
-              </div>
-              <div className="flex items-center gap-2">
-                <ChartColumn className="h-4 w-4 text-teal-600" />
-                Usually under 10 minutes
-              </div>
-            </div>
+            <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
+              {["Free for candidates", "Profile in about a minute", "Updates at every step"].map((t) => (
+                <li key={t} className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-emerald-600" /> {t}
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <Card className="relative overflow-hidden border-slate-200 bg-white/90 p-6 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur">
-            <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-emerald-100/70 blur-3xl" />
-            <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-sky-100/70 blur-3xl" />
-            <div className="absolute left-1/3 top-1/4 h-32 w-32 rounded-full bg-indigo-100/50 blur-3xl" />
-            <div className="relative space-y-5">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700">Sales profile snapshot preview</p>
-                <p className="mt-2 text-sm text-slate-600">Strong sales profile with quota history, deal size, and role clarity</p>
-              </div>
-              <div className="grid gap-4">
-                {profileHighlights.map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <div key={item.title} className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="rounded-xl bg-slate-900 p-2 text-white">
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="space-y-1">
-                          <h2 className="font-semibold text-slate-950">{item.title}</h2>
-                          <p className="text-sm leading-6 text-slate-600">{item.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </Card>
+          <HeroLiveCard />
         </div>
       </section>
 
       <LiveRolesTicker />
 
-      <CurrentJobsTeaser />
-
-      <section className="border-b border-slate-200 bg-white/70">
-        <div className="container-page grid gap-4 py-8 md:grid-cols-4 md:py-10">
+      {/* Facts (all real or process facts, no invented statistics) */}
+      <section className="border-b border-slate-200 bg-slate-50/60">
+        <div className="container-page grid grid-cols-2 gap-6 py-8 md:grid-cols-4 md:py-10">
           {[
-            { value: "3x", label: "more profile views for complete profiles" },
-            { value: "<10 min", label: "average profile completion time" },
-            { value: "100%", label: "access is verified and reviewed" },
-            { value: "Free", label: "always free for candidates" },
-          ].map((stat) => (
-            <Card key={stat.label} className="p-4">
-              <p className="text-2xl font-black text-slate-950">{stat.value}</p>
-              <p className="text-sm leading-6 text-slate-600">{stat.label}</p>
-            </Card>
+            { value: <OpenRolesCount />, label: "open roles right now" },
+            { value: "1 min", label: "to create your profile" },
+            { value: "Free", label: "always, for candidates" },
+            { value: "Live", label: "status on every application" },
+          ].map((s) => (
+            <div key={s.label}>
+              <p className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950">{s.value}</p>
+              <p className="mt-1 text-sm text-slate-500">{s.label}</p>
+            </div>
           ))}
         </div>
       </section>
 
-      <section id="profile" className="container-page space-y-6 py-14 md:py-16">
-        <div className="max-w-2xl space-y-2">
+      {/* How it works */}
+      <section id="workflow" className="container-page py-16 md:py-20">
+        <div className="mx-auto mb-10 max-w-2xl text-center">
           <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
-            More than a resume. A sales profile hiring teams can act on.
+            Three steps. No black hole.
           </h2>
-          <p className="text-slate-600">Generic CVs don&apos;t capture quota attainment or deal size. Structured sales data helps hiring teams shortlist with confidence.</p>
+          <p className="mt-3 text-slate-600">From signing up to your first interview, you always know where you stand.</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {profileHighlights.map((item) => {
-            const Icon = item.icon;
-
+        <div className="grid gap-5 md:grid-cols-3">
+          {steps.map((s, i) => {
+            const Icon = s.icon;
             return (
-              <Card key={item.title} className="space-y-4 p-5 transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg">
-                <div className="inline-flex rounded-xl bg-slate-900 p-2 text-white">
-                  <Icon className="h-4 w-4" />
+              <div key={s.title} className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                    <Icon className="h-6 w-6" />
+                  </span>
+                  <span className="font-(family-name:--font-space-grotesk) text-4xl font-black text-slate-100">0{i + 1}</span>
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-slate-950">{item.title}</h3>
-                  <p className="text-sm leading-6 text-slate-600">{item.description}</p>
-                </div>
-              </Card>
+                <h3 className="mt-5 text-lg font-bold text-slate-950">{s.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{s.description}</p>
+              </div>
             );
           })}
         </div>
       </section>
 
-      <section id="workflow" className="border-y border-slate-200 bg-slate-50/70">
-        <div className="container-page py-14 md:py-16">
-          <div className="mb-8 max-w-2xl space-y-2">
+      {/* Features */}
+      <section className="border-y border-slate-200 bg-slate-50/70">
+        <div className="container-page py-16 md:py-20">
+          <div className="mb-10 max-w-2xl">
             <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
-              Three simple steps to get discovered
+              Everything a job search needs, in one place
             </h2>
-            <p className="text-slate-600">A straightforward journey from signup to hiring-team outreach.</p>
+            <p className="mt-3 text-slate-600">Built around what candidates actually ask for: clarity, speed and a fair shot.</p>
           </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            {journey.map((item) => (
-              <Card key={item.step} className="space-y-4 p-5">
-                <span className="inline-flex rounded-full bg-slate-950 px-3 py-1 text-xs font-bold tracking-[0.18em] text-white">
-                  STEP {item.step}
-                </span>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-slate-950">{item.title}</h3>
-                  <p className="text-sm leading-6 text-slate-600">{item.description}</p>
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {features.map((f) => {
+              const Icon = f.icon;
+              const body = (
+                <>
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950 text-white">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="mt-5 text-lg font-bold text-slate-950">{f.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{f.description}</p>
+                  {f.cta && (
+                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-blue-600">
+                      {f.cta} <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                </>
+              );
+              return f.href ? (
+                <Link
+                  key={f.title}
+                  href={f.href}
+                  className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                >
+                  {body}
+                </Link>
+              ) : (
+                <div key={f.title} className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                  {body}
                 </div>
-              </Card>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
 
-      <section className="container-page py-14 md:py-16">
-        <div className="mb-8 max-w-2xl space-y-2">
-            <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
-            Who this is built for
+      {/* Audience */}
+      <section className="container-page py-16 md:py-20">
+        <div className="mb-10 max-w-2xl">
+          <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight text-slate-950 md:text-4xl">
+            Built for sales people at every stage
           </h2>
-          <p className="text-slate-600">Whether you are actively searching or passively open, you stay visible to the right opportunities.</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {audience.map((group) => {
-            const Icon = group.icon;
-
-            return (
-              <Card key={group.title} className="space-y-3 p-5">
-                <div className="inline-flex rounded-xl bg-indigo-50 p-2 text-indigo-700">
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-slate-950">{group.title}</h3>
-                  <p className="text-sm leading-6 text-slate-600">{group.description}</p>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
-
-      <section id="trust" className="border-y border-emerald-100 bg-emerald-50/80 text-slate-900">
-        <div className="container-page py-14 md:py-16">
-          <div className="mb-8 max-w-3xl space-y-2">
-            <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight md:text-4xl">
-              Built on transparency and candidate control
-            </h2>
-            <p className="text-slate-600">Your data is shown to verified hiring teams in the network, not sold to third-party lists.</p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            {trustPoints.map((point) => (
-              <Card key={point.title} className="space-y-2 border-emerald-200 bg-white p-5 text-slate-800">
-                <h3 className="text-lg font-bold text-slate-950">{point.title}</h3>
-                <p className="text-sm leading-6 text-slate-600">{point.description}</p>
-              </Card>
-            ))}
-          </div>
-
-          <Card className="mt-6 border-emerald-200 bg-white p-5 text-slate-800">
-            <p className="text-sm leading-6 text-slate-600">
-              Your profile is used for hiring-team matching only. StaffAnchor does not run candidate advertising and does not sell candidate data.
-            </p>
-          </Card>
-        </div>
-      </section>
-
-      <section className="container-page py-14 md:py-16">
-        <Card className="relative overflow-hidden border-slate-200 bg-[linear-gradient(135deg,#12131A_0%,#3730B3_55%,#4F46E5_100%)] p-6 text-white shadow-[0_24px_90px_-45px_rgba(15,23,42,0.8)] md:p-8">
-          <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative space-y-6">
-            <div className="space-y-2">
-              <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight md:text-4xl">
-                Ready to be discovered?
-              </h2>
-              <p className="max-w-2xl text-sm leading-6 text-indigo-50 md:text-base">
-                Create your free profile today. It goes live for verified hiring teams as soon as your details are complete.
-              </p>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {audience.map((a) => (
+            <div key={a.title} className="rounded-3xl border border-slate-200 p-6">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <Users className="h-5 w-5" />
+              </span>
+              <h3 className="mt-4 font-bold text-slate-950">{a.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{a.description}</p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link href="/register">
-                <Button className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-indigo-800 hover:bg-indigo-50">
-                  Create Free Profile
-                </Button>
+          ))}
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="container-page pb-16 md:pb-20">
+        <div className="relative overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,#0a1630_0%,#14306b_60%,#2557e6_100%)] p-8 text-white md:p-12">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative max-w-2xl">
+            <h2 className="font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight md:text-4xl">
+              Ready for a search that keeps you in the loop?
+            </h2>
+            <p className="mt-3 text-blue-100">Create your free profile now. It takes about a minute, and you can add more detail whenever you like.</p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="/register" className="inline-flex h-12 items-center rounded-full bg-white px-7 text-sm font-semibold text-blue-900 hover:bg-blue-50">
+                Create free profile
+              </Link>
+              <Link href="/jobs" className="inline-flex h-12 items-center rounded-full border border-white/30 px-7 text-sm font-semibold text-white hover:bg-white/10">
+                Browse current openings
               </Link>
             </div>
           </div>
-        </Card>
+        </div>
       </section>
     </main>
   );

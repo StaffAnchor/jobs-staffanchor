@@ -76,6 +76,9 @@ export default function JobsPage() {
       .then(setJobs)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load jobs."));
     setRecentlyViewed(getRecentlyViewedJobs());
+    // The homepage search lands here as /jobs?q=... -- start with it applied.
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) setSearch(q);
   }, []);
 
   // Personalisation only exists for a signed-in candidate; everyone else sees
