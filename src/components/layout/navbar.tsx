@@ -9,6 +9,7 @@ import { logPriorityClick } from "@/lib/priority-click";
 import { useAuthStore } from "@/modules/auth/store";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
+import NotificationBell from "./notification-bell";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -110,6 +111,7 @@ export function Navbar() {
           </Link>
           {candidateSignedIn ? (
             <>
+              <NotificationBell />
               <Link href="/candidate-portal">
                 <Button variant={pathname.startsWith("/candidate-portal") ? "default" : "ghost"}>My Account</Button>
               </Link>

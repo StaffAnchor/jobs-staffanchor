@@ -1,0 +1,5 @@
+-- Applied to production (qdbxrspvnglbrvzfqhhg) on 2026-10-02 as "candidate_portal_stage_events_and_notifications".
+-- Adds: candidate_stage_events (timeline history + trigger), candidate_notifications (in-app updates),
+-- and candidate-scoped RPCs get_my_applications / get_my_application_events / get_my_notifications /
+-- mark_my_notifications_read. Additive only; no emails are sent by any of this.
+-- See the migration in Supabase for the full SQL.

@@ -6,6 +6,7 @@ import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } 
 import MarketIntelligenceStrip from "./MarketIntelligenceStrip";
 import SharePassportCard from "./SharePassportCard";
 import AccountSecurityCard from "./AccountSecurityCard";
+import LatestUpdates from "./LatestUpdates";
 import { logPriorityClick } from "@/lib/priority-click";
 
 // The portal's actual landing screen -- previously "My Profile" (the full
@@ -95,6 +96,7 @@ export default function PortalHome({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <LatestUpdates onSeeAll={() => onNavigate("pipeline")} />
       <MarketIntelligenceStrip category={candidate.category ?? null} subDomain={candidate.sub_domain ?? null} />
 
       {/* --- Primary row: what's happening with me + my score --- */}

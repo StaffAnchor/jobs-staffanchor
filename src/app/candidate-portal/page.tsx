@@ -30,7 +30,7 @@ const TABS = [
   },
   {
     key: "pipeline" as const,
-    label: "My Pipeline",
+    label: "Applications",
     icon: Briefcase,
     accent: "text-indigo-600",
     ring: "ring-indigo-100",
@@ -79,8 +79,8 @@ const TAB_META: Record<
   pipeline: {
     icon: Briefcase,
     iconClasses: "bg-indigo-50 text-indigo-600",
-    title: "My Pipeline",
-    subtitle: "Where you stand on every role you've been matched to.",
+    title: "Applications",
+    subtitle: "Every step on every role, in plain words — no chasing needed.",
   },
   refer: {
     icon: Gift,
