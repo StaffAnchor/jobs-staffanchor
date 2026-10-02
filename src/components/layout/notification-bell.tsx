@@ -95,10 +95,20 @@ export default function NotificationBell() {
           ) : (
             <ul className="max-h-[360px] divide-y divide-slate-100 overflow-y-auto">
               {items.map((n) => (
-                <li key={n.id} className={`px-4 py-3 ${highlight.has(n.id) ? "bg-blue-50/60" : ""}`}>
-                  <p className="text-sm font-semibold text-slate-900">{n.title}</p>
-                  {n.body && <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{n.body}</p>}
-                  <p className="mt-1 text-[11px] text-slate-400">{timeAgo(n.created_at)}</p>
+                <li key={n.id} className={highlight.has(n.id) ? "bg-blue-50/60" : ""}>
+                  {n.link ? (
+                    <Link href={n.link} onClick={() => setOpen(false)} className="block px-4 py-3 hover:bg-slate-50">
+                      <p className="text-sm font-semibold text-slate-900">{n.title}</p>
+                      {n.body && <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{n.body}</p>}
+                      <p className="mt-1 text-[11px] text-slate-400">{timeAgo(n.created_at)}</p>
+                    </Link>
+                  ) : (
+                    <div className="px-4 py-3">
+                      <p className="text-sm font-semibold text-slate-900">{n.title}</p>
+                      {n.body && <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{n.body}</p>}
+                      <p className="mt-1 text-[11px] text-slate-400">{timeAgo(n.created_at)}</p>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

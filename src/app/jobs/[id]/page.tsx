@@ -12,6 +12,7 @@ import { getOpenJob, listOpenJobs, logQuickApplyClick, categoryLabel, budgetLabe
 import CandidateIntakeForm from "@/modules/apply/CandidateIntakeForm";
 import SignedInApplyCard from "@/modules/apply/SignedInApplyCard";
 import EmailGate from "@/modules/apply/EmailGate";
+import JobMatchBanner from "@/modules/jobs/JobMatchBanner";
 import PriorityFloatingNudge from "@/components/priority/priority-floating-nudge";
 import { supabase } from "@/lib/supabaseClient";
 import { recordJobView } from "@/lib/recentlyViewed";
@@ -380,8 +381,9 @@ export default function QuickApplyPage() {
         cramped inside the narrower page container (feedback: "this middle
         part... is very narrow"). Its own max-w keeps it from ever looking
         too wide on huge screens. */}
+    <JobMatchBanner mandateId={mandateId} />
     <div className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
-      <Card id="apply-form" className="mt-6 scroll-mt-24">
+      <Card id="apply-form" className="mt-4 scroll-mt-24">
         <CardContent className="p-5 sm:p-6">
           {signedIn === null ? (
             <div className="flex justify-center py-16">

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Briefcase, MapPin, Building2, TrendingUp, Users, ChevronRight, X, Sparkles, Search, History } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Briefcase, MapPin, Building2, TrendingUp, Users, ChevronRight, X, Sparkles, Search, History, Heart, BellPlus, Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
@@ -15,6 +17,17 @@ import {
   type JobListing,
 } from "@/modules/jobs/api";
 import { getRecentlyViewedJobs, type RecentlyViewedJob } from "@/lib/recentlyViewed";
+import { supabase } from "@/lib/supabaseClient";
+import {
+  createJobAlert,
+  loadJobMatches,
+  loadSavedJobIds,
+  MATCH_TIER_CLASSES,
+  MATCH_TIER_LABEL,
+  matchTier,
+  toggleSavedJob,
+  type JobMatch,
+} from "@/modules/jobs/personal";
 
 // Icon (not a letter initial) per function/domain -- reads calmer at a
 // glance across a dense list than a wall of colored letter avatars, and
@@ -41,6 +54,14 @@ const AVATAR_COLOR: Record<string, string> = {
 };
 
 export default function JobsPage() {
+  const router = useRouter();
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [matches, setMatches] = useState<Map<string, JobMatch>>(new Map());
+  const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [matchesOnly, setMatchesOnly] = useState(false);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<"newest" | "match">("newest");
+  const [alertBusy, setAlertBusy] = useState(false);
   const [jobs, setJobs] = useState<JobListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +77,74 @@ export default function JobsPage() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load jobs."));
     setRecentlyViewed(getRecentlyViewedJobs());
   }, []);
+
+  // Personalisation only exists for a signed-in candidate; everyone else sees
+  // the plain list exactly as before.
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (cancelled) return;
+      const isIn = !!data.user;
+      setSignedIn(isIn);
+      if (!isIn) return;
+      try {
+        const [m, s] = await Promise.all([loadJobMatches(), loadSavedJobIds()]);
+        if (cancelled) return;
+        setMatches(new Map(m.map((x) => [x.mandate_id, x])));
+        setSaved(new Set(s));
+        if (m.some((x) => x.score >= 40)) setSortBy("match");
+      } catch {
+        // Personalisation is a bonus -- the list still works without it.
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleToggleSave(e: React.MouseEvent, jobId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!signedIn) {
+      router.push("/candidate-login?returnTo=/jobs");
+      return;
+    }
+    const wasSaved = saved.has(jobId);
+    setSaved((prev) => {
+      const next = new Set(prev);
+      if (wasSaved) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
+    try {
+      await toggleSavedJob(jobId);
+    } catch {
+      // Roll back the optimistic change.
+      setSaved((prev) => {
+        const next = new Set(prev);
+        if (wasSaved) next.add(jobId);
+        else next.delete(jobId);
+        return next;
+      });
+      toast.error("Couldn't update your saved roles. Please try again.");
+    }
+  }
+
+  async function handleCreateAlert() {
+    if (!signedIn) {
+      router.push("/candidate-login?returnTo=/jobs");
+      return;
+    }
+    setAlertBusy(true);
+    try {
+      await createJobAlert({ category: industry, city: location, keyword: search });
+      toast.success("Alert saved. You'll see new matching roles in your updates.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save the alert.");
+    } finally {
+      setAlertBusy(false);
+    }
+  }
 
   const locations = useMemo(() => {
     const all = (jobs ?? []).flatMap((j) => (j.cities && j.cities.length ? j.cities : j.city ? [j.city] : []));
@@ -94,9 +183,19 @@ export default function JobsPage() {
           .toLowerCase();
         if (!haystack.includes(q)) return false;
       }
+      if (savedOnly && !saved.has(job.id)) return false;
+      if (matchesOnly) {
+        const m = matches.get(job.id);
+        if (!m || m.score < 55) return false;
+      }
       return true;
     });
-  }, [jobs, industry, location, experienceBand, search]);
+  }, [jobs, industry, location, experienceBand, search, savedOnly, matchesOnly, saved, matches]);
+
+  const ordered = useMemo(() => {
+    if (sortBy !== "match" || matches.size === 0) return filtered;
+    return [...filtered].sort((a, b) => (matches.get(b.id)?.score ?? 0) - (matches.get(a.id)?.score ?? 0));
+  }, [filtered, sortBy, matches]);
 
   const hasFilters = industry || location || experienceBand || search;
 
@@ -242,6 +341,53 @@ export default function JobsPage() {
           )}
         </div>
 
+        {/* Personalisation row */}
+        {signedIn && (
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setMatchesOnly((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${
+                matchesOnly ? "border-blue-600 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+              }`}
+            >
+              {matchesOnly && <Check className="h-3.5 w-3.5" />} Matches me
+            </button>
+            <button
+              onClick={() => setSavedOnly((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${
+                savedOnly ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+              }`}
+            >
+              <Heart className="h-3.5 w-3.5" /> Saved{saved.size > 0 ? ` (${saved.size})` : ""}
+            </button>
+            <Select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "newest" | "match")}
+              aria-label="Sort roles"
+              className="w-40 rounded-full border-slate-200 bg-white text-[13px] focus-visible:ring-indigo-500"
+            >
+              <option value="newest">Newest first</option>
+              <option value="match">Best match first</option>
+            </Select>
+            <button
+              onClick={handleCreateAlert}
+              disabled={alertBusy}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-[13px] font-semibold text-slate-700 hover:border-slate-300 disabled:opacity-60"
+            >
+              <BellPlus className="h-3.5 w-3.5" />
+              {alertBusy ? "Saving…" : hasFilters ? "Alert me for roles like this search" : "Alert me for new roles"}
+            </button>
+          </div>
+        )}
+        {signedIn === false && (
+          <p className="mb-5 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-[13px] text-blue-900">
+            <Link href="/candidate-login?returnTo=/jobs" className="font-semibold underline">
+              Sign in
+            </Link>{" "}
+            to see how well each role fits you, save roles and get alerts for new ones.
+          </p>
+        )}
+
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         {!jobs && !error && (
@@ -250,7 +396,7 @@ export default function JobsPage() {
           </div>
         )}
 
-        {jobs && filtered.length === 0 && (
+        {jobs && ordered.length === 0 && (
           <Card className="rounded-2xl border-dashed border-slate-300 bg-white/70">
             <CardContent className="py-14 text-center">
               <Briefcase className="mx-auto mb-3 h-6 w-6 text-slate-300" />
@@ -263,7 +409,7 @@ export default function JobsPage() {
 
         {/* Job cards */}
         <div className="space-y-3">
-          {filtered.map((job) => {
+          {ordered.map((job) => {
             const exp = experienceLabel(job.experience_min, job.experience_max);
             const cities = job.cities?.length ? job.cities : job.city ? [job.city] : [];
             const subDomains = job.sub_domains?.length ? job.sub_domains : job.sub_domain ? [job.sub_domain] : [];
@@ -290,7 +436,30 @@ export default function JobsPage() {
                         <span className="ml-1.5 font-normal text-slate-400">— {job.client_display}</span>
                       )}
                     </h2>
-                    <span className="shrink-0 text-[11px] font-medium text-slate-400">{timeAgo(job.created_at)}</span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      {(() => {
+                        const m = matches.get(job.id);
+                        if (m?.applied) {
+                          return <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-bold text-indigo-700">Applied</span>;
+                        }
+                        const tier = m ? matchTier(m.score) : null;
+                        return tier ? (
+                          <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${MATCH_TIER_CLASSES[tier]}`}>
+                            {MATCH_TIER_LABEL[tier]} · {m!.score}%
+                          </span>
+                        ) : null;
+                      })()}
+                      <span className="text-[11px] font-medium text-slate-400">{timeAgo(job.created_at)}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleSave(e, job.id)}
+                        aria-label={saved.has(job.id) ? "Remove from saved roles" : "Save this role"}
+                        aria-pressed={saved.has(job.id)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                      >
+                        <Heart className={`h-4 w-4 ${saved.has(job.id) ? "fill-rose-500 text-rose-500" : ""}`} />
+                      </button>
+                    </span>
                   </div>
 
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -306,6 +475,12 @@ export default function JobsPage() {
                     )}
                   </div>
 
+                  {(() => {
+                    const m = matches.get(job.id);
+                    return m && !m.applied && matchTier(m.score) && m.reasons.length > 0 ? (
+                      <p className="mt-2 text-[12px] font-medium text-emerald-700">{m.reasons.slice(0, 2).join(" · ")}</p>
+                    ) : null;
+                  })()}
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
                     <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-[10.5px] font-semibold text-indigo-700">
                       {categoryLabel(job.category)}

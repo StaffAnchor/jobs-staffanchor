@@ -7,6 +7,8 @@ import MarketIntelligenceStrip from "./MarketIntelligenceStrip";
 import SharePassportCard from "./SharePassportCard";
 import AccountSecurityCard from "./AccountSecurityCard";
 import LatestUpdates from "./LatestUpdates";
+import RoleMatches from "./RoleMatches";
+import SavedAndAlerts from "./SavedAndAlerts";
 import { logPriorityClick } from "@/lib/priority-click";
 
 // The portal's actual landing screen -- previously "My Profile" (the full
@@ -97,6 +99,7 @@ export default function PortalHome({
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <LatestUpdates onSeeAll={() => onNavigate("pipeline")} />
+      <RoleMatches />
       <MarketIntelligenceStrip category={candidate.category ?? null} subDomain={candidate.sub_domain ?? null} />
 
       {/* --- Primary row: what's happening with me + my score --- */}
@@ -219,6 +222,10 @@ export default function PortalHome({
           <SharePassportCard slug={publicSlug} enabled={publicEnabled} onChange={onPassportChange} />
         </div>
       )}
+
+      <div className="mt-6">
+        <SavedAndAlerts />
+      </div>
 
       <div className="mt-6">
         <AccountSecurityCard email={candidate.email} />

@@ -1,0 +1,7 @@
+-- Applied to production (qdbxrspvnglbrvzfqhhg) on 2026-10-02/03 as
+-- "candidate_portal_matches_saved_alerts" + "fix_get_my_job_matches_array_append".
+-- Adds: get_my_job_matches (deterministic, explainable score + reasons), candidate_saved_jobs
+-- (+ get_my_saved_jobs / toggle_saved_job), candidate_job_alerts (+ create/get/delete),
+-- candidate_notifications.link, get_my_notifications returning link, and trigger
+-- fn_job_alert_notify (in-app notification when a matching role opens; never blocks mandate writes).
+-- All candidate-scoped via auth.uid(); no emails are sent. See the Supabase migrations for full SQL.
