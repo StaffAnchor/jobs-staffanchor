@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Briefcase, CheckCircle2, IndianRupee, MapPin, Zap, ShieldCheck, PhoneCall, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Briefcase, Check, CheckCircle2, FileText, IndianRupee, ListChecks, MapPin, UserCheck, Wallet, Zap, ShieldCheck, PhoneCall, Clock } from "lucide-react";
 import { logPriorityClick } from "@/lib/priority-click";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getOpenJob, listOpenJobs, logQuickApplyClick, categoryLabel, budgetLabel, experienceLabel, timeAgo, type JobListing } from "@/modules/jobs/api";
@@ -16,6 +15,54 @@ import JobMatchBanner from "@/modules/jobs/JobMatchBanner";
 import PriorityFloatingNudge from "@/components/priority/priority-floating-nudge";
 import { supabase } from "@/lib/supabaseClient";
 import { recordJobView } from "@/lib/recentlyViewed";
+
+const MONOGRAM_GRADIENT: Record<string, string> = {
+  b2b_sales: "from-blue-500 to-indigo-600",
+  b2c_sales: "from-violet-500 to-fuchsia-600",
+  non_sales: "from-slate-500 to-slate-700",
+};
+
+function initials(title: string | null) {
+  const words = (title ?? "Sales").split(/\s+/).filter(Boolean);
+  return ((words[0]?.[0] ?? "S") + (words[1]?.[0] ?? "")).toUpperCase();
+}
+
+const HIRING_STEPS = [
+  ["Apply", "One click if your profile is ready"],
+  ["Recruiter review", "A recruiter reads your profile"],
+  ["Shared with client", "If you fit, your profile goes to them"],
+  ["Interviews", "We help you prepare"],
+  ["Offer", "We support you through it"],
+] as const;
+
+function Section({ icon: Icon, tone, title, children }: { icon: typeof FileText; tone: string; title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+      <h2 className="mb-4 flex items-center gap-3 text-lg font-extrabold tracking-tight text-slate-950">
+        <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tone}`}>
+          <Icon className="h-[18px] w-[18px]" />
+        </span>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function Bullets({ lines }: { lines: string[] }) {
+  return (
+    <ul className="space-y-2.5">
+      {lines.map((line, i) => (
+        <li key={i} className="flex items-start gap-3 text-[14.5px] leading-6 text-slate-700">
+          <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+            <Check className="h-3 w-3" />
+          </span>
+          {line}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function bulletList(value: string) {
   return value
@@ -154,184 +201,186 @@ export default function QuickApplyPage() {
   const jobCities = job.cities?.length ? job.cities : job.city ? [job.city] : [];
   const jobSubDomains = job.sub_domains?.length ? job.sub_domains : job.sub_domain ? [job.sub_domain] : [];
 
+  const exp = experienceLabel(job.experience_min, job.experience_max);
+
   return (
     <>
-    <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
-      <Link href="/jobs" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to open roles
-      </Link>
-
-      <div
-        className="mb-6 overflow-hidden rounded-2xl p-6 text-white shadow-lg shadow-slate-900/20 sm:p-8"
-        style={{ backgroundImage: "linear-gradient(135deg, #12131A 0%, #3730B3 55%, #4F46E5 100%)" }}
-      >
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-white/80">
-          {categoryLabel(job.category)}
-          {jobSubDomains.length ? ` · ${jobSubDomains.join(", ")}` : ""}
-        </p>
-        <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{job.role_title ?? "Sales Role"}</h1>
-        {job.client_display && <p className="mt-1 text-sm font-medium text-white/90">{job.client_display}</p>}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {jobCities.length > 0 && (
-            <span className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-[12px] font-medium backdrop-blur-sm">
-              <MapPin className="h-3.5 w-3.5" /> {jobCities.join(", ")}
-            </span>
-          )}
-          <span className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-[12px] font-medium backdrop-blur-sm">
-            <IndianRupee className="h-3.5 w-3.5" /> {budgetLabel(job.budget_min, job.budget_max)}
-          </span>
-          {experienceLabel(job.experience_min, job.experience_max) && (
-            <span className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-medium backdrop-blur-sm">
-              {experienceLabel(job.experience_min, job.experience_max)} experience
-            </span>
-          )}
-        </div>
-        {signedIn && appliedAlready ? (
-          <span className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md">
-            <CheckCircle2 className="h-4 w-4" /> Applied
-          </span>
-        ) : (
-          <a
-            href="#apply-form"
-            onClick={() => logQuickApplyClick(mandateId)}
-            className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-indigo-800 shadow-md transition hover:bg-indigo-50"
+    {/* ───────── Hero ───────── */}
+    <section className="relative overflow-hidden bg-[#0A1630] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_80%_at_90%_0%,rgba(76,123,255,0.32),transparent_60%),radial-gradient(40%_60%_at_0%_100%,rgba(16,185,129,0.12),transparent_60%)]" />
+      <div className="relative mx-auto max-w-6xl px-4 pb-10 pt-8 sm:px-6 lg:px-8">
+        <Link href="/jobs" className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-blue-200 hover:text-white">
+          <ArrowLeft className="h-4 w-4" /> All open roles
+        </Link>
+        <div className="flex flex-col gap-6 md:flex-row md:items-center">
+          <span
+            className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br text-2xl font-extrabold text-white shadow-xl shadow-black/30 ${
+              MONOGRAM_GRADIENT[job.category ?? ""] ?? MONOGRAM_GRADIENT.non_sales
+            }`}
           >
-            <Zap className="h-4 w-4" /> Apply
-          </a>
-        )}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardContent className="p-5 sm:p-6">
-              {hasStructuredJD ? (
-                <div className="space-y-5">
-                  {job.jd_overview && <p className="text-[14px] leading-6 text-slate-600">{job.jd_overview}</p>}
-                  {job.jd_responsibilities && (
-                    <div>
-                      <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-indigo-700">
-                        Key Responsibilities
-                      </h2>
-                      <ul className="list-disc space-y-1.5 pl-4 text-[13.5px] leading-6 text-slate-700">
-                        {bulletList(job.jd_responsibilities).map((line, i) => (
-                          <li key={i}>{line}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {job.jd_candidate_profile && (
-                    <div>
-                      <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-indigo-700">
-                        Candidate Profile
-                      </h2>
-                      <ul className="list-disc space-y-1.5 pl-4 text-[13.5px] leading-6 text-slate-700">
-                        {bulletList(job.jd_candidate_profile).map((line, i) => (
-                          <li key={i}>{line}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {job.jd_compensation_benefits && (
-                    <div>
-                      <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-emerald-700">
-                        Compensation &amp; Benefits
-                      </h2>
-                      <ul className="list-disc space-y-1.5 pl-4 text-[13.5px] leading-6 text-slate-700">
-                        {bulletList(job.jd_compensation_benefits).map((line, i) => (
-                          <li key={i}>{line}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ) : job.job_description ? (
-                <p className="whitespace-pre-wrap text-[13.5px] leading-6 text-slate-600">{job.job_description}</p>
-              ) : (
-                <p className="text-sm text-slate-400">No job description yet — a recruiter will share full details.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-1">
-          <div className="sticky top-20 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">At a glance</p>
-            <dl className="space-y-2.5 text-[13px]">
-              <div className="flex items-center justify-between">
-                <dt className="text-slate-500">Experience</dt>
-                <dd className="font-medium text-slate-800">{experienceLabel(job.experience_min, job.experience_max) ?? "—"}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-slate-500">Compensation</dt>
-                <dd className="font-medium text-slate-800">{budgetLabel(job.budget_min, job.budget_max)}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-slate-500">Location</dt>
-                <dd className="font-medium text-slate-800">{jobCities.length ? jobCities.join(", ") : "—"}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-slate-500">Function</dt>
-                <dd className="font-medium text-slate-800">{categoryLabel(job.category)}</dd>
-              </div>
-            </dl>
+            {initials(job.role_title)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-200">
+              {categoryLabel(job.category)}
+              {jobSubDomains.length ? ` · ${jobSubDomains.slice(0, 3).join(", ")}` : ""}
+            </p>
+            <h1 className="mt-2 font-(family-name:--font-space-grotesk) text-3xl font-black leading-tight tracking-tight md:text-5xl">
+              {job.role_title ?? "Sales Role"}
+            </h1>
+            {job.client_display && <p className="mt-2 text-base text-blue-100/90">{job.client_display}</p>}
+          </div>
+          <div className="shrink-0">
             {signedIn && appliedAlready ? (
-              <span className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-md">
+              <span className="inline-flex h-12 items-center gap-2 rounded-2xl bg-emerald-500 px-6 text-sm font-bold text-white shadow-lg">
                 <CheckCircle2 className="h-4 w-4" /> Applied
               </span>
             ) : (
               <a
                 href="#apply-form"
                 onClick={() => logQuickApplyClick(mandateId)}
-                className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-full bg-[#4F46E5] px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#3730B3]"
+                className="inline-flex h-12 items-center gap-2 rounded-2xl bg-white px-7 text-sm font-bold text-blue-900 shadow-lg shadow-black/20 transition hover:bg-blue-50"
               >
-                <Zap className="h-4 w-4" /> Apply
+                <Zap className="h-4 w-4" /> Apply now
+              </a>
+            )}
+          </div>
+        </div>
+        <div className="mt-7 flex flex-wrap gap-2.5">
+          {jobCities.length > 0 && (
+            <span className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-[13px] font-medium backdrop-blur-sm">
+              <MapPin className="h-3.5 w-3.5" /> {jobCities.join(", ")}
+            </span>
+          )}
+          <span className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-[13px] font-medium backdrop-blur-sm">
+            {(job.budget_min || job.budget_max) && <IndianRupee className="h-3.5 w-3.5" />} {budgetLabel(job.budget_min, job.budget_max)}
+          </span>
+          {exp && (
+            <span className="rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-[13px] font-medium backdrop-blur-sm">{exp} experience</span>
+          )}
+          <span className="rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-[13px] font-medium backdrop-blur-sm">{timeAgo(job.created_at)}</span>
+        </div>
+      </div>
+    </section>
+
+    <JobMatchBanner mandateId={mandateId} />
+
+    <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 md:pb-10 lg:px-8">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        <div className="min-w-0 space-y-6">
+          {hasStructuredJD ? (
+            <>
+              {job.jd_overview && (
+                <Section icon={FileText} tone="bg-blue-50 text-blue-600" title="About the role">
+                  <p className="text-[14.5px] leading-7 text-slate-600">{job.jd_overview}</p>
+                </Section>
+              )}
+              {job.jd_responsibilities && (
+                <Section icon={ListChecks} tone="bg-indigo-50 text-indigo-600" title="Key responsibilities">
+                  <Bullets lines={bulletList(job.jd_responsibilities)} />
+                </Section>
+              )}
+              {job.jd_candidate_profile && (
+                <Section icon={UserCheck} tone="bg-violet-50 text-violet-600" title="Who they are looking for">
+                  <Bullets lines={bulletList(job.jd_candidate_profile)} />
+                </Section>
+              )}
+              {job.jd_compensation_benefits && (
+                <Section icon={Wallet} tone="bg-emerald-50 text-emerald-600" title="Compensation and benefits">
+                  <Bullets lines={bulletList(job.jd_compensation_benefits)} />
+                </Section>
+              )}
+            </>
+          ) : (
+            <Section icon={FileText} tone="bg-blue-50 text-blue-600" title="About the role">
+              {job.job_description ? (
+                <p className="whitespace-pre-wrap text-[14.5px] leading-7 text-slate-600">{job.job_description}</p>
+              ) : (
+                <p className="text-sm text-slate-400">No job description yet. A recruiter will share full details.</p>
+              )}
+            </Section>
+          )}
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+            <h2 className="text-lg font-extrabold tracking-tight text-slate-950">How hiring works</h2>
+            <p className="mt-1 text-sm text-slate-500">We update you at every step, and you can follow it in your account.</p>
+            <ol className="mt-6 grid gap-5 sm:grid-cols-5">
+              {HIRING_STEPS.map(([title, text], i) => (
+                <li key={title}>
+                  <span className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-extrabold ${i === 0 ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-700"}`}>
+                    {i + 1}
+                  </span>
+                  <p className="mt-3 text-sm font-bold text-slate-900">{title}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{text}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
+
+        <aside className="space-y-5 lg:sticky lg:top-24">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">At a glance</p>
+            <dl className="space-y-3.5 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-slate-500">Experience</dt>
+                <dd className="text-right font-semibold text-slate-900">{exp ?? "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-slate-500">Compensation</dt>
+                <dd className="text-right font-semibold text-slate-900">{budgetLabel(job.budget_min, job.budget_max)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-slate-500">Location</dt>
+                <dd className="text-right font-semibold text-slate-900">{jobCities.length ? jobCities.join(", ") : "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-slate-500">Function</dt>
+                <dd className="text-right font-semibold text-slate-900">{categoryLabel(job.category)}</dd>
+              </div>
+            </dl>
+            {signedIn && appliedAlready ? (
+              <span className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 text-sm font-bold text-white">
+                <CheckCircle2 className="h-4 w-4" /> Applied
+              </span>
+            ) : (
+              <a
+                href="#apply-form"
+                onClick={() => logQuickApplyClick(mandateId)}
+                className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
+              >
+                <Zap className="h-4 w-4" /> Apply now
               </a>
             )}
           </div>
 
-          {/* Proof box -- addresses the skepticism a candidate has right at
-              the moment of applying ("is this recruiter for real, will
-              anyone actually get back to me"), instead of only making that
-              case on the marketing site where a job-seeker rarely lands
-              first. */}
-          <div className="mt-5 space-y-3 border-t border-slate-100 pt-5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Why apply through us</p>
-            <div className="flex items-start gap-2">
-              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" />
-              <p className="text-[12px] leading-5 text-slate-600">
-                Every profile is verified on a real call before it reaches an employer — not just a resume in a pile.
-              </p>
-            </div>
-            <div className="flex items-start gap-2">
-              <PhoneCall className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" />
-              <p className="text-[12px] leading-5 text-slate-600">
-                A StaffAnchor recruiter reviews your application personally — no automated rejection emails.
-              </p>
-            </div>
-            <div className="flex items-start gap-2">
-              <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-500" />
-              <p className="text-[12px] leading-5 text-slate-600">
-                We respond to every application within 1 business day, matched or not.
-              </p>
-            </div>
+          {/* Addresses the skepticism a candidate has right at the moment of
+              applying ("is this recruiter for real, will anyone get back to me"). */}
+          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Why apply through us</p>
+            {[
+              [ShieldCheck, "Every profile is verified on a real call before it reaches an employer, not just a resume in a pile."],
+              [PhoneCall, "A StaffAnchor recruiter reviews your application personally. No automated rejection emails."],
+              [Clock, "We respond to every application within 1 business day, matched or not."],
+            ].map(([Icon, text], i) => {
+              const I = Icon as typeof ShieldCheck;
+              return (
+                <div key={i} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <I className="h-4 w-4" />
+                  </span>
+                  <p className="text-[13px] leading-5 text-slate-600">{text as string}</p>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Teaser for Priority Applicant -- plants the idea before the
-              candidate applies, without competing with the main Apply CTA
-              above. Deliberately louder than the flat proof-box list right
-              above it (bigger icon badge, a real price pill, a distinct
-              CTA chip) since a plain tinted strip reads as just more fine
-              print next to that list -- this needs to look like an offer,
-              not a disclaimer. Full explainer + purchase lives on the
-              dedicated page every placement links to. */}
           <Link
             href={`/priority-applicant?mandateId=${mandateId}`}
             onClick={() => logPriorityClick("job_teaser", { mandateId })}
-            className="group relative mt-4 block overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-fuchsia-600 p-4 shadow-md shadow-indigo-500/30 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/40"
+            className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-fuchsia-600 p-5 shadow-md shadow-indigo-500/30 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/40"
           >
             <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/15 blur-xl" />
-            <div className="pointer-events-none absolute -bottom-8 left-10 h-16 w-16 rounded-full bg-white/10 blur-lg" />
             <div className="relative flex items-center gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20">
                 <Zap className="h-5 w-5 text-white" fill="currentColor" />
@@ -340,34 +389,40 @@ export default function QuickApplyPage() {
                 <p className="text-[13px] font-bold text-white">Want to be seen first?</p>
                 <p className="text-[11.5px] text-white/85">Get flagged for the recruiter&apos;s first review pass</p>
               </div>
-              <span className="flex shrink-0 items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[11.5px] font-bold text-indigo-700 shadow-sm transition-transform group-hover:scale-105">
+              <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-[11.5px] font-bold text-indigo-700 shadow-sm transition-transform group-hover:scale-105">
                 From ₹79
               </span>
             </div>
           </Link>
-        </div>
+        </aside>
       </div>
 
       {similarJobs.length > 0 && (
-        <div className="mt-6">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Similar roles</p>
-          <div className="grid gap-3 sm:grid-cols-3">
+        <div className="mt-10">
+          <h2 className="mb-4 text-lg font-extrabold tracking-tight text-slate-950">Similar roles</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {similarJobs.map((sj) => {
               const sjCities = sj.cities?.length ? sj.cities : sj.city ? [sj.city] : [];
               return (
                 <Link
                   key={sj.id}
                   href={`/jobs/${sj.id}`}
-                  className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+                  className="group min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg"
                 >
-                  <p className="truncate text-[13.5px] font-semibold text-slate-900 group-hover:text-indigo-700">
-                    {sj.role_title ?? "Open Role"}
-                  </p>
+                  <span className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br text-sm font-extrabold text-white ${MONOGRAM_GRADIENT[sj.category ?? ""] ?? MONOGRAM_GRADIENT.non_sales}`}>
+                    {initials(sj.role_title)}
+                  </span>
+                  <p className="mt-4 truncate text-[15px] font-extrabold text-slate-900 group-hover:text-blue-700">{sj.role_title ?? "Open Role"}</p>
                   <p className="mt-0.5 truncate text-xs text-slate-500">
                     {sj.client_display ?? categoryLabel(sj.category)}
                     {sjCities.length ? ` · ${sjCities.join(", ")}` : ""}
                   </p>
-                  <p className="mt-1.5 text-[11px] font-medium text-slate-400">{timeAgo(sj.created_at)}</p>
+                  <p className="mt-3 flex items-center justify-between text-[11px] font-medium text-slate-400">
+                    {timeAgo(sj.created_at)}
+                    <span className="flex items-center gap-1 font-bold text-blue-600">
+                      View <ArrowRight className="h-3 w-3" />
+                    </span>
+                  </p>
                 </Link>
               );
             })}
@@ -376,40 +431,38 @@ export default function QuickApplyPage() {
       )}
     </div>
 
-    {/* Quick Apply intentionally breaks out of the max-w-6xl wrapper above --
-        ApplyForm's own internal 3-column grid wants ~1280px and was getting
-        cramped inside the narrower page container (feedback: "this middle
-        part... is very narrow"). Its own max-w keeps it from ever looking
+    {/* The apply area breaks out of the narrower wrapper above: the long
+        profile form wants width, and its own max-w keeps it from ever looking
         too wide on huge screens. */}
-    <JobMatchBanner mandateId={mandateId} />
-    <div className="mx-auto max-w-[1400px] px-4 pb-8 sm:px-6 lg:px-8">
-      <Card id="apply-form" className="mt-4 scroll-mt-24">
-        <CardContent className="p-5 sm:p-6">
-          {signedIn === null ? (
-            <div className="flex justify-center py-16">
-              <Spinner />
-            </div>
-          ) : signedIn ? (
-            <SignedInApplyCard mandateId={mandateId} mandateTitle={job.role_title ?? undefined} />
-          ) : gateEmail === null ? (
-            <EmailGate mandateId={mandateId} mandateTitle={job.role_title ?? undefined} onNewCandidate={setGateEmail} />
-          ) : (
-            <CandidateIntakeForm
-              mandateId={mandateId}
-              mandateTitle={job.role_title ?? undefined}
-              email={gateEmail}
-            />
-          )}
-        </CardContent>
-      </Card>
+    <div className="mx-auto max-w-[1400px] px-4 pb-24 sm:px-6 md:pb-10 lg:px-8">
+      <div id="apply-form" className="scroll-mt-24 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+        {signedIn === null ? (
+          <div className="flex justify-center py-16">
+            <Spinner />
+          </div>
+        ) : signedIn ? (
+          <SignedInApplyCard mandateId={mandateId} mandateTitle={job.role_title ?? undefined} />
+        ) : gateEmail === null ? (
+          <EmailGate mandateId={mandateId} mandateTitle={job.role_title ?? undefined} onNewCandidate={setGateEmail} />
+        ) : (
+          <CandidateIntakeForm mandateId={mandateId} mandateTitle={job.role_title ?? undefined} email={gateEmail} />
+        )}
+      </div>
     </div>
 
-    {/* Same offer as the sidebar teaser above, but the sidebar scrolls out
-        of view long before the candidate reaches the apply form below --
-        exactly the stretch where they're spending the most time on the
-        page (typing an email, filling multi-step fields) and the sidebar
-        pitch has already disappeared. Fixed positioning keeps it on
-        screen through that whole stretch instead. */}
+    {/* Phone: the apply action stays within thumb reach while reading. */}
+    {!(signedIn && appliedAlready) && (
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur md:hidden">
+        <a
+          href="#apply-form"
+          onClick={() => logQuickApplyClick(mandateId)}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/25"
+        >
+          <Zap className="h-4 w-4" /> Apply now
+        </a>
+      </div>
+    )}
+
     <PriorityFloatingNudge mandateId={mandateId} />
     </>
   );
