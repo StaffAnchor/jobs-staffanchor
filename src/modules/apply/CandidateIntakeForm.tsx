@@ -389,7 +389,16 @@ export default function CandidateIntakeForm({
   // Bring the top of the form (not the page) into view, so on a job page the
   // candidate stays at the form instead of jumping to the job header.
   function scrollToForm() {
-    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    const go = (behavior: ScrollBehavior) => formRef.current?.scrollIntoView({ behavior, block: "start" });
+    requestAnimationFrame(() => go("smooth"));
+    // If anything else on the page (or a re-render that briefly shrinks it)
+    // throws the scroll position back to the top, put it back at the form.
+    for (const ms of [250, 700]) {
+      window.setTimeout(() => {
+        const top = formRef.current?.getBoundingClientRect().top ?? 0;
+        if (top > window.innerHeight * 0.6 || top < -window.innerHeight * 0.3) go("auto");
+      }, ms);
+    }
   }
 
   function goNext() {
