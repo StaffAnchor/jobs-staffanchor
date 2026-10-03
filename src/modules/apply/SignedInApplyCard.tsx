@@ -13,6 +13,7 @@ import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
 import { logQuickApplyFormOpened } from "@/modules/jobs/api";
 import { authHeaders } from "@/lib/auth-headers";
+import ReturningReviewCard, { type ReviewRow } from "./ReturningReviewCard";
 import CandidateIntakeForm, { intakeMissingFields, type IntakeExistingRow } from "./CandidateIntakeForm";
 
 // Naukri (and every other persistent-session job site) recognizes a signed-in
@@ -40,6 +41,7 @@ export default function SignedInApplyCard({
   const [alreadyApplied, setAlreadyApplied] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pipelineStage, setPipelineStage] = useState<string | null>(null);
   const [questions, setQuestions] = useState<ApplicationQuestion[]>([]);
@@ -126,6 +128,8 @@ export default function SignedInApplyCard({
         headers: await authHeaders(),
         body: JSON.stringify({
           payload: { email: candidate.email },
+          // The candidate just reviewed their details and said they are correct.
+          confirmDetails: true,
           mandateId,
           ...(screeningAnswers.length ? { screeningAnswers } : {}),
         }),
@@ -168,13 +172,13 @@ export default function SignedInApplyCard({
   // gets the short form pre-filled instead of a one-click apply that would
   // submit a near-empty profile to the recruiter.
   const intakeGaps = intakeMissingFields(candidate as IntakeExistingRow);
-  if (!applied && !alreadyApplied && intakeGaps.length > 0 && candidate.email) {
+  if (!applied && !alreadyApplied && (intakeGaps.length > 0 || editing) && candidate.email) {
     return (
       <div className="mx-auto max-w-2xl">
         <div className="mb-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Signed in as {candidate.email}</p>
           <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
-            {mandateTitle ? `Apply for ${mandateTitle}` : "Complete your details"}
+            {editing ? "Update your details" : mandateTitle ? `Apply for ${mandateTitle}` : "Complete your details"}
           </h2>
           <button
             type="button"
@@ -228,6 +232,33 @@ export default function SignedInApplyCard({
           <PriorityApplicantCard candidateId={candidate.id} mandateId={mandateId} />
         )}
       </div>
+    );
+  }
+
+  // Complete profile, not applied yet: show what we hold and let them confirm
+  // or change it, so recruiters never get a stale CTC or notice period.
+  if (!applied && !alreadyApplied) {
+    return (
+      <>
+        <ReturningReviewCard
+          candidate={candidate as unknown as ReviewRow}
+          mandateTitle={mandateTitle}
+          applying={applying}
+          error={error}
+          onApply={handleApply}
+          onUpdate={() => setEditing(true)}
+          onLogout={handleLogout}
+        />
+        {showQuestions && (
+          <ApplicationQuestionsModal
+            mandateTitle={mandateTitle}
+            questions={questions}
+            submitting={applying}
+            onCancel={() => setShowQuestions(false)}
+            onSubmit={(answers) => void submitApplication(buildAnswerPayload(questions, answers))}
+          />
+        )}
+      </>
     );
   }
 
