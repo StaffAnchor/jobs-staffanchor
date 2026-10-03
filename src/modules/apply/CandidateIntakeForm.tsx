@@ -176,6 +176,7 @@ export default function CandidateIntakeForm({
   const [submitted, setSubmitted] = useState(false);
   const [skippedVerify, setSkippedVerify] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
+  const [accountOnly, setAccountOnly] = useState(false);
 
   const extractionRef = useRef<ResumeExtraction | null>(null);
   const [screeningQuestions, setScreeningQuestions] = useState<ApplicationQuestion[]>([]);
@@ -320,7 +321,10 @@ export default function CandidateIntakeForm({
       if (!submitRes.ok) {
         // The email already has a profile and the caller isn't signed in as its
         // owner: send them to sign in instead of showing a dead-end error.
-        if (submitJson?.code === "PROFILE_EXISTS") setProfileExists(true);
+        if (submitJson?.code === "PROFILE_EXISTS") {
+          setProfileExists(true);
+          setAccountOnly(!!submitJson?.accountOnly);
+        }
         throw new Error(submitJson?.error ?? "Something went wrong. Please try again.");
       }
 
@@ -620,7 +624,7 @@ export default function CandidateIntakeForm({
               <>
                 {" "}
                 <a
-                  href={`/candidate-login?email=${encodeURIComponent(email)}${mandateId ? `&returnTo=${encodeURIComponent(`/jobs/${mandateId}`)}` : ""}`}
+                  href={`/candidate-login?email=${encodeURIComponent(email)}${mandateId && !accountOnly ? `&returnTo=${encodeURIComponent(`/jobs/${mandateId}`)}` : ""}`}
                   className="font-semibold underline"
                 >
                   Sign in

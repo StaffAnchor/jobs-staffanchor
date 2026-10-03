@@ -82,10 +82,16 @@ export async function POST(req: NextRequest) {
       completionRef: typeof completionRef === "string" ? completionRef : null,
     });
     if (!access.allowed) {
+      // A sign-in account with no profile row (e.g. an earlier visit that never
+      // finished): signing in lands them in "finish your profile".
+      const accountOnly = !existingRow && !!existingUser;
       return NextResponse.json(
         {
-          error: "You already have a StaffAnchor profile with this email. Please sign in to continue.",
+          error: accountOnly
+            ? "You already have an account. Sign in with the emailed code to finish your profile."
+            : "You already have a StaffAnchor profile with this email. Please sign in to continue.",
           code: "PROFILE_EXISTS",
+          accountOnly,
         },
         { status: 409 }
       );
