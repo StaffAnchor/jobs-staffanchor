@@ -1039,3 +1039,104 @@ export const motionTypeOptions = ["Product-Led Growth (PLG)", "Sales-Led", "Hybr
 // (no clean fixed vocabulary across every industrial vertical); tender/RFP
 // experience is Yes/No + optional free-text description.
 export const tenderRfpExperienceOptions = ["Yes", "No"] as const;
+
+
+// ---- Finer-grained CTC steps (LPA): 0.25L under 10L, 0.5L to 30L, 1L above ----
+// A candidate on 4.5L can pick 4.5L instead of rounding to 4 or 5. `current` is
+// any already-saved value that isn't on the ladder; it's added so a prefilled
+// select never shows blank.
+export function ctcStepOptions(current?: string): CtcOption[] {
+  const fmt = (n: number) => `${Number.isInteger(n) ? n : n.toString()} LPA`;
+  const out: CtcOption[] = [];
+  for (let n = 0; n < 10; n += 0.25) out.push({ value: n, label: fmt(n) });
+  for (let n = 10; n <= 30; n += 0.5) out.push({ value: n, label: fmt(n) });
+  for (let n = 31; n <= 120; n += 1) out.push({ value: n, label: fmt(n) });
+  out.push({ value: 121, label: "120L+" });
+  const cur = current !== undefined && current !== "" ? Number(current) : NaN;
+  if (!Number.isNaN(cur) && !out.some((o) => o.value === cur)) {
+    out.push({ value: cur, label: fmt(cur) });
+    out.sort((a, b) => (a.value ?? 0) - (b.value ?? 0));
+  }
+  return out;
+}
+
+// ---- "Your level": one list replacing the old Role Level + Role Type pair ----
+// `value` is what's stored in segment_data.role_level (unchanged for every
+// existing option, so CRM filters keep working); `lead` levels also ask team size.
+export const yourLevelOptions: { value: string; label: string; lead: boolean; salesOnly?: boolean }[] = [
+  { value: "IC – Sales Development", label: "SDR / BDR", lead: false, salesOnly: true },
+  { value: "IC – Account Executive", label: "AE / Sales Executive", lead: false, salesOnly: true },
+  { value: "IC", label: "Senior IC / Key Accounts", lead: false },
+  { value: "Team Lead / Asst. Manager", label: "Team Lead", lead: true },
+  { value: "Manager", label: "Manager", lead: true },
+  { value: "Senior Manager", label: "Sr Manager / AGM", lead: true },
+  { value: "Director", label: "Director / GM", lead: true },
+  { value: "VP / Head", label: "VP / Head / CRO", lead: true },
+  { value: "Founder / CXO", label: "Founder / CXO", lead: true },
+];
+
+// Sales tools beyond the CRMs in crmToolOptions.
+export const salesToolOptions = [
+  "LinkedIn Sales Navigator", "Apollo", "Outreach", "Salesloft", "Gong", "ZoomInfo", "Lusha", "Clay",
+  "Zoho Desk", "Freshdesk", "Exotel", "Knowlarity", "Ozonetel", "WhatsApp Business", "Excel / Google Sheets", "Power BI",
+];
+
+
+// ---- "What have you sold?" -- one grouped, searchable list per profile type,
+// replacing the old 3-bucket Practice + separate "What do you sell?" ----
+export type PickerGroup = { group: string; options: string[] };
+
+export const b2bSoldGroups: PickerGroup[] = [
+  {
+    group: "Software & technology",
+    options: [
+      "SaaS (horizontal)", "SaaS (vertical / industry)", "ERP / CRM / HRMS software", "Cybersecurity",
+      "Cloud & infrastructure", "AI & data platforms", "IT hardware & networking", "IT services & consulting",
+      "System integration", "Telecom & connectivity (B2B)", "Payments & FinTech platforms", "MarTech / AdTech",
+      "HR tech & staffing services", "EdTech (institutional / B2B)", "Healthcare IT & MedTech",
+    ],
+  },
+  {
+    group: "Industrial & infrastructure",
+    options: [
+      "Industrial automation", "Capital equipment & machinery", "Electrical & electronics", "Building products & construction",
+      "Clean energy / solar", "Chemicals & materials", "Packaging", "Auto components", "Infrastructure / EPC projects",
+      "Logistics & supply chain", "Agri & food processing",
+    ],
+  },
+  {
+    group: "Services, finance & institutions",
+    options: [
+      "Professional & consulting services", "Corporate BFSI (cash management, group insurance, MSME lending)",
+      "Commercial real estate / co-working", "Corporate travel & events", "Media & advertising",
+      "Hospitals, pharma & healthcare (B2B)", "Government & institutional sales", "Channel / distributor sales",
+    ],
+  },
+  { group: "Something else", options: ["Other B2B"] },
+];
+
+export const b2cSoldGroups: PickerGroup[] = [
+  { group: "Financial products", options: ["Life insurance", "Health / general insurance", "Personal & home loans", "Credit cards & banking products", "Mutual funds & wealth", "Consumer fintech apps"] },
+  { group: "Education", options: ["EdTech (K-12)", "EdTech (test prep / coaching)", "EdTech (upskilling / higher-ed)", "Study abroad / overseas consulting"] },
+  { group: "Property, auto & energy", options: ["Residential real estate", "Cars & two-wheelers", "Solar / home energy"] },
+  { group: "Consumer & retail", options: ["Electronics & appliances retail", "Fashion, jewellery & lifestyle", "D2C / e-commerce", "FMCG / consumer durables", "Telecom, broadband & DTH"] },
+  { group: "Health, travel & subscriptions", options: ["Healthcare & diagnostics", "Wellness, fitness & beauty", "Travel & hospitality", "Matrimony, classifieds & subscriptions"] },
+  { group: "Something else", options: ["Other consumer sales"] },
+];
+
+// Industries a candidate has sold INTO (a superset of industryOptions, grouped).
+export const industrySoldGroups: PickerGroup[] = [
+  { group: "Technology", options: ["SaaS / Cloud Software", "ERP / CRM / HRMS Software", "AI / ML Products", "Data & Analytics Platforms", "Cybersecurity", "IT Infrastructure & Hardware", "IT Services & Consulting", "System Integration", "Telecom & Networking", "Semiconductors / Electronics", "Fintech / Digital Payments", "Media / Advertising / MarTech", "Staffing / HR Tech"] },
+  { group: "Banking, finance & insurance", options: ["Life Insurance", "Health / General Insurance", "Insurance Broking / Distribution", "Mutual Funds / Wealth Management", "Banking (Retail)", "Banking (Corporate / SME)", "NBFC / Microfinance", "Housing Finance", "Credit Cards / Lending", "Stock Broking / Capital Markets", "Real Estate Finance", "Forex / Remittance"] },
+  { group: "Healthcare & life sciences", options: ["Pharma (Ethical / Rx)", "Pharma (OTC / Consumer)", "Medical Devices & Diagnostics", "Diagnostic Labs", "Hospital & Healthcare Services", "Biotech", "Nutraceuticals & HealthTech", "Dental / Optical"] },
+  { group: "Consumer & retail", options: ["FMCG", "Consumer Durables", "Consumer Electronics", "D2C Brands", "E-commerce / Marketplaces", "Fashion & Apparel", "Luxury & Premium Goods", "Modern Trade / Retail Chains", "QSR / Food & Beverage", "Beauty & Personal Care", "Jewellery"] },
+  { group: "Industrial & manufacturing", options: ["Industrial Equipment & Machinery", "Industrial Automation", "Electrical & Electronics Equipment", "Automotive & Auto Components", "Chemicals & Specialty Chemicals", "Steel / Metals / Mining", "Packaging", "Textiles", "Agrochemicals / Seeds", "Construction Materials"] },
+  { group: "Energy, real estate & infrastructure", options: ["Renewable Energy / Solar", "Oil & Gas / Energy", "Infrastructure / EPC Projects", "Smart City Projects", "Residential Real Estate", "Commercial Real Estate", "Co-working / Managed Spaces"] },
+  { group: "Education & services", options: ["EdTech / Training & Skilling", "K-12 / Schools", "Higher Education / Universities", "Test Prep / Coaching", "Study Abroad / Overseas Education", "Logistics & Supply Chain", "Legal Tech / Professional Services", "Consulting", "Travel & Hospitality", "Events & Experiential", "Media & Entertainment"] },
+  { group: "Public sector & other", options: ["Government / Public Sector", "Defence", "Agri & Food Processing", "Non-profit / Social Enterprise", "Other"] },
+];
+
+export const b2cMotionChoices = [
+  "Retail / Counter Sales", "Field / Door-to-door", "Telesales / Inside Sales", "Channel / Franchise-led",
+  "Digital / Online leads", "Branch / Walk-in", "Agent / Partner network", "Events / Campus / Roadshows",
+];

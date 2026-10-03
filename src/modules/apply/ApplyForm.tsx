@@ -517,7 +517,9 @@ function segNumArr(data: Record<string, unknown> | null | undefined, key: string
 // portal instead of maintaining a second, separately-validated form.
 function buildFormStateFromProfile(p: ExistingProfile): FormState {
   const sd = p.segment_data ?? null;
-  const knownCity = p.current_location && cityOptions.includes(p.current_location);
+  // current_location is saved as "City, State"; the dropdown lists bare cities.
+  const savedCity = p.current_location ? p.current_location.split(",")[0].trim() : "";
+  const knownCity = !!savedCity && cityOptions.includes(savedCity);
   const roleTypeRaw = seg(sd, "role_type");
   const knownQualification =
     p.highest_qualification && highestQualificationOptions.includes(p.highest_qualification);
@@ -531,7 +533,7 @@ function buildFormStateFromProfile(p: ExistingProfile): FormState {
     phone: p.phone ?? "",
     whatsappOptIn: p.whatsapp_opt_in ?? true,
     currentLocation: p.current_location ?? "",
-    cityChoice: knownCity ? (p.current_location as string) : p.current_location ? "Other" : "",
+    cityChoice: knownCity ? savedCity : p.current_location ? "Other" : "",
     customCity: !knownCity && p.current_location ? p.current_location.split(",")[0].trim() : "",
     customState: !knownCity && p.current_location ? (p.current_location.split(",")[1] ?? "").trim() : "",
     linkedinUrl: p.linkedin_url ?? "",
