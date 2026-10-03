@@ -668,8 +668,17 @@ export default function CandidateIntakeForm({
 
   return (
     <>
-      <style>{`@keyframes siIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}.si-step{animation:siIn .35s ease both}`}</style>
-      <form onSubmit={handleSubmit} className="mx-auto grid max-w-xl gap-6">
+      <style>{`
+@keyframes siIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.si-step{animation:siIn .45s cubic-bezier(.22,1,.36,1) both}
+.si-form input:not([type=checkbox]):not([type=file]),.si-form select{height:2.9rem;border-radius:.85rem;border:1px solid #e2e8f0;background-color:#fff;padding-left:.95rem;font-size:.95rem;transition:border-color .2s,box-shadow .2s}
+.si-form input:not([type=checkbox]):not([type=file]):hover,.si-form select:hover{border-color:#cbd5e1}
+.si-form input:not([type=checkbox]):not([type=file]):focus,.si-form select:focus{outline:none;border-color:#0f172a;box-shadow:0 0 0 4px rgba(15,23,42,.06)}
+.si-form input[type=checkbox]{accent-color:#0f172a}
+.si-form button{-webkit-tap-highlight-color:transparent}
+.si-form details>summary::-webkit-details-marker{display:none}
+`}</style>
+      <form onSubmit={handleSubmit} className="si-form mx-auto grid max-w-xl gap-7">
         {signedIn && existing && (
           <p className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800">
             <Sparkles className="h-3.5 w-3.5" />
@@ -681,7 +690,9 @@ export default function CandidateIntakeForm({
           <div className="flex items-center justify-between gap-3">
             <div className="flex gap-1.5" aria-hidden>
               {stepIds.map((id, i) => (
-                <span key={id} className={`h-1 w-10 rounded-full transition-colors duration-300 ${i <= pos ? "bg-slate-900" : "bg-slate-200"}`} />
+                <span key={id} className="h-1 w-10 overflow-hidden rounded-full bg-slate-200">
+                  <span className={`block h-full rounded-full bg-slate-900 transition-[width] duration-500 ease-out ${i <= pos ? "w-full" : "w-0"}`} />
+                </span>
               ))}
             </div>
             <span className="text-xs font-medium tabular-nums text-slate-400">Profile strength {ringPct}%</span>
@@ -899,7 +910,8 @@ export default function CandidateIntakeForm({
             )}
 
             <div className="grid gap-4 rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs text-slate-500">
+              <p className="flex items-start gap-2 text-[15px] font-medium leading-snug text-slate-700">
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                 {isLeadLevel
                   ? "You lead a team, so we're asking about your team's target."
                   : "You work as an individual contributor, so we're asking about your own target."}
@@ -1127,11 +1139,11 @@ export default function CandidateIntakeForm({
             </Button>
           )}
           {isLast ? (
-            <Button type="submit" disabled={submitting || resumeParsing} className="h-12 flex-1 rounded-xl text-base">
+            <Button type="submit" disabled={submitting || resumeParsing} className="h-12 flex-1 rounded-2xl text-base transition-transform active:scale-[.99]">
               {submitting ? "Submitting…" : mandateId ? "Submit Application" : "Create My Profile"}
             </Button>
           ) : (
-            <Button type="submit" disabled={resumeParsing} className="h-12 flex-1 rounded-xl text-base">
+            <Button type="submit" disabled={resumeParsing} className="h-12 flex-1 rounded-2xl text-base transition-transform active:scale-[.99]">
               Continue <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           )}
@@ -1177,7 +1189,7 @@ function Chips(props: ChipProps) {
             type="button"
             aria-pressed={on}
             onClick={() => (props.multi ? props.onToggle(o.value) : props.onChange(o.value))}
-            className={`rounded-full border px-4 py-2 text-left text-sm transition active:scale-95 ${
+            className={`rounded-full border px-4 py-2 text-left text-[15px] transition-all duration-200 active:scale-95 ${
               on
                 ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
@@ -1196,9 +1208,9 @@ function Chips(props: ChipProps) {
 function Group({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="grid gap-1.5 text-sm">
-      <span className="font-medium text-slate-700">
+      <span className="text-[15px] font-medium text-slate-800">
         {label}
-        {required ? <span className="text-red-600"> *</span> : null}
+        {required ? <span className="text-slate-300"> *</span> : null}
       </span>
       {children}
     </div>
@@ -1292,6 +1304,7 @@ function GroupedPicker({
   max?: number;
 }) {
   const [q, setQ] = useState("");
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
   const ql = q.trim().toLowerCase();
   const toggle = (v: string) => {
     if (selected.includes(v)) onChange(selected.filter((x) => x !== v));
@@ -1307,7 +1320,7 @@ function GroupedPicker({
         aria-pressed={on}
         disabled={!on && full}
         onClick={() => toggle(o)}
-        className={`rounded-full border px-3 py-1.5 text-left text-sm transition active:scale-95 disabled:opacity-40 ${
+        className={`rounded-full border px-3.5 py-1.5 text-left text-sm transition-all duration-200 active:scale-95 disabled:opacity-40 ${
           on ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
         }`}
       >
@@ -1339,19 +1352,34 @@ function GroupedPicker({
           {matches.length ? matches.map(chip) : <p className="text-xs text-slate-400">No match. Try a broader word.</p>}
         </div>
       ) : (
-        <div className="grid gap-1.5">
-          {groups.map((g, i) => {
+        <div className="grid gap-2">
+          {groups.map((g) => {
             const opts = g.options.filter((o) => !hidden.includes(o));
             if (!opts.length) return null;
             const n = opts.filter((o) => selected.includes(o)).length;
+            const isOpen = openGroups.includes(g.group);
             return (
-              <details key={g.group} open={i === 0} className="group rounded-xl border border-slate-200 bg-white">
-                <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-2.5 text-sm font-medium text-slate-700">
+              <div key={g.group} className="rounded-2xl border border-slate-200 bg-white transition-colors hover:border-slate-300">
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  onClick={() => setOpenGroups((o) => (o.includes(g.group) ? o.filter((x) => x !== g.group) : [...o, g.group]))}
+                  className="flex w-full items-center justify-between px-4 py-3 text-left text-[15px] font-medium text-slate-800"
+                >
                   {g.group}
-                  <span className="text-xs font-normal text-slate-400">{n > 0 ? `${n} picked` : `${opts.length}`}</span>
-                </summary>
-                <div className="flex flex-wrap gap-1.5 px-3.5 pb-3.5">{opts.map(chip)}</div>
-              </details>
+                  <span className="flex items-center gap-2 text-xs font-normal text-slate-400">
+                    {n > 0 ? <span className="rounded-full bg-slate-900 px-2 py-0.5 text-white">{n}</span> : opts.length}
+                    <svg viewBox="0 0 20 20" className={`h-4 w-4 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </button>
+                <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                  <div className="overflow-hidden">
+                    <div className="flex flex-wrap gap-2 px-4 pb-4">{opts.map(chip)}</div>
+                  </div>
+                </div>
+              </div>
             );
           })}
         </div>
