@@ -21,17 +21,20 @@ import {
 } from "./applicationQuestions";
 import {
   achievementBandOptions,
+  b2bSoldGroups,
+  b2cSoldGroups,
+  b2cMotionChoices,
+  industrySoldGroups,
+  revenueTargetBandOptionsFor,
+  type PickerGroup,
   b2bSalesMotionTypeGroups,
   crmToolOptions,
   ctcStepOptions,
   customerSegmentOptions,
-  industryOptions,
   salesToolOptions,
   searchSkills,
-  subDomainsForPractice,
   teamSizeOptions,
   yourLevelOptions,
-  b2cSalesMotionOptions,
   currencyOptions,
   dealSizeBandsFor,
   sellingStyleOptions,
@@ -125,6 +128,7 @@ export function intakeMissingFields(row: IntakeExistingRow): string[] {
     if (!Array.isArray(motion) || motion.length === 0) missing.push("Sales motion");
     if (!(typeof (row.category === "b2c_sales" ? seg.ticket : seg.deal_size) === "string")) missing.push("Deal size");
     if (!(typeof seg.quota === "string" || typeof seg.team_quota === "string")) missing.push("Quota attainment");
+    if (!(seg.revenue_snapshot && typeof (seg.revenue_snapshot as Record<string, unknown>).target === "string")) missing.push("Last year's target");
   }
   return missing;
 }
@@ -189,7 +193,9 @@ export default function CandidateIntakeForm({
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeParsing, setResumeParsing] = useState(false);
   const [category, setCategory] = useState<CategoryValue | "">((existing?.category as CategoryValue) ?? "");
-  const [practice, setPractice] = useState(existing?.sub_domain ?? "");
+  // Practice is only a single pick for non-sales functions; sales profiles use
+  // the "what have you sold" lists below.
+  const [practice, setPractice] = useState(existing?.category === "non_sales" ? (existing?.sub_domain ?? "") : "");
   const [roleLevel, setRoleLevel] = useState(typeof seg.role_level === "string" ? seg.role_level : "");
   const [roleType, setRoleType] = useState(roleTypeFromStored(seg.role_type));
   const [totalExperienceYears, setTotalExperienceYears] = useState(
@@ -233,7 +239,10 @@ export default function CandidateIntakeForm({
     typeof seg.quota === "string" ? seg.quota : typeof seg.team_quota === "string" ? seg.team_quota : ""
   );
   const [teamSize, setTeamSize] = useState(typeof seg.team_size === "string" ? seg.team_size : "");
-  const [sells, setSells] = useState<string[]>(Array.isArray(seg.sells) ? (seg.sells as string[]) : []);
+  const [soldNow, setSoldNow] = useState<string[]>(Array.isArray(seg.sells_now) ? (seg.sells_now as string[]) : []);
+  const [soldBefore, setSoldBefore] = useState<string[]>(Array.isArray(seg.sells_before) ? (seg.sells_before as string[]) : []);
+  const [targetCurrency, setTargetCurrency] = useState<CurrencyValue>("INR");
+  const [targetBand, setTargetBand] = useState("");
   const [segments, setSegments] = useState<string[]>(
     Array.isArray(seg.customer_segment_sold) ? (seg.customer_segment_sold as string[]) : []
   );
@@ -246,6 +255,7 @@ export default function CandidateIntakeForm({
   const [offerInHand, setOfferInHand] = useState(seg.offer_in_hand === true ? "Yes" : seg.offer_in_hand === false ? "No" : "");
   const [offerCtc, setOfferCtc] = useState(typeof seg.offer_ctc === "number" ? String(seg.offer_ctc) : "");
   const [pos, setPos] = useState(0);
+  const [earlierOpen, setEarlierOpen] = useState(false);
   const [readSummary, setReadSummary] = useState<string[]>([]);
 
   const [noticePeriods, setNoticePeriods] = useState<string[]>(defaultNoticePeriods);
@@ -262,8 +272,6 @@ export default function CandidateIntakeForm({
   const screeningAnswersRef = useRef<ApplicationAnswerPayload[] | null>(null);
 
   const practiceOptions = useMemo(() => level1OptionsForProfileType(category || null), [category]);
-  const practiceLabel =
-    category === "b2b_sales" ? "Main Practice" : category === "b2c_sales" ? "Main Vertical" : category === "non_sales" ? "Main Function" : "Main Practice";
   const hasExistingResume = !!existing?.resume_file_url;
 
   useEffect(() => {
@@ -328,6 +336,8 @@ export default function CandidateIntakeForm({
   const stepId = stepIds[Math.min(pos, stepIds.length - 1)];
   const isLast = pos >= stepIds.length - 1;
 
+  const quotaWord = isLeadLevel ? "team" : "individual";
+
   function validateStep(id: number): string | null {
     if (id === 0) {
       if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
@@ -337,26 +347,27 @@ export default function CandidateIntakeForm({
       if (cityChoice === "Other" && !customCity.trim()) return "Please enter your city.";
     }
     if (id === 1) {
-      if (!category) return "Please pick your profile type.";
-      if (!practice) return `Please select your ${practiceLabel.toLowerCase()}.`;
+      if (!category) return "Please pick what you do.";
+      if (category === "non_sales" && !practice) return "Please pick your function.";
+      if (isSalesCategory(category) && soldNow.length === 0) return "Pick what you sell today.";
       if (!roleLevel) return "Please pick your level.";
       if (isLeadLevel && !teamSize) return "Please select your team size.";
       if (!totalExperienceYears) return "Please select your total experience.";
-      if (!employmentStatus) return "Please pick your employment status.";
-      if (!noticePeriod) return "Please select how soon you can join.";
-      if (!currentFixedCtc) return "Please select your current fixed CTC.";
-      if (!currentVariableCtc) return "Please select your current variable pay (0 LPA if none).";
     }
     if (id === 2) {
       if (category === "b2b_sales" && !sellingStyle) return "Are you a hunter, a farmer or a mix? Pick one.";
       if (motions.length === 0) return "Pick at least one way you sell.";
-      if (category === "b2b_sales" && sells.length === 0) return "Pick what you sell.";
       if (industriesSold.length === 0) return "Add at least one industry you've sold into.";
       if (category === "b2b_sales" && segments.length === 0) return "Pick the customer segments you sell to.";
       if (!dealBand) return category === "b2c_sales" ? "Pick your typical ticket size." : "Pick your typical deal size.";
-      if (!attainment) return "Pick how much of your target you hit last year.";
+      if (!targetBand) return `Pick your ${quotaWord} target for last year.`;
+      if (!attainment) return `Pick how much of your ${quotaWord} target you hit.`;
     }
     if (id === 3) {
+      if (!employmentStatus) return "Please pick your employment status.";
+      if (!noticePeriod) return "Please select how soon you can join.";
+      if (!currentFixedCtc) return "Please select your current fixed CTC.";
+      if (!currentVariableCtc) return "Please select your current variable pay (0 LPA if none).";
       if (!expectedFixedCtc && !ctcNegotiable) return "Tell us your expected fixed CTC, or mark it Negotiable.";
       if (!relocation) return "Please tell us if you're open to relocation.";
       if (!offerInHand) return "Do you have an offer in hand? Pick Yes or No.";
@@ -399,7 +410,7 @@ export default function CandidateIntakeForm({
       phone.length === 10,
       !!cityChoice,
       !!category,
-      !!practice,
+      isSalesCategory(category) ? soldNow.length > 0 : !!practice,
       !!roleLevel,
       !!totalExperienceYears,
       !!employmentStatus,
@@ -410,7 +421,7 @@ export default function CandidateIntakeForm({
       !!relocation,
       !!offerInHand,
     ];
-    if (hasSalesStep) checks.push(motions.length > 0, industriesSold.length > 0, !!dealBand, !!attainment);
+    if (hasSalesStep) checks.push(motions.length > 0, industriesSold.length > 0, !!dealBand, !!targetBand, !!attainment);
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   })();
 
@@ -442,7 +453,8 @@ export default function CandidateIntakeForm({
         category,
         // Level 1 of the taxonomy (Practice / Vertical / Function) is what the
         // long profile form stores in sub_domain too.
-        sub_domain: practice,
+        sub_domain: isSalesCategory(category) ? (soldNow[0] ?? null) : practice,
+        secondary_sub_domains: isSalesCategory(category) ? [...soldNow.slice(1), ...soldBefore] : [],
         total_experience_years: Math.min(Number(totalExperienceYears), 40),
         current_fixed_ctc: Math.min(Number(currentFixedCtc), 120),
         current_variable_ctc: Math.min(Number(currentVariableCtc), 120),
@@ -461,7 +473,20 @@ export default function CandidateIntakeForm({
           offer_in_hand: offerInHand === "Yes",
           ...(offerInHand === "Yes" && offerCtc ? { offer_ctc: Math.min(Number(offerCtc), 120) } : {}),
           ...(hasSalesStep && tools.length ? { crm_tools: tools } : {}),
-          ...(hasSalesStep && category === "b2b_sales" ? { sells, customer_segment_sold: segments } : {}),
+          ...(isSalesCategory(category) ? { sells_now: soldNow, sells_before: soldBefore } : {}),
+          ...(hasSalesStep && category === "b2b_sales" ? { customer_segment_sold: segments } : {}),
+          ...(hasSalesStep
+            ? {
+                // Same shape the long profile form writes, so the CRM reads one thing.
+                revenue_snapshot: {
+                  period: "Annual",
+                  target: targetBand,
+                  target_currency: targetCurrency,
+                  achievement: attainment,
+                  quota_scope: isLeadLevel ? "team" : "individual",
+                },
+              }
+            : {}),
           // Same keys the long profile form writes, so the CRM reads one shape.
           ...(hasSalesStep
             ? {
@@ -609,67 +634,71 @@ export default function CandidateIntakeForm({
     );
   }
 
-  const STEP_COPY: Record<number, { eyebrow: string; title: string; blurb: string }> = {
-    0: { eyebrow: "Step 1", title: "Drop your CV, we'll do the typing", blurb: "Upload first. We read it and fill in what we can." },
-    1: { eyebrow: "Step 2", title: "Where you stand today", blurb: "Quick taps. Most of this is one click each." },
-    2: { eyebrow: "Step 3", title: "Your sales story", blurb: "This is what recruiters look at first. It takes 20 seconds." },
-    3: { eyebrow: "Last step", title: "What you want next", blurb: "So we only send roles worth your time." },
+  const first = fullName.trim().split(/\s+/)[0] || "";
+  const expLabel = experienceOptions.find((o) => String(o.value) === totalExperienceYears)?.label ?? "";
+  const levelLabel = yourLevelOptions.find((l) => l.value === roleLevel)?.label ?? "";
+  // The profile read back to the candidate in plain English -- shown on the last
+  // step (and on the success screen) so they can see what recruiters will see.
+  const story = (() => {
+    if (!category || !roleLevel) return "";
+    const who = `${levelLabel}${isLeadLevel && teamSize ? ` leading ${teamSize} people` : ""}${expLabel ? `, ${expLabel.toLowerCase()} in` : ""}`;
+    const what = isSalesCategory(category) ? soldNow.slice(0, 2).join(" and ") : practice;
+    const to = segments.length ? `, selling to ${segments.slice(0, 3).join(", ")}` : "";
+    const result = hasSalesStep && attainment && targetBand ? ` Last year you hit ${attainment} of a ${targetBand} ${quotaWord} target.` : "";
+    return `${who} ${what}${to}.${result}`.replace(/\s+/g, " ").trim();
+  })();
+
+  const STEP_COPY: Record<number, { label: string; title: string; blurb: string }> = {
+    0: { label: "You", title: "Let's start with your CV", blurb: "Upload it and we'll fill in what we can. You just confirm." },
+    1: { label: "Role", title: first ? `Nice to meet you, ${first}` : "Tell us about your role", blurb: "A few taps. This is how recruiters picture you." },
+    2: { label: "Sales", title: "The part recruiters read first", blurb: "Be specific. Specific profiles get shortlisted." },
+    3: { label: "Move", title: "What you want next", blurb: "So we only bring you roles worth your time." },
   };
   const copy = STEP_COPY[stepId];
   const dealBands = dealSizeBandsFor(category || null, dealCurrency);
+  const targetBands = revenueTargetBandOptionsFor("Annual", targetCurrency);
+  const soldGroups: PickerGroup[] = category === "b2c_sales" ? b2cSoldGroups : b2bSoldGroups;
   const motionGroups =
     category === "b2c_sales"
-      ? [{ group: "How do you sell?", options: [...b2cSalesMotionOptions] }]
+      ? [{ group: "How do you sell?", options: b2cMotionChoices }]
       : b2bSalesMotionTypeGroups.map((g) => ({ group: g.group, options: [...g.options] }));
   const salesWord = category === "b2c_sales" ? "ticket size" : "deal size";
   const ringPct = Math.min(100, strength);
+  const showEarlier = soldBefore.length > 0 || earlierOpen;
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="mx-auto grid max-w-2xl gap-5">
+      <style>{`@keyframes siIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}.si-step{animation:siIn .35s ease both}`}</style>
+      <form onSubmit={handleSubmit} className="mx-auto grid max-w-xl gap-6">
         {signedIn && existing && (
-          <p className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
+          <p className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800">
             <Sparkles className="h-3.5 w-3.5" />
             We&apos;ve pre-filled what we already have. Just complete the blanks.
           </p>
         )}
 
-        <div className="flex items-center gap-4">
-          <div className="relative h-14 w-14 shrink-0">
-            <svg viewBox="0 0 36 36" className="h-14 w-14 -rotate-90">
-              <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3.5" className="stroke-slate-200" />
-              <circle
-                cx="18"
-                cy="18"
-                r="15.5"
-                fill="none"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeDasharray={`${(ringPct / 100) * 97.4} 97.4`}
-                className="stroke-blue-600 transition-all duration-500"
-              />
-            </svg>
-            <span className="absolute inset-0 grid place-items-center text-xs font-bold text-slate-800">{ringPct}%</span>
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex gap-1.5" aria-hidden>
+              {stepIds.map((id, i) => (
+                <span key={id} className={`h-1 w-10 rounded-full transition-colors duration-300 ${i <= pos ? "bg-slate-900" : "bg-slate-200"}`} />
+              ))}
+            </div>
+            <span className="text-xs font-medium tabular-nums text-slate-400">Profile strength {ringPct}%</span>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-600">
-              {copy.eyebrow} of {stepIds.length}
-            </p>
-            <h2 className="text-lg font-bold leading-tight text-slate-900">{copy.title}</h2>
-            <p className="text-xs text-slate-500">{copy.blurb}</p>
-          </div>
-        </div>
-        <div className="flex gap-1.5" aria-hidden>
-          {stepIds.map((id, i) => (
-            <span key={id} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= pos ? "bg-blue-600" : "bg-slate-200"}`} />
-          ))}
+          <p className="mt-5 text-xs font-medium uppercase tracking-widest text-slate-400">
+            {pos + 1} of {stepIds.length} · {copy.label}
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{copy.title}</h2>
+          <p className="mt-1 text-sm text-slate-500">{copy.blurb}</p>
         </div>
 
+        <div key={stepId} className="si-step grid gap-6">
         {stepId === 0 && (
-          <div className="grid gap-4">
+          <div className="grid gap-5">
             <FormField label="Resume" required={!hasExistingResume}>
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/40 px-4 py-5 text-sm text-slate-600 transition hover:border-blue-400 hover:bg-blue-50">
-                <FileText className="h-5 w-5 shrink-0 text-blue-500" />
+              <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-6 text-sm text-slate-600 transition hover:border-slate-400 hover:bg-slate-50">
+                <FileText className="h-5 w-5 shrink-0 text-slate-400" />
                 <span className="min-w-0 flex-1 truncate">
                   {resumeFile ? resumeFile.name : hasExistingResume ? "Resume on file. Choose a file to replace it" : "Tap to upload PDF or Word (.pdf, .doc, .docx)"}
                 </span>
@@ -681,18 +710,18 @@ export default function CandidateIntakeForm({
                 />
               </label>
               {resumeParsing && (
-                <p className="mt-1 flex items-center gap-1.5 text-xs text-blue-600">
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                   <Sparkles className="h-3.5 w-3.5 animate-pulse" /> Reading your resume…
                 </p>
               )}
               {!resumeParsing && readSummary.length > 0 && (
-                <div className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                  <p className="flex items-center gap-1.5 font-semibold">
-                    <Check className="h-3.5 w-3.5" /> Nice, we found:
+                <div className="mt-2 rounded-2xl bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                  <p className="flex items-center gap-1.5 font-medium text-slate-800">
+                    <Check className="h-3.5 w-3.5 text-emerald-600" /> Here&apos;s what we picked up
                   </p>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     {readSummary.map((t) => (
-                      <span key={t} className="rounded-full bg-white px-2 py-0.5 ring-1 ring-emerald-200">
+                      <span key={t} className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">
                         {t}
                       </span>
                     ))}
@@ -737,7 +766,7 @@ export default function CandidateIntakeForm({
               </FormField>
             </div>
 
-            <label className="flex items-start gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-xs text-slate-600">
+            <label className="flex items-start gap-2 text-xs text-slate-500">
               <input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} className="mt-0.5" />
               Send me matching roles and interview reminders on WhatsApp (optional).
             </label>
@@ -745,7 +774,7 @@ export default function CandidateIntakeForm({
         )}
 
         {stepId === 1 && (
-          <div className="grid gap-5">
+          <div className="grid gap-6">
             <Group label="I work in" required>
               <Chips
                 value={category}
@@ -753,21 +782,53 @@ export default function CandidateIntakeForm({
                 onChange={(v) => {
                   setCategory(v as CategoryValue);
                   setPractice("");
+                  setSoldNow([]);
+                  setSoldBefore([]);
+                  setMotions([]);
+                  setDealBand("");
                 }}
               />
             </Group>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label={practiceLabel} required>
-                <Select value={practice} onChange={(e) => setPractice(e.target.value)} disabled={!category}>
-                  <option value="">{category ? "Select" : "Pick a profile type first"}</option>
-                  {practiceOptions.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-            </div>
+
+            {category === "non_sales" && (
+              <Group label="Your function" required>
+                <Chips value={practice} options={practiceOptions.map((o) => ({ value: o, label: o }))} onChange={setPractice} />
+              </Group>
+            )}
+
+            {isSalesCategory(category) && (
+              <>
+                <Group label="What do you sell today?" required>
+                  <GroupedPicker
+                    groups={soldGroups}
+                    selected={soldNow}
+                    onChange={setSoldNow}
+                    hidden={soldBefore}
+                    max={3}
+                    placeholder={category === "b2c_sales" ? "Search, e.g. insurance, EdTech, loans" : "Search, e.g. SaaS, cybersecurity, automation"}
+                  />
+                  <p className="text-xs text-slate-400">Pick up to 3. The first one is your main.</p>
+                </Group>
+                <div className="grid gap-2">
+                  {!showEarlier ? (
+                    <button type="button" onClick={() => setEarlierOpen(true)} className="w-fit text-sm font-medium text-blue-600 hover:underline">
+                      + Add what you sold earlier in your career
+                    </button>
+                  ) : (
+                    <Group label="What have you sold earlier? (optional)">
+                      <GroupedPicker
+                        groups={soldGroups}
+                        selected={soldBefore}
+                        onChange={setSoldBefore}
+                        hidden={soldNow}
+                        placeholder="Search earlier products or industries"
+                      />
+                    </Group>
+                  )}
+                </div>
+              </>
+            )}
+
             <Group label="Your level" required>
               <Chips
                 value={roleLevel}
@@ -787,57 +848,22 @@ export default function CandidateIntakeForm({
                 <Chips value={teamSize} options={teamSizeOptions.slice(0, 9).map((o) => ({ value: o, label: o }))} onChange={setTeamSize} />
               </Group>
             )}
-            <Group label="Employment status" required>
-              <Chips value={employmentStatus} options={employmentStatusOptions.map((o) => ({ value: o, label: o }))} onChange={setEmploymentStatus} />
-            </Group>
-            {employmentStatus === "Serving Notice" && (
-              <FormField label="Last working day (optional)">
-                <Input type="date" value={lastWorkingDay} onChange={(e) => setLastWorkingDay(e.target.value)} className="sm:max-w-[calc(50%-0.5rem)]" />
-              </FormField>
-            )}
-            <Group label="Can join in" required>
-              <Chips value={noticePeriod} options={noticePeriods.map((o) => ({ value: o, label: o }))} onChange={setNoticePeriod} />
-            </Group>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <FormField label="Total Experience" required>
-                <Select value={totalExperienceYears} onChange={(e) => setTotalExperienceYears(e.target.value)}>
-                  <option value="">Select</option>
-                  {experienceOptions.map((o) => (
-                    <option key={o.label} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-              <FormField label="Current Fixed CTC" required>
-                <Select value={currentFixedCtc} onChange={(e) => setCurrentFixedCtc(e.target.value)}>
-                  <option value="">Select</option>
-                  {ctcStepOptions(currentFixedCtc).map((o) => (
-                    <option key={o.label} value={o.value ?? ""}>
-                      {o.label}
-                    </option>
-                  ))}
-                </Select>
-                {currentFixedCtc !== "" && Number(currentFixedCtc) > 0 && Number(currentFixedCtc) < 121 && (
-                  <span className="text-xs text-slate-400">= ₹{Math.round(Number(currentFixedCtc) * 100000).toLocaleString("en-IN")} a year</span>
-                )}
-              </FormField>
-              <FormField label="Current Variable Pay" required>
-                <Select value={currentVariableCtc} onChange={(e) => setCurrentVariableCtc(e.target.value)}>
-                  <option value="">Select (0 if none)</option>
-                  {ctcStepOptions(currentVariableCtc).map((o) => (
-                    <option key={o.label} value={o.value ?? ""}>
-                      {o.label}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-            </div>
+
+            <FormField label="Total experience" required>
+              <Select value={totalExperienceYears} onChange={(e) => setTotalExperienceYears(e.target.value)} className="sm:max-w-[calc(50%-0.5rem)]">
+                <option value="">Select</option>
+                {experienceOptions.map((o) => (
+                  <option key={o.label} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
           </div>
         )}
 
         {stepId === 2 && (
-          <div className="grid gap-5">
+          <div className="grid gap-6">
             {category === "b2b_sales" && (
               <Group label="Your selling style" required>
                 <Chips value={sellingStyle} options={sellingStyleOptions.map((o) => ({ value: o, label: o }))} onChange={setSellingStyle} />
@@ -847,7 +873,7 @@ export default function CandidateIntakeForm({
               <div className="grid gap-3">
                 {motionGroups.map((g) => (
                   <div key={g.group}>
-                    {motionGroups.length > 1 && <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{g.group}</p>}
+                    {motionGroups.length > 1 && <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">{g.group}</p>}
                     <Chips
                       multi
                       values={motions}
@@ -858,24 +884,8 @@ export default function CandidateIntakeForm({
                 ))}
               </div>
             </Group>
-            {category === "b2b_sales" && (
-              <Group label="What do you sell?" required>
-                <Chips
-                  multi
-                  values={sells}
-                  options={subDomainsForPractice(practice).map((o) => ({ value: o, label: o }))}
-                  onToggle={(v) => setSells((m) => (m.includes(v) ? m.filter((x) => x !== v) : [...m, v]))}
-                />
-              </Group>
-            )}
             <Group label="Industries you've sold into" required>
-              <MultiSearch
-                selected={industriesSold}
-                onChange={setIndustriesSold}
-                search={(q, ex) => industryOptions.filter((o) => o.toLowerCase().includes(q.toLowerCase()) && !ex.includes(o)).slice(0, 8)}
-                defaults={industryOptions.slice(0, 8)}
-                placeholder="Search, e.g. SaaS, Insurance, EdTech"
-              />
+              <GroupedPicker groups={industrySoldGroups} selected={industriesSold} onChange={setIndustriesSold} placeholder="Search, e.g. BFSI, pharma, FMCG" />
             </Group>
             {category === "b2b_sales" && (
               <Group label="Who do you sell to?" required>
@@ -887,44 +897,72 @@ export default function CandidateIntakeForm({
                 />
               </Group>
             )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label={`Typical ${salesWord}`} required>
-                <div className="flex gap-2">
-                  <Select
-                    value={dealCurrency}
-                    onChange={(e) => {
-                      setDealCurrency(e.target.value as CurrencyValue);
-                      setDealBand("");
-                    }}
-                    className="w-24 shrink-0"
-                  >
-                    {currencyOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </Select>
-                  <Select value={dealBand} onChange={(e) => setDealBand(e.target.value)}>
-                    <option value="">Select</option>
-                    {dealBands.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </FormField>
-              <FormField label="Target hit last year" required>
-                <Select value={attainment} onChange={(e) => setAttainment(e.target.value)}>
-                  <option value="">Select</option>
-                  {achievementBandOptions.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+
+            <div className="grid gap-4 rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-500">
+                {isLeadLevel
+                  ? "You lead a team, so we're asking about your team's target."
+                  : "You work as an individual contributor, so we're asking about your own target."}
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label={`Typical ${salesWord}`} required>
+                  <div className="flex gap-2">
+                    <Select
+                      value={dealCurrency}
+                      onChange={(e) => {
+                        setDealCurrency(e.target.value as CurrencyValue);
+                        setDealBand("");
+                      }}
+                      className="w-24 shrink-0"
+                    >
+                      {currencyOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </Select>
+                    <Select value={dealBand} onChange={(e) => setDealBand(e.target.value)}>
+                      <option value="">Select</option>
+                      {dealBands.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </FormField>
+                <FormField label={`Your ${quotaWord} target last year`} required>
+                  <div className="flex gap-2">
+                    <Select
+                      value={targetCurrency}
+                      onChange={(e) => {
+                        setTargetCurrency(e.target.value as CurrencyValue);
+                        setTargetBand("");
+                      }}
+                      className="w-24 shrink-0"
+                    >
+                      {currencyOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </Select>
+                    <Select value={targetBand} onChange={(e) => setTargetBand(e.target.value)}>
+                      <option value="">Select</option>
+                      {targetBands.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </FormField>
+              </div>
+              <Group label={`How much of it did you hit?`} required>
+                <Chips value={attainment} options={achievementBandOptions.map((o) => ({ value: o, label: o }))} onChange={setAttainment} />
+              </Group>
             </div>
+
             <Group label="Tools you've used (optional)">
               <MultiSearch
                 selected={tools}
@@ -948,54 +986,89 @@ export default function CandidateIntakeForm({
                 allowCustom
               />
             </Group>
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Profiles with a clear sales story get shortlisted far more often than ones without.
-            </p>
           </div>
         )}
 
         {stepId === 3 && (
-          <div className="grid gap-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Expected Fixed CTC" required>
-                <Select
-                  value={ctcNegotiable ? "" : expectedFixedCtc}
-                  onChange={(e) => {
-                    setExpectedFixedCtc(e.target.value);
-                    if (e.target.value) setCtcNegotiable(false);
-                  }}
-                  disabled={ctcNegotiable}
-                >
-                  <option value="">Select</option>
-                  {ctcStepOptions(expectedFixedCtc).map((o) => (
-                    <option key={o.label} value={o.value ?? ""}>
-                      {o.label}
-                    </option>
-                  ))}
-                </Select>
-                <label className="mt-1.5 flex items-center gap-2 text-xs text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={ctcNegotiable}
+          <div className="grid gap-6">
+            <Group label="Where are you right now?" required>
+              <Chips value={employmentStatus} options={employmentStatusOptions.map((o) => ({ value: o, label: o }))} onChange={setEmploymentStatus} />
+            </Group>
+            {employmentStatus === "Serving Notice" && (
+              <FormField label="Last working day (optional)">
+                <Input type="date" value={lastWorkingDay} onChange={(e) => setLastWorkingDay(e.target.value)} className="sm:max-w-[calc(50%-0.5rem)]" />
+              </FormField>
+            )}
+            <Group label="Can join in" required>
+              <Chips value={noticePeriod} options={noticePeriods.map((o) => ({ value: o, label: o }))} onChange={setNoticePeriod} />
+            </Group>
+
+            <div className="grid gap-4 rounded-2xl bg-slate-50 p-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="Current fixed CTC" required>
+                  <Select value={currentFixedCtc} onChange={(e) => setCurrentFixedCtc(e.target.value)}>
+                    <option value="">Select</option>
+                    {ctcStepOptions(currentFixedCtc).map((o) => (
+                      <option key={o.label} value={o.value ?? ""}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                  {currentFixedCtc !== "" && Number(currentFixedCtc) > 0 && Number(currentFixedCtc) < 121 && (
+                    <span className="text-xs text-slate-400">= ₹{Math.round(Number(currentFixedCtc) * 100000).toLocaleString("en-IN")} a year</span>
+                  )}
+                </FormField>
+                <FormField label="Current variable pay" required>
+                  <Select value={currentVariableCtc} onChange={(e) => setCurrentVariableCtc(e.target.value)}>
+                    <option value="">Select (0 if none)</option>
+                    {ctcStepOptions(currentVariableCtc).map((o) => (
+                      <option key={o.label} value={o.value ?? ""}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField label="Expected fixed CTC" required>
+                  <Select
+                    value={ctcNegotiable ? "" : expectedFixedCtc}
                     onChange={(e) => {
-                      setCtcNegotiable(e.target.checked);
-                      if (e.target.checked) setExpectedFixedCtc("");
+                      setExpectedFixedCtc(e.target.value);
+                      if (e.target.value) setCtcNegotiable(false);
                     }}
-                  />
-                  Negotiable. I&apos;ll discuss it for the right role.
-                </label>
-              </FormField>
-              <FormField label="Expected Variable Pay (optional)">
-                <Select value={expectedVariableCtc} onChange={(e) => setExpectedVariableCtc(e.target.value)}>
-                  <option value="">Skip</option>
-                  {ctcStepOptions(expectedVariableCtc).map((o) => (
-                    <option key={o.label} value={o.value ?? ""}>
-                      {o.label}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
+                    disabled={ctcNegotiable}
+                  >
+                    <option value="">Select</option>
+                    {ctcStepOptions(expectedFixedCtc).map((o) => (
+                      <option key={o.label} value={o.value ?? ""}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <label className="mt-1.5 flex items-center gap-2 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={ctcNegotiable}
+                      onChange={(e) => {
+                        setCtcNegotiable(e.target.checked);
+                        if (e.target.checked) setExpectedFixedCtc("");
+                      }}
+                    />
+                    Negotiable. I&apos;ll discuss it for the right role.
+                  </label>
+                </FormField>
+                <FormField label="Expected variable pay (optional)">
+                  <Select value={expectedVariableCtc} onChange={(e) => setExpectedVariableCtc(e.target.value)}>
+                    <option value="">Skip</option>
+                    {ctcStepOptions(expectedVariableCtc).map((o) => (
+                      <option key={o.label} value={o.value ?? ""}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              </div>
             </div>
+
             <Group label="Open to relocate?" required>
               <Chips value={relocation} options={relocationOptions.map((o) => ({ value: o, label: o }))} onChange={setRelocation} />
             </Group>
@@ -1014,15 +1087,24 @@ export default function CandidateIntakeForm({
                 </Select>
               </FormField>
             )}
+
+            {story && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-[11px] font-medium uppercase tracking-widest text-slate-400">How your profile reads</p>
+                <p className="mt-1.5 text-sm leading-relaxed text-slate-800">{story}</p>
+              </div>
+            )}
+
             <label className="flex items-start gap-2 text-xs text-slate-500">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
               I consent to StaffAnchor storing and sharing my profile with relevant employers.
             </label>
           </div>
         )}
+        </div>
 
         {errorMsg && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">
             {errorMsg}
             {profileExists && (
               <>
@@ -1040,23 +1122,23 @@ export default function CandidateIntakeForm({
 
         <div className="flex items-center gap-3">
           {pos > 0 && (
-            <Button type="button" variant="outline" onClick={goBack} className="shrink-0">
+            <Button type="button" variant="outline" onClick={goBack} className="h-12 shrink-0 rounded-xl">
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Button>
           )}
           {isLast ? (
-            <Button type="submit" disabled={submitting || resumeParsing} className="flex-1">
+            <Button type="submit" disabled={submitting || resumeParsing} className="h-12 flex-1 rounded-xl text-base">
               {submitting ? "Submitting…" : mandateId ? "Submit Application" : "Create My Profile"}
             </Button>
           ) : (
-            <Button type="submit" disabled={resumeParsing} className="flex-1">
+            <Button type="submit" disabled={resumeParsing} className="h-12 flex-1 rounded-xl text-base">
               Continue <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           )}
         </div>
         {isLast && (
           <p className="text-center text-[11px] text-slate-400">
-            After this you can add LinkedIn, languages and your full career timeline from My Account to boost your profile.
+            Afterwards you can add LinkedIn, languages and your full career timeline from My Account.
           </p>
         )}
       </form>
@@ -1095,10 +1177,10 @@ function Chips(props: ChipProps) {
             type="button"
             aria-pressed={on}
             onClick={() => (props.multi ? props.onToggle(o.value) : props.onChange(o.value))}
-            className={`rounded-full border px-3.5 py-1.5 text-left text-sm transition active:scale-95 ${
+            className={`rounded-full border px-4 py-2 text-left text-sm transition active:scale-95 ${
               on
-                ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                : "border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50"
+                ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
             }`}
           >
             {o.label}
@@ -1185,6 +1267,93 @@ function MultiSearch({
               + {o}
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Grouped, searchable multi-select: pills for what's picked, a search box, and
+// the full list as collapsible groups. `hidden` options (picked elsewhere) are
+// left out; `max` caps the number of picks.
+function GroupedPicker({
+  groups,
+  selected,
+  onChange,
+  placeholder,
+  hidden = [],
+  max,
+}: {
+  groups: PickerGroup[];
+  selected: string[];
+  onChange: (v: string[]) => void;
+  placeholder: string;
+  hidden?: string[];
+  max?: number;
+}) {
+  const [q, setQ] = useState("");
+  const ql = q.trim().toLowerCase();
+  const toggle = (v: string) => {
+    if (selected.includes(v)) onChange(selected.filter((x) => x !== v));
+    else if (!max || selected.length < max) onChange([...selected, v]);
+  };
+  const full = !!max && selected.length >= max;
+  const chip = (o: string) => {
+    const on = selected.includes(o);
+    return (
+      <button
+        key={o}
+        type="button"
+        aria-pressed={on}
+        disabled={!on && full}
+        onClick={() => toggle(o)}
+        className={`rounded-full border px-3 py-1.5 text-left text-sm transition active:scale-95 disabled:opacity-40 ${
+          on ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
+        }`}
+      >
+        {o}
+      </button>
+    );
+  };
+  const matches = ql
+    ? groups.flatMap((g) => g.options).filter((o) => o.toLowerCase().includes(ql) && !hidden.includes(o)).slice(0, 14)
+    : [];
+  return (
+    <div className="grid gap-2.5">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((t, i) => (
+            <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-sm text-white">
+              {t}
+              {i === 0 && max ? <span className="rounded bg-white/20 px-1 text-[10px] uppercase tracking-wide">main</span> : null}
+              <button type="button" aria-label={`Remove ${t}`} onClick={() => onChange(selected.filter((x) => x !== t))} className="text-slate-300 hover:text-white">
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} />
+      {ql ? (
+        <div className="flex flex-wrap gap-1.5">
+          {matches.length ? matches.map(chip) : <p className="text-xs text-slate-400">No match. Try a broader word.</p>}
+        </div>
+      ) : (
+        <div className="grid gap-1.5">
+          {groups.map((g, i) => {
+            const opts = g.options.filter((o) => !hidden.includes(o));
+            if (!opts.length) return null;
+            const n = opts.filter((o) => selected.includes(o)).length;
+            return (
+              <details key={g.group} open={i === 0} className="group rounded-xl border border-slate-200 bg-white">
+                <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-2.5 text-sm font-medium text-slate-700">
+                  {g.group}
+                  <span className="text-xs font-normal text-slate-400">{n > 0 ? `${n} picked` : `${opts.length}`}</span>
+                </summary>
+                <div className="flex flex-wrap gap-1.5 px-3.5 pb-3.5">{opts.map(chip)}</div>
+              </details>
+            );
+          })}
         </div>
       )}
     </div>
