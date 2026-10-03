@@ -241,8 +241,14 @@ export default function CandidateIntakeForm({
   const [teamSize, setTeamSize] = useState(typeof seg.team_size === "string" ? seg.team_size : "");
   const [soldNow, setSoldNow] = useState<string[]>(Array.isArray(seg.sells_now) ? (seg.sells_now as string[]) : []);
   const [soldBefore, setSoldBefore] = useState<string[]>(Array.isArray(seg.sells_before) ? (seg.sells_before as string[]) : []);
-  const [targetCurrency, setTargetCurrency] = useState<CurrencyValue>("INR");
-  const [targetBand, setTargetBand] = useState("");
+  const [targetCurrency, setTargetCurrency] = useState<CurrencyValue>(
+    (seg.revenue_snapshot as Record<string, unknown> | undefined)?.target_currency === "USD" ? "USD" : "INR"
+  );
+  const [targetBand, setTargetBand] = useState(
+    typeof (seg.revenue_snapshot as Record<string, unknown> | undefined)?.target === "string"
+      ? ((seg.revenue_snapshot as Record<string, unknown>).target as string)
+      : ""
+  );
   const [segments, setSegments] = useState<string[]>(
     Array.isArray(seg.customer_segment_sold) ? (seg.customer_segment_sold as string[]) : []
   );

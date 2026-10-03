@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
     // (/register?ref=<id>). Lets that link holder -- and only them -- update
     // the profile it points at without signing in.
     completionRef?: string;
+    // True when the candidate has just reviewed their details and confirmed them.
+    confirmDetails?: boolean;
   };
   try {
     body = await req.json();
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { payload, mandateId, screeningAnswers, skipWelcomeEmail, completionRef } = body;
+  const { payload, mandateId, screeningAnswers, skipWelcomeEmail, completionRef, confirmDetails } = body;
   if (!payload || typeof payload !== "object") {
     return NextResponse.json({ error: "payload is required." }, { status: 400 });
   }
@@ -124,7 +126,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (candidateId) {
-      const { error: linkError } = await admin.from("candidates").update({ user_id: userId }).eq("id", candidateId);
+      // A full-form submit, or an explicit "all correct", means the candidate
+      // just stood behind these details.
+      const confirmed = confirmDetails === true || Object.keys(payload).filter((k) => k !== "email").length > 0;
+      const { error: linkError } = await admin
+        .from("candidates")
+        .update({ user_id: userId, ...(confirmed ? { details_confirmed_at: new Date().toISOString() } : {}) })
+        .eq("id", candidateId);
       if (linkError) {
         // Non-fatal -- the candidate row itself saved fine; log for visibility
         // and let the caller know the submit still succeeded.
