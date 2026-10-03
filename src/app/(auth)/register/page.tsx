@@ -2,8 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import ApplyForm, { type ExistingProfile } from "@/modules/apply/ApplyForm";
-import CandidateIntakeForm from "@/modules/apply/CandidateIntakeForm";
+import { type ExistingProfile } from "@/modules/apply/ApplyForm";
+import CandidateIntakeForm, { type IntakeExistingRow } from "@/modules/apply/CandidateIntakeForm";
 import EmailGate from "@/modules/apply/EmailGate";
 import { supabase } from "@/lib/supabaseClient";
 import { Spinner } from "@/components/ui/spinner";
@@ -78,12 +78,21 @@ function RegisterForm() {
   const showPriorityNudge = !returnTo?.startsWith("/priority-applicant");
 
   // A `ref` link is a recruiter handing a specific candidate a direct
-  // completion link for their existing record -- that keeps the full profile
-  // form, since the recruiter is asking for the detailed version.
+  // completion link for their existing record. It opens the same short intake
+  // as every other entry point, pre-filled; the long profile stays in My Account.
   if (ref && existingProfile) {
     return (
       <>
-        <ApplyForm existingProfile={existingProfile} returnTo={returnTo ?? undefined} />
+        <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <CandidateIntakeForm
+              email={existingProfile.email}
+              existing={existingProfile as unknown as IntakeExistingRow}
+              completionRef={existingProfile.id}
+              returnTo={returnTo ?? undefined}
+            />
+          </div>
+        </div>
         {showPriorityNudge && <PriorityFloatingNudge />}
       </>
     );

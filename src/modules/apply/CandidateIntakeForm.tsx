@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, FileText, Phone, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, FileText, Phone, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { posthog } from "@/lib/posthog";
 import { authHeaders } from "@/lib/auth-headers";
@@ -20,6 +20,13 @@ import {
   type ApplicationAnswerPayload,
 } from "./applicationQuestions";
 import {
+  achievementBandOptions,
+  b2bSalesMotionTypeGroups,
+  b2cSalesMotionOptions,
+  currencyOptions,
+  dealSizeBandsFor,
+  sellingStyleOptions,
+  type CurrencyValue,
   categoryOptions,
   cityOptions,
   cityStateMap,
@@ -71,6 +78,9 @@ export type IntakeExistingRow = {
   total_experience_years?: number | null;
   current_fixed_ctc?: number | null;
   expected_fixed_ctc?: number | null;
+  current_variable_ctc?: number | null;
+  expected_variable_ctc?: number | null;
+  whatsapp_opt_in?: boolean | null;
   current_employment_status?: string | null;
   open_to_relocation?: string | null;
   notice_period?: string | null;
@@ -93,10 +103,22 @@ export function intakeMissingFields(row: IntakeExistingRow): string[] {
   if (!(typeof seg.role_type === "string" && seg.role_type)) missing.push("Role type");
   if (row.total_experience_years == null) missing.push("Total experience");
   if (row.current_fixed_ctc == null) missing.push("Current fixed CTC");
+  if (row.current_variable_ctc == null) missing.push("Current variable pay");
   if (!row.current_employment_status) missing.push("Employment status");
   if (!row.open_to_relocation) missing.push("Open to relocation");
   if (!row.notice_period) missing.push("Days to join");
+  if (row.expected_fixed_ctc == null && seg.expected_ctc_negotiable !== true) missing.push("Expected CTC");
+  if (isSalesCategory(row.category) && row.total_experience_years !== 0) {
+    const motion = row.category === "b2c_sales" ? seg.motion : seg.b2b_sales_motion_type;
+    if (!Array.isArray(motion) || motion.length === 0) missing.push("Sales motion");
+    if (!(typeof (row.category === "b2c_sales" ? seg.ticket : seg.deal_size) === "string")) missing.push("Deal size");
+    if (!(typeof seg.quota === "string" || typeof seg.team_quota === "string")) missing.push("Quota attainment");
+  }
   return missing;
+}
+
+function isSalesCategory(c: string | null | undefined): boolean {
+  return c === "b2b_sales" || c === "b2c_sales";
 }
 
 // candidates.segment_data.role_type stores "IC" / "Team Lead" / a free label;
@@ -131,6 +153,9 @@ type Props = {
   onDone?: () => void;
   // Where to send a newly registered candidate after they confirm their email.
   returnTo?: string;
+  // candidates.id from a recruiter-sent completion link (/register?ref=<id>):
+  // lets the holder update that profile without signing in.
+  completionRef?: string;
 };
 
 export default function CandidateIntakeForm({
@@ -141,6 +166,7 @@ export default function CandidateIntakeForm({
   signedIn = false,
   onDone,
   returnTo,
+  completionRef,
 }: Props) {
   const router = useRouter();
   const seg = (existing?.segment_data ?? {}) as Record<string, unknown>;
@@ -169,6 +195,33 @@ export default function CandidateIntakeForm({
   const [customCity, setCustomCity] = useState(loc.custom);
   const [relocation, setRelocation] = useState(existing?.open_to_relocation ?? "");
   const [consent, setConsent] = useState(true);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(existing?.whatsapp_opt_in === true);
+  const [currentVariableCtc, setCurrentVariableCtc] = useState(
+    existing?.current_variable_ctc != null ? String(existing.current_variable_ctc) : ""
+  );
+  const [expectedVariableCtc, setExpectedVariableCtc] = useState(
+    existing?.expected_variable_ctc != null ? String(existing.expected_variable_ctc) : ""
+  );
+  const [ctcNegotiable, setCtcNegotiable] = useState(seg.expected_ctc_negotiable === true);
+  const [sellingStyle, setSellingStyle] = useState(typeof seg.style === "string" ? seg.style : "");
+  const [motions, setMotions] = useState<string[]>(
+    Array.isArray(seg.b2b_sales_motion_type)
+      ? (seg.b2b_sales_motion_type as string[])
+      : Array.isArray(seg.motion)
+        ? (seg.motion as string[])
+        : []
+  );
+  const [dealCurrency, setDealCurrency] = useState<CurrencyValue>(
+    ((seg.deal_size_currency ?? seg.ticket_currency) as CurrencyValue) === "USD" ? "USD" : "INR"
+  );
+  const [dealBand, setDealBand] = useState(
+    typeof seg.deal_size === "string" ? seg.deal_size : typeof seg.ticket === "string" ? seg.ticket : ""
+  );
+  const [attainment, setAttainment] = useState(
+    typeof seg.quota === "string" ? seg.quota : typeof seg.team_quota === "string" ? seg.team_quota : ""
+  );
+  const [pos, setPos] = useState(0);
+  const [readSummary, setReadSummary] = useState<string[]>([]);
 
   const [noticePeriods, setNoticePeriods] = useState<string[]>(defaultNoticePeriods);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -227,6 +280,12 @@ export default function CandidateIntakeForm({
               : "")
         );
         if (fields.category_guess) setCategory((prev) => prev || (fields.category_guess as CategoryValue));
+        const found: string[] = [];
+        if (fields.current_job_title) found.push(fields.current_job_title);
+        if (fields.current_employer) found.push(fields.current_employer);
+        if (fields.total_experience_years != null) found.push(`${Math.round(fields.total_experience_years)} yrs experience`);
+        if (fields.skills?.length) found.push(`${fields.skills.length} skills`);
+        setReadSummary(found);
       }
     } catch {
       // Never block on a parse failure -- the resume still uploads and submits.
@@ -235,24 +294,92 @@ export default function CandidateIntakeForm({
     }
   }
 
-  function validate(): string | null {
-    if (!fullName.trim()) return "Please enter your full name.";
-    if (phone.replace(/\D/g, "").length !== 10) return "Please enter a valid 10-digit phone number.";
-    if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
-    if (!category) return "Please select your profile type (B2B Sales, B2C Sales or Non-Sales).";
-    if (!practice) return `Please select your ${practiceLabel.toLowerCase()}.`;
-    if (!roleLevel) return "Please select your role level.";
-    if (!roleType) return "Please select your current role type.";
-    if (!totalExperienceYears) return "Please select your total experience.";
-    if (!currentFixedCtc) return "Please select your current fixed CTC.";
-    if (!employmentStatus) return "Please select your employment status.";
-    if (!noticePeriod) return "Please select how soon you can join.";
-    if (!cityChoice) return "Please select your current city.";
-    if (cityChoice === "Other" && !customCity.trim()) return "Please enter your city.";
-    if (!relocation) return "Please tell us if you're open to relocation.";
-    if (!consent) return "Please accept the consent checkbox to continue.";
+  const hasSalesStep = isSalesCategory(category) && totalExperienceYears !== "0";
+  // Step ids: 0 you, 1 role now, 2 sales story (sales only), 3 next move.
+  const stepIds = hasSalesStep ? [0, 1, 2, 3] : [0, 1, 3];
+  const stepId = stepIds[Math.min(pos, stepIds.length - 1)];
+  const isLast = pos >= stepIds.length - 1;
+
+  function validateStep(id: number): string | null {
+    if (id === 0) {
+      if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
+      if (!fullName.trim()) return "Please enter your full name.";
+      if (phone.replace(/\D/g, "").length !== 10) return "Please enter a valid 10-digit phone number.";
+      if (!cityChoice) return "Please select your current city.";
+      if (cityChoice === "Other" && !customCity.trim()) return "Please enter your city.";
+    }
+    if (id === 1) {
+      if (!category) return "Please pick your profile type.";
+      if (!practice) return `Please select your ${practiceLabel.toLowerCase()}.`;
+      if (!roleLevel) return "Please select your role level.";
+      if (!roleType) return "Please pick your current role type.";
+      if (!totalExperienceYears) return "Please select your total experience.";
+      if (!employmentStatus) return "Please pick your employment status.";
+      if (!noticePeriod) return "Please select how soon you can join.";
+      if (!currentFixedCtc) return "Please select your current fixed CTC.";
+      if (!currentVariableCtc) return "Please select your current variable pay (0 LPA if none).";
+    }
+    if (id === 2) {
+      if (category === "b2b_sales" && !sellingStyle) return "Are you a hunter, a farmer or a mix? Pick one.";
+      if (motions.length === 0) return "Pick at least one way you sell.";
+      if (!dealBand) return category === "b2c_sales" ? "Pick your typical ticket size." : "Pick your typical deal size.";
+      if (!attainment) return "Pick how much of your target you hit last year.";
+    }
+    if (id === 3) {
+      if (!expectedFixedCtc && !ctcNegotiable) return "Tell us your expected fixed CTC, or mark it Negotiable.";
+      if (!relocation) return "Please tell us if you're open to relocation.";
+      if (!consent) return "Please accept the consent checkbox to continue.";
+    }
     return null;
   }
+
+  function validate(): string | null {
+    for (const id of stepIds) {
+      const err = validateStep(id);
+      if (err) return err;
+    }
+    return null;
+  }
+
+  function goNext() {
+    const err = validateStep(stepId);
+    if (err) {
+      setErrorMsg(err);
+      return;
+    }
+    setErrorMsg(null);
+    setPos((p) => Math.min(p + 1, stepIds.length - 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function goBack() {
+    setErrorMsg(null);
+    setPos((p) => Math.max(0, p - 1));
+  }
+
+  // Live "how strong is my profile" read for the progress ring: every field
+  // this form asks for, weighted equally.
+  const strength = (() => {
+    const checks: boolean[] = [
+      !!(resumeFile || hasExistingResume),
+      !!fullName.trim(),
+      phone.length === 10,
+      !!cityChoice,
+      !!category,
+      !!practice,
+      !!roleLevel,
+      !!roleType,
+      !!totalExperienceYears,
+      !!employmentStatus,
+      !!noticePeriod,
+      !!currentFixedCtc,
+      !!currentVariableCtc,
+      !!(expectedFixedCtc || ctcNegotiable),
+      !!relocation,
+    ];
+    if (hasSalesStep) checks.push(motions.length > 0, !!dealBand, !!attainment);
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  })();
 
   async function submitInternal() {
     setSubmitting(true);
@@ -285,13 +412,31 @@ export default function CandidateIntakeForm({
         sub_domain: practice,
         total_experience_years: Math.min(Number(totalExperienceYears), 40),
         current_fixed_ctc: Math.min(Number(currentFixedCtc), 120),
-        expected_fixed_ctc: expectedFixedCtc ? Math.min(Number(expectedFixedCtc), 120) : null,
+        current_variable_ctc: Math.min(Number(currentVariableCtc), 120),
+        expected_fixed_ctc: expectedFixedCtc && !ctcNegotiable ? Math.min(Number(expectedFixedCtc), 120) : null,
+        expected_variable_ctc: expectedVariableCtc ? Math.min(Number(expectedVariableCtc), 120) : null,
+        whatsapp_opt_in: whatsappOptIn,
         current_employment_status: employmentStatus,
         notice_period: noticePeriod,
         open_to_relocation: relocation,
         segment_data: {
           role_level: roleLevel,
           role_type: roleTypeToStored(roleType),
+          expected_ctc_negotiable: ctcNegotiable,
+          // Same keys the long profile form writes, so the CRM reads one shape.
+          ...(hasSalesStep
+            ? {
+                ...(category === "b2b_sales"
+                  ? {
+                      b2b_sales_motion_type: motions,
+                      style: sellingStyle,
+                      deal_size: dealBand,
+                      deal_size_currency: dealCurrency,
+                    }
+                  : { motion: motions, ticket: dealBand, ticket_currency: dealCurrency }),
+                ...(roleType === "Leading a Team" ? { team_quota: attainment } : { quota: attainment }),
+              }
+            : {}),
         },
         // Silent resume-parse fill -- never shown to or confirmed by the candidate.
         current_employer: extraction?.current_employer || null,
@@ -315,6 +460,7 @@ export default function CandidateIntakeForm({
           // the separate "welcome, here's how to sign back in" email would
           // just be a second, redundant message seconds later.
           skipWelcomeEmail: !signedIn,
+          ...(completionRef ? { completionRef } : {}),
         }),
       });
       const submitJson = await submitRes.json().catch(() => ({}));
@@ -350,6 +496,10 @@ export default function CandidateIntakeForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!isLast) {
+      goNext();
+      return;
+    }
     const err = validate();
     if (err) {
       setErrorMsg(err);
@@ -419,203 +569,336 @@ export default function CandidateIntakeForm({
     );
   }
 
+  const STEP_COPY: Record<number, { eyebrow: string; title: string; blurb: string }> = {
+    0: { eyebrow: "Step 1", title: "Drop your CV, we'll do the typing", blurb: "Upload first. We read it and fill in what we can." },
+    1: { eyebrow: "Step 2", title: "Where you stand today", blurb: "Quick taps. Most of this is one click each." },
+    2: { eyebrow: "Step 3", title: "Your sales story", blurb: "This is what recruiters look at first. It takes 20 seconds." },
+    3: { eyebrow: "Last step", title: "What you want next", blurb: "So we only send roles worth your time." },
+  };
+  const copy = STEP_COPY[stepId];
+  const dealBands = dealSizeBandsFor(category || null, dealCurrency);
+  const motionGroups =
+    category === "b2c_sales"
+      ? [{ group: "How do you sell?", options: [...b2cSalesMotionOptions] }]
+      : b2bSalesMotionTypeGroups.map((g) => ({ group: g.group, options: [...g.options] }));
+  const salesWord = category === "b2c_sales" ? "ticket size" : "deal size";
+  const ringPct = Math.min(100, strength);
+
   return (
     <>
-      <form onSubmit={handleSubmit} className="mx-auto grid max-w-2xl gap-6">
-        {!signedIn && (
-          <p className="flex items-center gap-2 text-xs text-slate-500">
-            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-            Takes about a minute. Upload your resume first — we&apos;ll fill in what we can.
-          </p>
-        )}
+      <form onSubmit={handleSubmit} className="mx-auto grid max-w-2xl gap-5">
         {signedIn && existing && (
           <p className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
             <Sparkles className="h-3.5 w-3.5" />
-            We&apos;ve pre-filled what we already have — just complete the blanks.
+            We&apos;ve pre-filled what we already have. Just complete the blanks.
           </p>
         )}
 
-        <fieldset className="grid gap-4">
-          <legend className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">About you</legend>
-
-          <FormField label="Resume" required={!hasExistingResume}>
-            <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed border-slate-300 bg-slate-50/60 px-3 py-3 text-sm text-slate-600 hover:border-slate-400">
-              <FileText className="h-4 w-4 shrink-0 text-slate-400" />
-              <span className="min-w-0 flex-1 truncate">
-                {resumeFile ? resumeFile.name : hasExistingResume ? "Resume on file — choose a file to replace it" : "Upload PDF or Word (.pdf, .doc, .docx)"}
-              </span>
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={(e) => void handleResumeChange(e.target.files?.[0] ?? null)}
-                className="sr-only"
+        <div className="flex items-center gap-4">
+          <div className="relative h-14 w-14 shrink-0">
+            <svg viewBox="0 0 36 36" className="h-14 w-14 -rotate-90">
+              <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3.5" className="stroke-slate-200" />
+              <circle
+                cx="18"
+                cy="18"
+                r="15.5"
+                fill="none"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeDasharray={`${(ringPct / 100) * 97.4} 97.4`}
+                className="stroke-blue-600 transition-all duration-500"
               />
-            </label>
-            {resumeParsing && <p className="mt-1 text-xs text-slate-400">Reading your resume…</p>}
-          </FormField>
+            </svg>
+            <span className="absolute inset-0 grid place-items-center text-xs font-bold text-slate-800">{ringPct}%</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-600">
+              {copy.eyebrow} of {stepIds.length}
+            </p>
+            <h2 className="text-lg font-bold leading-tight text-slate-900">{copy.title}</h2>
+            <p className="text-xs text-slate-500">{copy.blurb}</p>
+          </div>
+        </div>
+        <div className="flex gap-1.5" aria-hidden>
+          {stepIds.map((id, i) => (
+            <span key={id} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= pos ? "bg-blue-600" : "bg-slate-200"}`} />
+          ))}
+        </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Full Name" required>
-              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" autoComplete="name" />
-            </FormField>
-            <FormField label="Phone Number" required>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">+91</span>
-                <Phone className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
-                <Input
-                  inputMode="numeric"
-                  autoComplete="tel-national"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  placeholder="10-digit number"
-                  className="pl-10"
+        {stepId === 0 && (
+          <div className="grid gap-4">
+            <FormField label="Resume" required={!hasExistingResume}>
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/40 px-4 py-5 text-sm text-slate-600 transition hover:border-blue-400 hover:bg-blue-50">
+                <FileText className="h-5 w-5 shrink-0 text-blue-500" />
+                <span className="min-w-0 flex-1 truncate">
+                  {resumeFile ? resumeFile.name : hasExistingResume ? "Resume on file. Choose a file to replace it" : "Tap to upload PDF or Word (.pdf, .doc, .docx)"}
+                </span>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => void handleResumeChange(e.target.files?.[0] ?? null)}
+                  className="sr-only"
                 />
-              </div>
-            </FormField>
-          </div>
-
-          <FormField label="Email">
-            <Input value={email} disabled className="bg-slate-50 text-slate-500" />
-          </FormField>
-        </fieldset>
-
-        <fieldset className="grid gap-4">
-          <legend className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Your role</legend>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Profile Type" required>
-              <Select
-                value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value as CategoryValue | "");
-                  setPractice("");
-                }}
-              >
-                <option value="">Select</option>
-                {categoryOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField label={practiceLabel} required>
-              <Select value={practice} onChange={(e) => setPractice(e.target.value)} disabled={!category}>
-                <option value="">{category ? "Select" : "Choose profile type first"}</option>
-                {practiceOptions.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField label="Role Level" required>
-              <Select value={roleLevel} onChange={(e) => setRoleLevel(e.target.value)}>
-                <option value="">Select</option>
-                {roleLevelOptions.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField label="Current Role Type" required>
-              <Select value={roleType} onChange={(e) => setRoleType(e.target.value)}>
-                <option value="">Select</option>
-                {roleTypeOptions.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField label="Total Experience" required>
-              <Select value={totalExperienceYears} onChange={(e) => setTotalExperienceYears(e.target.value)}>
-                <option value="">Select</option>
-                {experienceOptions.map((o) => (
-                  <option key={o.label} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField label="Current Fixed CTC" required>
-              <Select value={currentFixedCtc} onChange={(e) => setCurrentFixedCtc(e.target.value)}>
-                <option value="">Select</option>
-                {ctcOptions.map((o) => (
-                  <option key={o.label} value={o.value ?? ""}>
-                    {o.label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField label="Employment Status" required>
-              <Select value={employmentStatus} onChange={(e) => setEmploymentStatus(e.target.value)}>
-                <option value="">Select</option>
-                {employmentStatusOptions.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField label="Days to Join" required>
-              <Select value={noticePeriod} onChange={(e) => setNoticePeriod(e.target.value)}>
-                <option value="">Select</option>
-                {noticePeriods.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-          </div>
-        </fieldset>
-
-        <fieldset className="grid gap-4">
-          <legend className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Location</legend>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Current City" required>
-              <Select value={cityChoice} onChange={(e) => setCityChoice(e.target.value)}>
-                <option value="">Select city</option>
-                {cityOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </Select>
-              {cityChoice === "Other" && (
-                <Input value={customCity} onChange={(e) => setCustomCity(e.target.value)} placeholder="Enter your city" className="mt-2" />
+              </label>
+              {resumeParsing && (
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-blue-600">
+                  <Sparkles className="h-3.5 w-3.5 animate-pulse" /> Reading your resume…
+                </p>
+              )}
+              {!resumeParsing && readSummary.length > 0 && (
+                <div className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                  <p className="flex items-center gap-1.5 font-semibold">
+                    <Check className="h-3.5 w-3.5" /> Nice, we found:
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {readSummary.map((t) => (
+                      <span key={t} className="rounded-full bg-white px-2 py-0.5 ring-1 ring-emerald-200">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
             </FormField>
-            <FormField label="Open to Relocation" required>
-              <Select value={relocation} onChange={(e) => setRelocation(e.target.value)}>
-                <option value="">Select</option>
-                {relocationOptions.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Full Name" required>
+                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" autoComplete="name" />
+              </FormField>
+              <FormField label="Phone Number" required>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">+91</span>
+                  <Phone className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+                  <Input
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    placeholder="10-digit number"
+                    className="pl-10"
+                  />
+                </div>
+              </FormField>
+              <FormField label="Email">
+                <Input value={email} disabled className="bg-slate-50 text-slate-500" />
+              </FormField>
+              <FormField label="Current City" required>
+                <Select value={cityChoice} onChange={(e) => setCityChoice(e.target.value)}>
+                  <option value="">Select city</option>
+                  {cityOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </Select>
+                {cityChoice === "Other" && (
+                  <Input value={customCity} onChange={(e) => setCustomCity(e.target.value)} placeholder="Enter your city" className="mt-2" />
+                )}
+              </FormField>
+            </div>
+
+            <label className="flex items-start gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-xs text-slate-600">
+              <input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} className="mt-0.5" />
+              Send me matching roles and interview reminders on WhatsApp (optional).
+            </label>
           </div>
-        </fieldset>
+        )}
 
-        <FormField label="Expected Fixed CTC (optional)">
-          <Select value={expectedFixedCtc} onChange={(e) => setExpectedFixedCtc(e.target.value)} className="sm:max-w-[calc(50%-0.5rem)]">
-            <option value="">Skip — discuss later</option>
-            {ctcOptions.map((o) => (
-              <option key={o.label} value={o.value ?? ""}>
-                {o.label}
-              </option>
-            ))}
-          </Select>
-        </FormField>
+        {stepId === 1 && (
+          <div className="grid gap-5">
+            <FormField label="I work in" required>
+              <Chips
+                value={category}
+                options={categoryOptions.map((o) => ({ value: o.value, label: o.label }))}
+                onChange={(v) => {
+                  setCategory(v as CategoryValue);
+                  setPractice("");
+                }}
+              />
+            </FormField>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label={practiceLabel} required>
+                <Select value={practice} onChange={(e) => setPractice(e.target.value)} disabled={!category}>
+                  <option value="">{category ? "Select" : "Pick a profile type first"}</option>
+                  {practiceOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField label="Role Level" required>
+                <Select value={roleLevel} onChange={(e) => setRoleLevel(e.target.value)}>
+                  <option value="">Select</option>
+                  {roleLevelOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            </div>
+            <FormField label="Right now I am" required>
+              <Chips value={roleType} options={roleTypeOptions.map((o) => ({ value: o, label: o }))} onChange={setRoleType} />
+            </FormField>
+            <FormField label="Employment status" required>
+              <Chips value={employmentStatus} options={employmentStatusOptions.map((o) => ({ value: o, label: o }))} onChange={setEmploymentStatus} />
+            </FormField>
+            <FormField label="Can join in" required>
+              <Chips value={noticePeriod} options={noticePeriods.map((o) => ({ value: o, label: o }))} onChange={setNoticePeriod} />
+            </FormField>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField label="Total Experience" required>
+                <Select value={totalExperienceYears} onChange={(e) => setTotalExperienceYears(e.target.value)}>
+                  <option value="">Select</option>
+                  {experienceOptions.map((o) => (
+                    <option key={o.label} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField label="Current Fixed CTC" required>
+                <Select value={currentFixedCtc} onChange={(e) => setCurrentFixedCtc(e.target.value)}>
+                  <option value="">Select</option>
+                  {ctcOptions.map((o) => (
+                    <option key={o.label} value={o.value ?? ""}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField label="Current Variable Pay" required>
+                <Select value={currentVariableCtc} onChange={(e) => setCurrentVariableCtc(e.target.value)}>
+                  <option value="">Select (0 if none)</option>
+                  {ctcOptions.map((o) => (
+                    <option key={o.label} value={o.value ?? ""}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            </div>
+          </div>
+        )}
 
-        <label className="flex items-start gap-2 text-xs text-slate-500">
-          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
-          I consent to StaffAnchor storing and sharing my profile with relevant employers.
-        </label>
+        {stepId === 2 && (
+          <div className="grid gap-5">
+            {category === "b2b_sales" && (
+              <FormField label="Your selling style" required>
+                <Chips value={sellingStyle} options={sellingStyleOptions.map((o) => ({ value: o, label: o }))} onChange={setSellingStyle} />
+              </FormField>
+            )}
+            <FormField label="How do you sell? (pick all that apply)" required>
+              <div className="grid gap-3">
+                {motionGroups.map((g) => (
+                  <div key={g.group}>
+                    {motionGroups.length > 1 && <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{g.group}</p>}
+                    <Chips
+                      multi
+                      values={motions}
+                      options={g.options.map((o) => ({ value: o, label: o }))}
+                      onToggle={(v) => setMotions((m) => (m.includes(v) ? m.filter((x) => x !== v) : [...m, v]))}
+                    />
+                  </div>
+                ))}
+              </div>
+            </FormField>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label={`Typical ${salesWord}`} required>
+                <div className="flex gap-2">
+                  <Select
+                    value={dealCurrency}
+                    onChange={(e) => {
+                      setDealCurrency(e.target.value as CurrencyValue);
+                      setDealBand("");
+                    }}
+                    className="w-24 shrink-0"
+                  >
+                    {currencyOptions.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select value={dealBand} onChange={(e) => setDealBand(e.target.value)}>
+                    <option value="">Select</option>
+                    {dealBands.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </FormField>
+              <FormField label="Target hit last year" required>
+                <Select value={attainment} onChange={(e) => setAttainment(e.target.value)}>
+                  <option value="">Select</option>
+                  {achievementBandOptions.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            </div>
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Profiles with a clear sales story get shortlisted far more often than ones without.
+            </p>
+          </div>
+        )}
+
+        {stepId === 3 && (
+          <div className="grid gap-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Expected Fixed CTC" required>
+                <Select
+                  value={ctcNegotiable ? "" : expectedFixedCtc}
+                  onChange={(e) => {
+                    setExpectedFixedCtc(e.target.value);
+                    if (e.target.value) setCtcNegotiable(false);
+                  }}
+                  disabled={ctcNegotiable}
+                >
+                  <option value="">Select</option>
+                  {ctcOptions.map((o) => (
+                    <option key={o.label} value={o.value ?? ""}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+                <label className="mt-1.5 flex items-center gap-2 text-xs text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={ctcNegotiable}
+                    onChange={(e) => {
+                      setCtcNegotiable(e.target.checked);
+                      if (e.target.checked) setExpectedFixedCtc("");
+                    }}
+                  />
+                  Negotiable. I&apos;ll discuss it for the right role.
+                </label>
+              </FormField>
+              <FormField label="Expected Variable Pay (optional)">
+                <Select value={expectedVariableCtc} onChange={(e) => setExpectedVariableCtc(e.target.value)}>
+                  <option value="">Skip</option>
+                  {ctcOptions.map((o) => (
+                    <option key={o.label} value={o.value ?? ""}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            </div>
+            <FormField label="Open to relocate?" required>
+              <Chips value={relocation} options={relocationOptions.map((o) => ({ value: o, label: o }))} onChange={setRelocation} />
+            </FormField>
+            <label className="flex items-start gap-2 text-xs text-slate-500">
+              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
+              I consent to StaffAnchor storing and sharing my profile with relevant employers.
+            </label>
+          </div>
+        )}
 
         {errorMsg && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -634,12 +917,27 @@ export default function CandidateIntakeForm({
           </p>
         )}
 
-        <Button type="submit" disabled={submitting || resumeParsing} className="w-full">
-          {submitting ? "Submitting…" : mandateId ? "Submit Application" : "Create My Profile"}
-        </Button>
-        <p className="text-center text-[11px] text-slate-400">
-          Want to stand out with more detail (past roles, targets, LinkedIn)? You can complete your full profile any time from My Account.
-        </p>
+        <div className="flex items-center gap-3">
+          {pos > 0 && (
+            <Button type="button" variant="outline" onClick={goBack} className="shrink-0">
+              <ArrowLeft className="mr-1 h-4 w-4" /> Back
+            </Button>
+          )}
+          {isLast ? (
+            <Button type="submit" disabled={submitting || resumeParsing} className="flex-1">
+              {submitting ? "Submitting…" : mandateId ? "Submit Application" : "Create My Profile"}
+            </Button>
+          ) : (
+            <Button type="submit" disabled={resumeParsing} className="flex-1">
+              Continue <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        {isLast && (
+          <p className="text-center text-[11px] text-slate-400">
+            After this you can add LinkedIn, languages and your full career timeline from My Account to boost your profile.
+          </p>
+        )}
       </form>
 
       {showScreeningModal && (
@@ -656,5 +954,36 @@ export default function CandidateIntakeForm({
         />
       )}
     </>
+  );
+}
+
+// Tap-to-select pills for short option lists. Single-select (value/onChange)
+// or multi-select (values/onToggle).
+type ChipProps =
+  | { multi?: false; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }
+  | { multi: true; values: string[]; options: { value: string; label: string }[]; onToggle: (v: string) => void };
+
+function Chips(props: ChipProps) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {props.options.map((o) => {
+        const on = props.multi ? props.values.includes(o.value) : props.value === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            aria-pressed={on}
+            onClick={() => (props.multi ? props.onToggle(o.value) : props.onChange(o.value))}
+            className={`rounded-full border px-3.5 py-1.5 text-left text-sm transition active:scale-95 ${
+              on
+                ? "border-blue-600 bg-blue-600 text-white shadow-sm"
+                : "border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
