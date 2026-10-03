@@ -22,6 +22,15 @@ import {
 import {
   achievementBandOptions,
   b2bSalesMotionTypeGroups,
+  crmToolOptions,
+  ctcStepOptions,
+  customerSegmentOptions,
+  industryOptions,
+  salesToolOptions,
+  searchSkills,
+  subDomainsForPractice,
+  teamSizeOptions,
+  yourLevelOptions,
   b2cSalesMotionOptions,
   currencyOptions,
   dealSizeBandsFor,
@@ -30,14 +39,11 @@ import {
   categoryOptions,
   cityOptions,
   cityStateMap,
-  ctcOptions,
   defaultNoticePeriods,
   employmentStatusOptions,
   experienceOptions,
   level1OptionsForProfileType,
   relocationOptions,
-  roleLevelOptions,
-  roleTypeOptions,
   type CategoryValue,
 } from "./options";
 
@@ -81,6 +87,8 @@ export type IntakeExistingRow = {
   current_variable_ctc?: number | null;
   expected_variable_ctc?: number | null;
   whatsapp_opt_in?: boolean | null;
+  industries?: string[] | null;
+  skills?: string | null;
   current_employment_status?: string | null;
   open_to_relocation?: string | null;
   notice_period?: string | null;
@@ -108,7 +116,11 @@ export function intakeMissingFields(row: IntakeExistingRow): string[] {
   if (!row.open_to_relocation) missing.push("Open to relocation");
   if (!row.notice_period) missing.push("Days to join");
   if (row.expected_fixed_ctc == null && seg.expected_ctc_negotiable !== true) missing.push("Expected CTC");
+  if (typeof seg.offer_in_hand !== "boolean") missing.push("Offer in hand");
+  const lvl = yourLevelOptions.find((l) => l.value === seg.role_level);
+  if (lvl?.lead && !(typeof seg.team_size === "string" && seg.team_size)) missing.push("Team size");
   if (isSalesCategory(row.category) && row.total_experience_years !== 0) {
+    if (!row.industries?.length) missing.push("Industries sold into");
     const motion = row.category === "b2c_sales" ? seg.motion : seg.b2b_sales_motion_type;
     if (!Array.isArray(motion) || motion.length === 0) missing.push("Sales motion");
     if (!(typeof (row.category === "b2c_sales" ? seg.ticket : seg.deal_size) === "string")) missing.push("Deal size");
@@ -220,6 +232,19 @@ export default function CandidateIntakeForm({
   const [attainment, setAttainment] = useState(
     typeof seg.quota === "string" ? seg.quota : typeof seg.team_quota === "string" ? seg.team_quota : ""
   );
+  const [teamSize, setTeamSize] = useState(typeof seg.team_size === "string" ? seg.team_size : "");
+  const [sells, setSells] = useState<string[]>(Array.isArray(seg.sells) ? (seg.sells as string[]) : []);
+  const [segments, setSegments] = useState<string[]>(
+    Array.isArray(seg.customer_segment_sold) ? (seg.customer_segment_sold as string[]) : []
+  );
+  const [industriesSold, setIndustriesSold] = useState<string[]>(existing?.industries ?? []);
+  const [tools, setTools] = useState<string[]>(Array.isArray(seg.crm_tools) ? (seg.crm_tools as string[]) : []);
+  const [skillList, setSkillList] = useState<string[]>(
+    (existing?.skills ?? "").split(",").map((x) => x.trim()).filter(Boolean)
+  );
+  const [lastWorkingDay, setLastWorkingDay] = useState(typeof seg.last_working_day === "string" ? seg.last_working_day : "");
+  const [offerInHand, setOfferInHand] = useState(seg.offer_in_hand === true ? "Yes" : seg.offer_in_hand === false ? "No" : "");
+  const [offerCtc, setOfferCtc] = useState(typeof seg.offer_ctc === "number" ? String(seg.offer_ctc) : "");
   const [pos, setPos] = useState(0);
   const [readSummary, setReadSummary] = useState<string[]>([]);
 
@@ -280,6 +305,7 @@ export default function CandidateIntakeForm({
               : "")
         );
         if (fields.category_guess) setCategory((prev) => prev || (fields.category_guess as CategoryValue));
+        if (fields.skills?.length) setSkillList((prev) => (prev.length ? prev : fields.skills.slice(0, 12)));
         const found: string[] = [];
         if (fields.current_job_title) found.push(fields.current_job_title);
         if (fields.current_employer) found.push(fields.current_employer);
@@ -294,6 +320,8 @@ export default function CandidateIntakeForm({
     }
   }
 
+  const levelDef = yourLevelOptions.find((l) => l.value === roleLevel);
+  const isLeadLevel = !!levelDef?.lead;
   const hasSalesStep = isSalesCategory(category) && totalExperienceYears !== "0";
   // Step ids: 0 you, 1 role now, 2 sales story (sales only), 3 next move.
   const stepIds = hasSalesStep ? [0, 1, 2, 3] : [0, 1, 3];
@@ -311,8 +339,8 @@ export default function CandidateIntakeForm({
     if (id === 1) {
       if (!category) return "Please pick your profile type.";
       if (!practice) return `Please select your ${practiceLabel.toLowerCase()}.`;
-      if (!roleLevel) return "Please select your role level.";
-      if (!roleType) return "Please pick your current role type.";
+      if (!roleLevel) return "Please pick your level.";
+      if (isLeadLevel && !teamSize) return "Please select your team size.";
       if (!totalExperienceYears) return "Please select your total experience.";
       if (!employmentStatus) return "Please pick your employment status.";
       if (!noticePeriod) return "Please select how soon you can join.";
@@ -322,12 +350,17 @@ export default function CandidateIntakeForm({
     if (id === 2) {
       if (category === "b2b_sales" && !sellingStyle) return "Are you a hunter, a farmer or a mix? Pick one.";
       if (motions.length === 0) return "Pick at least one way you sell.";
+      if (category === "b2b_sales" && sells.length === 0) return "Pick what you sell.";
+      if (industriesSold.length === 0) return "Add at least one industry you've sold into.";
+      if (category === "b2b_sales" && segments.length === 0) return "Pick the customer segments you sell to.";
       if (!dealBand) return category === "b2c_sales" ? "Pick your typical ticket size." : "Pick your typical deal size.";
       if (!attainment) return "Pick how much of your target you hit last year.";
     }
     if (id === 3) {
       if (!expectedFixedCtc && !ctcNegotiable) return "Tell us your expected fixed CTC, or mark it Negotiable.";
       if (!relocation) return "Please tell us if you're open to relocation.";
+      if (!offerInHand) return "Do you have an offer in hand? Pick Yes or No.";
+      if (offerInHand === "Yes" && !offerCtc) return "Please select the CTC of your offer.";
       if (!consent) return "Please accept the consent checkbox to continue.";
     }
     return null;
@@ -368,7 +401,6 @@ export default function CandidateIntakeForm({
       !!category,
       !!practice,
       !!roleLevel,
-      !!roleType,
       !!totalExperienceYears,
       !!employmentStatus,
       !!noticePeriod,
@@ -376,8 +408,9 @@ export default function CandidateIntakeForm({
       !!currentVariableCtc,
       !!(expectedFixedCtc || ctcNegotiable),
       !!relocation,
+      !!offerInHand,
     ];
-    if (hasSalesStep) checks.push(motions.length > 0, !!dealBand, !!attainment);
+    if (hasSalesStep) checks.push(motions.length > 0, industriesSold.length > 0, !!dealBand, !!attainment);
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   })();
 
@@ -423,6 +456,12 @@ export default function CandidateIntakeForm({
           role_level: roleLevel,
           role_type: roleTypeToStored(roleType),
           expected_ctc_negotiable: ctcNegotiable,
+          ...(isLeadLevel && teamSize ? { team_size: teamSize } : {}),
+          ...(employmentStatus === "Serving Notice" && lastWorkingDay ? { last_working_day: lastWorkingDay } : {}),
+          offer_in_hand: offerInHand === "Yes",
+          ...(offerInHand === "Yes" && offerCtc ? { offer_ctc: Math.min(Number(offerCtc), 120) } : {}),
+          ...(hasSalesStep && tools.length ? { crm_tools: tools } : {}),
+          ...(hasSalesStep && category === "b2b_sales" ? { sells, customer_segment_sold: segments } : {}),
           // Same keys the long profile form writes, so the CRM reads one shape.
           ...(hasSalesStep
             ? {
@@ -444,7 +483,8 @@ export default function CandidateIntakeForm({
         current_industry: extraction?.current_industry || null,
         highest_qualification: extraction?.highest_qualification || null,
         linkedin_url: extraction?.linkedin_url || null,
-        skills: extraction?.skills?.length ? extraction.skills.join(", ") : null,
+        skills: skillList.length ? skillList.join(", ") : extraction?.skills?.length ? extraction.skills.join(", ") : null,
+        ...(hasSalesStep && industriesSold.length ? { industries: industriesSold } : {}),
         consent: true,
         profile_stage: mandateId ? "applicant" : "lead",
       };
@@ -706,7 +746,7 @@ export default function CandidateIntakeForm({
 
         {stepId === 1 && (
           <div className="grid gap-5">
-            <FormField label="I work in" required>
+            <Group label="I work in" required>
               <Chips
                 value={category}
                 options={categoryOptions.map((o) => ({ value: o.value, label: o.label }))}
@@ -715,7 +755,7 @@ export default function CandidateIntakeForm({
                   setPractice("");
                 }}
               />
-            </FormField>
+            </Group>
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField label={practiceLabel} required>
                 <Select value={practice} onChange={(e) => setPractice(e.target.value)} disabled={!category}>
@@ -727,26 +767,37 @@ export default function CandidateIntakeForm({
                   ))}
                 </Select>
               </FormField>
-              <FormField label="Role Level" required>
-                <Select value={roleLevel} onChange={(e) => setRoleLevel(e.target.value)}>
-                  <option value="">Select</option>
-                  {roleLevelOptions.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
             </div>
-            <FormField label="Right now I am" required>
-              <Chips value={roleType} options={roleTypeOptions.map((o) => ({ value: o, label: o }))} onChange={setRoleType} />
-            </FormField>
-            <FormField label="Employment status" required>
+            <Group label="Your level" required>
+              <Chips
+                value={roleLevel}
+                options={yourLevelOptions
+                  .filter((l) => !l.salesOnly || isSalesCategory(category))
+                  .map((l) => ({ value: l.value, label: l.value === "IC" && category === "non_sales" ? "Individual Contributor" : l.label }))}
+                onChange={(v) => {
+                  setRoleLevel(v);
+                  const lead = yourLevelOptions.find((l) => l.value === v)?.lead;
+                  setRoleType(lead ? "Leading a Team" : "Individual Contributor (IC)");
+                  if (!lead) setTeamSize("");
+                }}
+              />
+            </Group>
+            {isLeadLevel && (
+              <Group label="How big is your team?" required>
+                <Chips value={teamSize} options={teamSizeOptions.slice(0, 9).map((o) => ({ value: o, label: o }))} onChange={setTeamSize} />
+              </Group>
+            )}
+            <Group label="Employment status" required>
               <Chips value={employmentStatus} options={employmentStatusOptions.map((o) => ({ value: o, label: o }))} onChange={setEmploymentStatus} />
-            </FormField>
-            <FormField label="Can join in" required>
+            </Group>
+            {employmentStatus === "Serving Notice" && (
+              <FormField label="Last working day (optional)">
+                <Input type="date" value={lastWorkingDay} onChange={(e) => setLastWorkingDay(e.target.value)} className="sm:max-w-[calc(50%-0.5rem)]" />
+              </FormField>
+            )}
+            <Group label="Can join in" required>
               <Chips value={noticePeriod} options={noticePeriods.map((o) => ({ value: o, label: o }))} onChange={setNoticePeriod} />
-            </FormField>
+            </Group>
             <div className="grid gap-4 sm:grid-cols-3">
               <FormField label="Total Experience" required>
                 <Select value={totalExperienceYears} onChange={(e) => setTotalExperienceYears(e.target.value)}>
@@ -761,17 +812,20 @@ export default function CandidateIntakeForm({
               <FormField label="Current Fixed CTC" required>
                 <Select value={currentFixedCtc} onChange={(e) => setCurrentFixedCtc(e.target.value)}>
                   <option value="">Select</option>
-                  {ctcOptions.map((o) => (
+                  {ctcStepOptions(currentFixedCtc).map((o) => (
                     <option key={o.label} value={o.value ?? ""}>
                       {o.label}
                     </option>
                   ))}
                 </Select>
+                {currentFixedCtc !== "" && Number(currentFixedCtc) > 0 && Number(currentFixedCtc) < 121 && (
+                  <span className="text-xs text-slate-400">= ₹{Math.round(Number(currentFixedCtc) * 100000).toLocaleString("en-IN")} a year</span>
+                )}
               </FormField>
               <FormField label="Current Variable Pay" required>
                 <Select value={currentVariableCtc} onChange={(e) => setCurrentVariableCtc(e.target.value)}>
                   <option value="">Select (0 if none)</option>
-                  {ctcOptions.map((o) => (
+                  {ctcStepOptions(currentVariableCtc).map((o) => (
                     <option key={o.label} value={o.value ?? ""}>
                       {o.label}
                     </option>
@@ -785,11 +839,11 @@ export default function CandidateIntakeForm({
         {stepId === 2 && (
           <div className="grid gap-5">
             {category === "b2b_sales" && (
-              <FormField label="Your selling style" required>
+              <Group label="Your selling style" required>
                 <Chips value={sellingStyle} options={sellingStyleOptions.map((o) => ({ value: o, label: o }))} onChange={setSellingStyle} />
-              </FormField>
+              </Group>
             )}
-            <FormField label="How do you sell? (pick all that apply)" required>
+            <Group label="How do you sell? (pick all that apply)" required>
               <div className="grid gap-3">
                 {motionGroups.map((g) => (
                   <div key={g.group}>
@@ -803,7 +857,36 @@ export default function CandidateIntakeForm({
                   </div>
                 ))}
               </div>
-            </FormField>
+            </Group>
+            {category === "b2b_sales" && (
+              <Group label="What do you sell?" required>
+                <Chips
+                  multi
+                  values={sells}
+                  options={subDomainsForPractice(practice).map((o) => ({ value: o, label: o }))}
+                  onToggle={(v) => setSells((m) => (m.includes(v) ? m.filter((x) => x !== v) : [...m, v]))}
+                />
+              </Group>
+            )}
+            <Group label="Industries you've sold into" required>
+              <MultiSearch
+                selected={industriesSold}
+                onChange={setIndustriesSold}
+                search={(q, ex) => industryOptions.filter((o) => o.toLowerCase().includes(q.toLowerCase()) && !ex.includes(o)).slice(0, 8)}
+                defaults={industryOptions.slice(0, 8)}
+                placeholder="Search, e.g. SaaS, Insurance, EdTech"
+              />
+            </Group>
+            {category === "b2b_sales" && (
+              <Group label="Who do you sell to?" required>
+                <Chips
+                  multi
+                  values={segments}
+                  options={customerSegmentOptions.map((o) => ({ value: o, label: o }))}
+                  onToggle={(v) => setSegments((m) => (m.includes(v) ? m.filter((x) => x !== v) : [...m, v]))}
+                />
+              </Group>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField label={`Typical ${salesWord}`} required>
                 <div className="flex gap-2">
@@ -842,6 +925,29 @@ export default function CandidateIntakeForm({
                 </Select>
               </FormField>
             </div>
+            <Group label="Tools you've used (optional)">
+              <MultiSearch
+                selected={tools}
+                onChange={setTools}
+                search={(q, ex) =>
+                  [...crmToolOptions.filter((o) => o !== "Other"), ...salesToolOptions]
+                    .filter((o) => o.toLowerCase().includes(q.toLowerCase()) && !ex.includes(o))
+                    .slice(0, 8)
+                }
+                defaults={["Salesforce", "HubSpot", "Zoho CRM", "LinkedIn Sales Navigator", "LeadSquared", "Apollo", "Gong", "Excel / Google Sheets"]}
+                placeholder="Search CRMs and sales tools"
+              />
+            </Group>
+            <Group label="Your top skills (optional)">
+              <MultiSearch
+                selected={skillList}
+                onChange={setSkillList}
+                search={(q, ex) => searchSkills(q, ex, 8)}
+                defaults={["Negotiation", "Solution Selling", "Cold Calling", "Key Account Management", "Closing", "Pipeline Management"]}
+                placeholder="Search skills"
+                allowCustom
+              />
+            </Group>
             <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
               Profiles with a clear sales story get shortlisted far more often than ones without.
             </p>
@@ -861,7 +967,7 @@ export default function CandidateIntakeForm({
                   disabled={ctcNegotiable}
                 >
                   <option value="">Select</option>
-                  {ctcOptions.map((o) => (
+                  {ctcStepOptions(expectedFixedCtc).map((o) => (
                     <option key={o.label} value={o.value ?? ""}>
                       {o.label}
                     </option>
@@ -882,7 +988,7 @@ export default function CandidateIntakeForm({
               <FormField label="Expected Variable Pay (optional)">
                 <Select value={expectedVariableCtc} onChange={(e) => setExpectedVariableCtc(e.target.value)}>
                   <option value="">Skip</option>
-                  {ctcOptions.map((o) => (
+                  {ctcStepOptions(expectedVariableCtc).map((o) => (
                     <option key={o.label} value={o.value ?? ""}>
                       {o.label}
                     </option>
@@ -890,9 +996,24 @@ export default function CandidateIntakeForm({
                 </Select>
               </FormField>
             </div>
-            <FormField label="Open to relocate?" required>
+            <Group label="Open to relocate?" required>
               <Chips value={relocation} options={relocationOptions.map((o) => ({ value: o, label: o }))} onChange={setRelocation} />
-            </FormField>
+            </Group>
+            <Group label="Any offer in hand?" required>
+              <Chips value={offerInHand} options={["Yes", "No"].map((o) => ({ value: o, label: o }))} onChange={setOfferInHand} />
+            </Group>
+            {offerInHand === "Yes" && (
+              <FormField label="Offer CTC (fixed)" required>
+                <Select value={offerCtc} onChange={(e) => setOfferCtc(e.target.value)} className="sm:max-w-[calc(50%-0.5rem)]">
+                  <option value="">Select</option>
+                  {ctcStepOptions(offerCtc).map((o) => (
+                    <option key={o.label} value={o.value ?? ""}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
             <label className="flex items-start gap-2 text-xs text-slate-500">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
               I consent to StaffAnchor storing and sharing my profile with relevant employers.
@@ -984,6 +1105,88 @@ function Chips(props: ChipProps) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// Like FormField but a div, so clicking the title never "presses" the first chip
+// (a <label> forwards clicks to its first button).
+function Group({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-1.5 text-sm">
+      <span className="font-medium text-slate-700">
+        {label}
+        {required ? <span className="text-red-600"> *</span> : null}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+// Type-to-search multi-select shown as removable chips. `defaults` are the
+// suggestions shown before anything is typed.
+function MultiSearch({
+  selected,
+  onChange,
+  search,
+  defaults,
+  placeholder,
+  allowCustom,
+}: {
+  selected: string[];
+  onChange: (v: string[]) => void;
+  search: (q: string, exclude: string[]) => string[];
+  defaults: string[];
+  placeholder: string;
+  allowCustom?: boolean;
+}) {
+  const [q, setQ] = useState("");
+  const suggestions = (q.trim() ? search(q.trim(), selected) : defaults.filter((d) => !selected.includes(d))).slice(0, 8);
+  const add = (v: string) => {
+    const t = v.trim();
+    if (t && !selected.includes(t)) onChange([...selected, t]);
+    setQ("");
+  };
+  return (
+    <div className="grid gap-2">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((t) => (
+            <span key={t} className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2.5 py-1 text-xs text-white">
+              {t}
+              <button type="button" aria-label={`Remove ${t}`} onClick={() => onChange(selected.filter((x) => x !== t))} className="text-slate-300 hover:text-white">
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <Input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (suggestions[0] && q.trim()) add(suggestions[0]);
+            else if (allowCustom) add(q);
+          }
+        }}
+        placeholder={placeholder}
+      />
+      {suggestions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {suggestions.map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => add(o)}
+              className="rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-xs text-slate-600 hover:border-blue-400 hover:bg-blue-50"
+            >
+              + {o}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

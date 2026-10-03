@@ -1039,3 +1039,44 @@ export const motionTypeOptions = ["Product-Led Growth (PLG)", "Sales-Led", "Hybr
 // (no clean fixed vocabulary across every industrial vertical); tender/RFP
 // experience is Yes/No + optional free-text description.
 export const tenderRfpExperienceOptions = ["Yes", "No"] as const;
+
+
+// ---- Finer-grained CTC steps (LPA): 0.25L under 10L, 0.5L to 30L, 1L above ----
+// A candidate on 4.5L can pick 4.5L instead of rounding to 4 or 5. `current` is
+// any already-saved value that isn't on the ladder; it's added so a prefilled
+// select never shows blank.
+export function ctcStepOptions(current?: string): CtcOption[] {
+  const fmt = (n: number) => `${Number.isInteger(n) ? n : n.toString()} LPA`;
+  const out: CtcOption[] = [];
+  for (let n = 0; n < 10; n += 0.25) out.push({ value: n, label: fmt(n) });
+  for (let n = 10; n <= 30; n += 0.5) out.push({ value: n, label: fmt(n) });
+  for (let n = 31; n <= 120; n += 1) out.push({ value: n, label: fmt(n) });
+  out.push({ value: 121, label: "120L+" });
+  const cur = current !== undefined && current !== "" ? Number(current) : NaN;
+  if (!Number.isNaN(cur) && !out.some((o) => o.value === cur)) {
+    out.push({ value: cur, label: fmt(cur) });
+    out.sort((a, b) => (a.value ?? 0) - (b.value ?? 0));
+  }
+  return out;
+}
+
+// ---- "Your level": one list replacing the old Role Level + Role Type pair ----
+// `value` is what's stored in segment_data.role_level (unchanged for every
+// existing option, so CRM filters keep working); `lead` levels also ask team size.
+export const yourLevelOptions: { value: string; label: string; lead: boolean; salesOnly?: boolean }[] = [
+  { value: "IC – Sales Development", label: "SDR / BDR", lead: false, salesOnly: true },
+  { value: "IC – Account Executive", label: "AE / Sales Executive", lead: false, salesOnly: true },
+  { value: "IC", label: "Senior IC / Key Accounts", lead: false },
+  { value: "Team Lead / Asst. Manager", label: "Team Lead", lead: true },
+  { value: "Manager", label: "Manager", lead: true },
+  { value: "Senior Manager", label: "Sr Manager / AGM", lead: true },
+  { value: "Director", label: "Director / GM", lead: true },
+  { value: "VP / Head", label: "VP / Head / CRO", lead: true },
+  { value: "Founder / CXO", label: "Founder / CXO", lead: true },
+];
+
+// Sales tools beyond the CRMs in crmToolOptions.
+export const salesToolOptions = [
+  "LinkedIn Sales Navigator", "Apollo", "Outreach", "Salesloft", "Gong", "ZoomInfo", "Lusha", "Clay",
+  "Zoho Desk", "Freshdesk", "Exotel", "Knowlarity", "Ozonetel", "WhatsApp Business", "Excel / Google Sheets", "Power BI",
+];
