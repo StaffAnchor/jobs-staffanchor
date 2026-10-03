@@ -256,6 +256,7 @@ export default function CandidateIntakeForm({
   const [offerCtc, setOfferCtc] = useState(typeof seg.offer_ctc === "number" ? String(seg.offer_ctc) : "");
   const [pos, setPos] = useState(0);
   const [earlierOpen, setEarlierOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   const [readSummary, setReadSummary] = useState<string[]>([]);
 
   const [noticePeriods, setNoticePeriods] = useState<string[]>(defaultNoticePeriods);
@@ -385,6 +386,12 @@ export default function CandidateIntakeForm({
     return null;
   }
 
+  // Bring the top of the form (not the page) into view, so on a job page the
+  // candidate stays at the form instead of jumping to the job header.
+  function scrollToForm() {
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
   function goNext() {
     const err = validateStep(stepId);
     if (err) {
@@ -393,12 +400,13 @@ export default function CandidateIntakeForm({
     }
     setErrorMsg(null);
     setPos((p) => Math.min(p + 1, stepIds.length - 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToForm();
   }
 
   function goBack() {
     setErrorMsg(null);
     setPos((p) => Math.max(0, p - 1));
+    scrollToForm();
   }
 
   // Live "how strong is my profile" read for the progress ring: every field
@@ -680,7 +688,7 @@ export default function CandidateIntakeForm({
 .si-form button{-webkit-tap-highlight-color:transparent}
 .si-form details>summary::-webkit-details-marker{display:none}
 `}</style>
-      <form onSubmit={handleSubmit} className="si-form mx-auto grid max-w-xl gap-7">
+      <form ref={formRef} onSubmit={handleSubmit} className="si-form mx-auto grid max-w-xl scroll-mt-24 gap-7">
         {signedIn && existing && (
           <p className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800">
             <Sparkles className="h-3.5 w-3.5" />
