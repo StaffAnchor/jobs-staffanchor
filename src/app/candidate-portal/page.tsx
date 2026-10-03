@@ -7,7 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
 import { type CandidateProfile } from "@/modules/candidate-portal/ProfileEditor";
 import ApplyForm from "@/modules/apply/ApplyForm";
-import CandidateIntakeForm, { type IntakeExistingRow } from "@/modules/apply/CandidateIntakeForm";
+import CandidateIntakeForm, { intakeMissingFields, type IntakeExistingRow } from "@/modules/apply/CandidateIntakeForm";
 import MyPipeline from "@/modules/candidate-portal/MyPipeline";
 import ReferEarn from "@/modules/candidate-portal/ReferEarn";
 import PortalHome from "@/modules/candidate-portal/PortalHome";
@@ -184,7 +184,17 @@ export default function CandidatePortalPage() {
 
   // See get_or_create_my_candidate_profile() -- the very first sign-in
   // creates a candidates row with only an email address.
-  if (!intakeSkipped && profile.email && (!profile.full_name?.trim() || !profile.phone?.trim() || !profile.category)) {
+  // Also shown to a profile a recruiter created (e.g. from a bulk CV upload) that
+  // the candidate has never confirmed: they arrive from the emailed sign-in link,
+  // and this asks for exactly what a CV can't tell us (CTC, notice period, ...).
+  const neverConfirmed =
+    !(profile as unknown as { details_confirmed_at?: string | null }).details_confirmed_at &&
+    intakeMissingFields(profile as unknown as IntakeExistingRow).length > 0;
+  if (
+    !intakeSkipped &&
+    profile.email &&
+    (!profile.full_name?.trim() || !profile.phone?.trim() || !profile.category || neverConfirmed)
+  ) {
     return (
       <div className="bg-[#f7f9fc] px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-3xl">
