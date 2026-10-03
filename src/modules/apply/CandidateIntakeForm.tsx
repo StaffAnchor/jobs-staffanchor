@@ -350,7 +350,7 @@ export default function CandidateIntakeForm({
       if (!category) return "Please pick what you do.";
       if (category === "non_sales" && !practice) return "Please pick your function.";
       if (isSalesCategory(category) && soldNow.length === 0) return "Pick what you sell today.";
-      if (!roleLevel) return "Please pick your level.";
+      if (!roleLevel) return "Please pick your role level.";
       if (isLeadLevel && !teamSize) return "Please select your team size.";
       if (!totalExperienceYears) return "Please select your total experience.";
     }
@@ -674,6 +674,8 @@ export default function CandidateIntakeForm({
 .si-form input:not([type=checkbox]):not([type=file]),.si-form select{height:2.9rem;border-radius:.85rem;border:1px solid #e2e8f0;background-color:#fff;padding-left:.95rem;font-size:.95rem;transition:border-color .2s,box-shadow .2s}
 .si-form input:not([type=checkbox]):not([type=file]):hover,.si-form select:hover{border-color:#cbd5e1}
 .si-form input:not([type=checkbox]):not([type=file]):focus,.si-form select:focus{outline:none;border-color:#0f172a;box-shadow:0 0 0 4px rgba(15,23,42,.06)}
+.si-form input.si-phone{padding-left:3rem}
+.si-form label>span:first-child{font-size:1rem;font-weight:600;letter-spacing:-.01em;color:#0f172a}
 .si-form input[type=checkbox]{accent-color:#0f172a}
 .si-form button{-webkit-tap-highlight-color:transparent}
 .si-form details>summary::-webkit-details-marker{display:none}
@@ -755,7 +757,7 @@ export default function CandidateIntakeForm({
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     placeholder="10-digit number"
-                    className="pl-10"
+                    className="si-phone"
                   />
                 </div>
               </FormField>
@@ -822,11 +824,19 @@ export default function CandidateIntakeForm({
                 </Group>
                 <div className="grid gap-2">
                   {!showEarlier ? (
-                    <button type="button" onClick={() => setEarlierOpen(true)} className="w-fit text-sm font-medium text-blue-600 hover:underline">
-                      + Add what you sold earlier in your career
+                    <button
+                      type="button"
+                      onClick={() => setEarlierOpen(true)}
+                      className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-3.5 text-left transition hover:border-slate-400 hover:bg-slate-50"
+                    >
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-900 text-lg leading-none text-white">+</span>
+                      <span>
+                        <span className="block text-[15px] font-semibold text-slate-900">Add what you sold earlier</span>
+                        <span className="block text-xs text-slate-500">Past products and industries show your range to recruiters.</span>
+                      </span>
                     </button>
                   ) : (
-                    <Group label="What have you sold earlier? (optional)">
+                    <Group label="What did you sell earlier? (optional)">
                       <GroupedPicker
                         groups={soldGroups}
                         selected={soldBefore}
@@ -840,7 +850,7 @@ export default function CandidateIntakeForm({
               </>
             )}
 
-            <Group label="Your level" required>
+            <Group label="Your role level" required>
               <Chips
                 value={roleLevel}
                 options={yourLevelOptions
@@ -1208,7 +1218,7 @@ function Chips(props: ChipProps) {
 function Group({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="grid gap-1.5 text-sm">
-      <span className="text-[15px] font-medium text-slate-800">
+      <span className="text-base font-semibold tracking-tight text-slate-900">
         {label}
         {required ? <span className="text-slate-300"> *</span> : null}
       </span>
