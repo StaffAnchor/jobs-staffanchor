@@ -674,7 +674,7 @@ export default function CandidateIntakeForm({
 .si-form input:not([type=checkbox]):not([type=file]),.si-form select{height:2.9rem;border-radius:.85rem;border:1px solid #e2e8f0;background-color:#fff;padding-left:.95rem;font-size:.95rem;transition:border-color .2s,box-shadow .2s}
 .si-form input:not([type=checkbox]):not([type=file]):hover,.si-form select:hover{border-color:#cbd5e1}
 .si-form input:not([type=checkbox]):not([type=file]):focus,.si-form select:focus{outline:none;border-color:#0f172a;box-shadow:0 0 0 4px rgba(15,23,42,.06)}
-.si-form input.si-phone{padding-left:3rem}
+.si-form input.si-phone:not([type=checkbox]):not([type=file]){padding-left:3rem}
 .si-form label>span:first-child{font-size:1rem;font-weight:600;letter-spacing:-.01em;color:#0f172a}
 .si-form input[type=checkbox]{accent-color:#0f172a}
 .si-form button{-webkit-tap-highlight-color:transparent}
