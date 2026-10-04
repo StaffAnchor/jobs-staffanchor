@@ -47,6 +47,7 @@ import {
   experienceOptions,
   level1OptionsForProfileType,
   relocationOptions,
+  workModeOptions,
   type CategoryValue,
 } from "./options";
 
@@ -94,6 +95,7 @@ export type IntakeExistingRow = {
   skills?: string | null;
   current_employment_status?: string | null;
   open_to_relocation?: string | null;
+  work_mode?: string | null;
   notice_period?: string | null;
   segment_data?: Record<string, unknown> | null;
 };
@@ -117,8 +119,9 @@ export function intakeMissingFields(row: IntakeExistingRow): string[] {
   if (row.current_variable_ctc == null) missing.push("Current variable pay");
   if (!row.current_employment_status) missing.push("Employment status");
   if (!row.open_to_relocation) missing.push("Open to relocation");
+  if (!row.work_mode) missing.push("Work mode");
   if (!row.notice_period) missing.push("Days to join");
-  if (row.expected_fixed_ctc == null && seg.expected_ctc_negotiable !== true) missing.push("Expected CTC");
+  if (row.expected_fixed_ctc == null) missing.push("Expected CTC");
   if (typeof seg.offer_in_hand !== "boolean") missing.push("Offer in hand");
   const lvl = yourLevelOptions.find((l) => l.value === seg.role_level);
   if (lvl?.lead && !(typeof seg.team_size === "string" && seg.team_size)) missing.push("Team size");
@@ -212,6 +215,7 @@ export default function CandidateIntakeForm({
   const [cityChoice, setCityChoice] = useState(loc.choice);
   const [customCity, setCustomCity] = useState(loc.custom);
   const [relocation, setRelocation] = useState(existing?.open_to_relocation ?? "");
+  const [workMode, setWorkMode] = useState(existing?.work_mode ?? "");
   const [consent, setConsent] = useState(true);
   const [whatsappOptIn, setWhatsappOptIn] = useState(existing?.whatsapp_opt_in === true);
   const [currentVariableCtc, setCurrentVariableCtc] = useState(
@@ -377,6 +381,7 @@ export default function CandidateIntakeForm({
       if (!currentVariableCtc) return "Please select your current variable pay (0 LPA if none).";
       if (!expectedFixedCtc && !ctcNegotiable) return "Tell us your expected fixed CTC, or mark it Negotiable.";
       if (!relocation) return "Please tell us if you're open to relocation.";
+      if (!workMode) return "Please pick your preferred work mode.";
       if (!offerInHand) return "Do you have an offer in hand? Pick Yes or No.";
       if (offerInHand === "Yes" && !offerCtc) return "Please select the CTC of your offer.";
       if (!consent) return "Please accept the consent checkbox to continue.";
@@ -442,6 +447,7 @@ export default function CandidateIntakeForm({
       !!currentVariableCtc,
       !!(expectedFixedCtc || ctcNegotiable),
       !!relocation,
+      !!workMode,
       !!offerInHand,
     ];
     if (hasSalesStep) checks.push(motions.length > 0, industriesSold.length > 0, !!dealBand, !!targetBand, !!attainment);
@@ -481,12 +487,20 @@ export default function CandidateIntakeForm({
         total_experience_years: Math.min(Number(totalExperienceYears), 40),
         current_fixed_ctc: Math.min(Number(currentFixedCtc), 120),
         current_variable_ctc: Math.min(Number(currentVariableCtc), 120),
-        expected_fixed_ctc: expectedFixedCtc && !ctcNegotiable ? Math.min(Number(expectedFixedCtc), 120) : null,
+        // "Negotiable" keeps the flag in segment_data, but the column still needs a
+        // number for a profile to count as complete: use their current fixed CTC as
+        // the starting point rather than leaving it blank.
+        expected_fixed_ctc: ctcNegotiable
+          ? Math.min(Number(currentFixedCtc), 120)
+          : expectedFixedCtc
+            ? Math.min(Number(expectedFixedCtc), 120)
+            : null,
         expected_variable_ctc: expectedVariableCtc ? Math.min(Number(expectedVariableCtc), 120) : null,
         whatsapp_opt_in: whatsappOptIn,
         current_employment_status: employmentStatus,
         notice_period: noticePeriod,
         open_to_relocation: relocation,
+        work_mode: workMode,
         segment_data: {
           role_level: roleLevel,
           role_type: roleTypeToStored(roleType),
@@ -1098,7 +1112,7 @@ export default function CandidateIntakeForm({
                         if (e.target.checked) setExpectedFixedCtc("");
                       }}
                     />
-                    Negotiable. I&apos;ll discuss it for the right role.
+                    Negotiable. I&apos;ll discuss it for the right role. (We&apos;ll start from your current CTC.)
                   </label>
                 </FormField>
                 <FormField label="Expected variable pay (optional)">
@@ -1116,6 +1130,9 @@ export default function CandidateIntakeForm({
 
             <Group label="Open to relocate?" required>
               <Chips value={relocation} options={relocationOptions.map((o) => ({ value: o, label: o }))} onChange={setRelocation} />
+            </Group>
+            <Group label="Preferred work mode?" required>
+              <Chips value={workMode} options={workModeOptions.map((o) => ({ value: o, label: o }))} onChange={setWorkMode} />
             </Group>
             <Group label="Any offer in hand?" required>
               <Chips value={offerInHand} options={["Yes", "No"].map((o) => ({ value: o, label: o }))} onChange={setOfferInHand} />
