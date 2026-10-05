@@ -43,6 +43,23 @@ function dates(r: { start?: string | null; end?: string | null; is_current?: boo
   return [s, e].filter(Boolean).join(" – ");
 }
 
+// The stored AI summary is one long paragraph that already has the resume
+// highlights pasted onto its end. Clients get one headline and a few short
+// points; the full text stays one tap away.
+function tidy(s: string) {
+  return s.replace(/\s+/g, " ").replace(/\.{2,}/g, ".").replace(/\.;/g, ";").trim();
+}
+function firstSentence(s: string) {
+  const m = s.match(/^.*?[.!?](\s|$)/);
+  return (m ? m[0] : s).trim();
+}
+function clip(s: string, max = 120) {
+  const t = tidy(s).replace(/[.;]$/, "");
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  return cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:\-–]$/, "") + "…";
+}
+
 export default function CandidateDrawer({
   role,
   c,
@@ -57,6 +74,7 @@ export default function CandidateDrawer({
   getResumeUrl?: (path: string) => Promise<string | null>;
 }) {
   const fit = computeFit(role, c);
+  const [showFull, setShowFull] = useState(false);
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
   const [resumeState, setResumeState] = useState<"idle" | "loading" | "ok" | "error">(c.resume_file_url && getResumeUrl ? "loading" : "idle");
 
@@ -88,7 +106,10 @@ export default function CandidateDrawer({
     c.cv_roles && c.cv_roles.length
       ? c.cv_roles
       : (c.career_timeline ?? []).map((t, i) => ({ title: t.title, company: t.company, start: t.start_month, end: t.end_month, is_current: !t.end_month && i === 0, evidence: t.description }));
-  const highlights = c.ai_passport?.resume_highlights ?? [];
+  const highlights = (c.ai_passport?.resume_highlights ?? []).slice(0, 4);
+  const fullSummary = tidy((c.ai_summary ?? "").split(/Resume highlights:/i)[0]);
+  const headline = tidy(c.ai_passport?.headline ?? "") || (fullSummary ? firstSentence(fullSummary) : "");
+  const hasMore = fullSummary.length > headline.length + 20;
   const mustHaves = role.must_haves ?? [];
   const checkedRequirements = new Set((c.ai_checks?.must ?? []).map((x) => x.requirement));
   const unchecked = mustHaves.filter((m) => !checkedRequirements.has(m));
@@ -165,18 +186,26 @@ export default function CandidateDrawer({
             )}
           </Section>
 
-          {(c.ai_summary || highlights.length > 0) && (
-            <Section n={2} title="Summary">
-              {c.ai_summary && <p className="text-[13.5px] leading-6 text-slate-700">{c.ai_summary}</p>}
+          {(headline || highlights.length > 0) && (
+            <Section n={2} title="At a glance">
+              {headline && <p className="text-[14.5px] font-medium leading-6 text-slate-900">{headline}</p>}
               {highlights.length > 0 && (
-                <ul className="mt-3 space-y-1.5">
+                <ul className="mt-3 space-y-2">
                   {highlights.map((h, i) => (
-                    <li key={i} className="flex gap-2 text-[13px] text-slate-700">
-                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#e8896a]" />
-                      {h}
+                    <li key={i} className="flex gap-2.5 text-[13px] leading-5 text-slate-700">
+                      <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#e8896a]" />
+                      {clip(h)}
                     </li>
                   ))}
                 </ul>
+              )}
+              {hasMore && (
+                <div className="mt-3">
+                  <button type="button" onClick={() => setShowFull((v) => !v)} className="text-[12px] font-medium text-indigo-700 hover:text-indigo-900">
+                    {showFull ? "Hide full summary" : "Show full summary"}
+                  </button>
+                  {showFull && <p className="mt-2 text-[12.5px] leading-6 text-slate-500">{fullSummary}</p>}
+                </div>
               )}
             </Section>
           )}

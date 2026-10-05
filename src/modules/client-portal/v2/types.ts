@@ -99,7 +99,7 @@ export type BoardCandidate = {
   secondary_sub_domains: string[] | null;
   industries: string[] | null;
   ai_summary: string | null;
-  ai_passport: { resume_highlights?: string[] } | null;
+  ai_passport: { headline?: string; resume_highlights?: string[] } | null;
   resume_file_url: string | null;
   stage: string;
   stage_updated_at: string | null;

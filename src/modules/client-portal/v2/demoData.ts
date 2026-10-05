@@ -44,8 +44,8 @@ const candidates: BoardCandidate[] = [
     sub_domain: "SaaS (horizontal)",
     industries: ["Fintech", "SaaS / Cloud Software", "E-commerce"],
     ai_summary:
-      "Six years selling B2B SaaS to mid-market and enterprise buyers, currently a Senior AE at Cloudwise Systems. He has beaten quota in each of the last three years and runs the full cycle from outbound to close.",
-    ai_passport: { resume_highlights: ["Closed a ₹83L annual number at 128% of quota last year.", "Won 11 new logos in a territory he opened from scratch.", "Runs security and procurement reviews himself."] },
+      "Aarav Menon is a Senior Account Executive at Cloudwise Systems, specializing in SaaS sales to mid-market and enterprise buyers. Aarav is looking for a fixed CTC of INR 26 Lakhs, with an additional INR 6 Lakhs variable component. His quarterly targets are between INR 15L-25L and he has consistently achieved 100-110% of them, with typical deal sizes ranging from INR 25L-50L. Aarav has a stable career history, with most roles demonstrating significant tenure. Resume highlights: Closed a ₹83L annual number at 128% of quota last year.; Won 11 new logos in a territory he opened from scratch.; Runs security and procurement reviews himself..",
+    ai_passport: { headline: "Aarav is a Senior Account Executive at Cloudwise Systems, selling workflow software to mid-market and enterprise buyers.", resume_highlights: ["Closed a ₹83L annual number at 128% of quota last year.", "Won 11 new logos in a territory he opened from scratch, with security and procurement reviews run by himself end to end across large accounts.", "Runs security and procurement reviews himself."] },
     selling: {
       sells_now: ["SaaS (horizontal)"],
       motion: ["Outbound enterprise", "Inbound mid-market"],
