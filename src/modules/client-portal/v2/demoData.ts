@@ -23,6 +23,8 @@ const base = {
   cv_certifications: [],
   career_timeline: null,
   ai_checks: null,
+  share_review: null,
+  confirmed_on_call_at: null,
 } satisfies Partial<BoardCandidate>;
 
 const candidates: BoardCandidate[] = [
@@ -60,12 +62,16 @@ const candidates: BoardCandidate[] = [
       { title: "Senior Account Executive", company: "Cloudwise Systems", start: "2024-01", is_current: true, sells: "Workflow automation software", quota_or_target: "₹75L", achievement: "128% of quota", deal_size: "₹32L avg", evidence: "Owns a territory across South India; closes full-cycle deals with CFOs and heads of operations." },
       { title: "Account Executive", company: "Ledgerly", start: "2021-06", end: "2023-12", sells: "Accounting software for mid-market", quota_or_target: "₹42L", achievement: "104% of quota", evidence: "Carried a ₹42L number in a smaller territory before moving up." },
     ],
-    ai_checks: {
-      must: [
-        { requirement: "Sold to enterprise buyers", status: "met", evidence: "Runs deals with CFOs and heads of operations at 500+ person companies.", question: null },
-        { requirement: "Owned a quota above ₹50L", status: "met", evidence: "₹75L annual quota, 128% attainment.", question: null },
+    confirmed_on_call_at: "2026-10-01T08:30:00Z",
+    share_review: {
+      reviewer_name: "Ananta Trivedi",
+      reviewed_at: "2026-10-01T09:10:00Z",
+      requirements: [
+        { requirement: "Sold to enterprise buyers", kind: "must", status: "met", note: "Runs deals with CFOs and heads of operations at 500+ person companies." },
+        { requirement: "Owned a quota above ₹50L", kind: "must", status: "met", note: "₹75L annual quota, 128% attainment." },
+        { requirement: "5+ years in B2B SaaS", kind: "must", status: "partial", note: "4.5 years in SaaS, earlier years in hardware sales." },
+        { requirement: "Experience selling to fintech", kind: "good", status: "not_met", note: "Sells to SaaS and e-commerce, no fintech yet. Strong enterprise motion otherwise." },
       ],
-      good: [{ requirement: "Experience selling to fintech", status: "doubt", evidence: null, question: "Has he sold to banks directly, or only fintech start-ups?" }],
     },
   },
   {

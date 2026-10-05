@@ -112,7 +112,11 @@ export default function CandidateDrawer({
   const hasMore = fullSummary.length > headline.length + 20;
   const mustHaves = role.must_haves ?? [];
   const checkedRequirements = new Set((c.ai_checks?.must ?? []).map((x) => x.requirement));
-  const unchecked = mustHaves.filter((m) => !checkedRequirements.has(m));
+  const unchecked = c.share_review ? [] : mustHaves.filter((m) => !checkedRequirements.has(m));
+  const reqRows = fit.rows.filter((r) => r.key.startsWith("req-"));
+  const reqSummary = reqRows.length
+    ? { total: reqRows.length, met: reqRows.filter((r) => r.state === "met").length, partial: reqRows.filter((r) => r.state === "partial").length, unmet: reqRows.filter((r) => r.state === "unmet").length }
+    : null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={`${c.full_name} profile`}>
@@ -155,6 +159,22 @@ export default function CandidateDrawer({
           </div>
 
           <Section n={1} title="Why this is a fit">
+            {reqSummary && (
+              <p className={`mb-3 rounded-lg px-3 py-2 text-[12.5px] ${reqSummary.unmet > 0 || reqSummary.partial > 0 ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"}`}>
+                <span className="font-semibold">
+                  {reqSummary.met} of {reqSummary.total} requirements met
+                </span>
+                {reqSummary.partial > 0 && ` · ${reqSummary.partial} partly met`}
+                {reqSummary.unmet > 0 && ` · ${reqSummary.unmet} not met`}
+                {c.share_review?.reviewer_name && (
+                  <span className="text-slate-500">
+                    {" "}
+                    · confirmed by {c.share_review.reviewer_name}
+                    {c.share_review.reviewed_at ? ` on ${new Date(c.share_review.reviewed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}
+                  </span>
+                )}
+              </p>
+            )}
             {fit.rows.length === 0 ? (
               <p className="text-[13px] text-slate-500">This role has no filters to compare against yet.</p>
             ) : (
@@ -165,7 +185,7 @@ export default function CandidateDrawer({
                   <span />
                 </div>
                 {fit.rows.map((r) => (
-                  <div key={r.key} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_28px] items-start gap-3 border-t border-[#f1ece3] px-3.5 py-2.5">
+                  <div key={r.key} className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_28px] items-start gap-3 border-t border-[#f1ece3] px-3.5 py-2.5 ${r.state === "unmet" ? "bg-rose-50/60" : ""}`}>
                     <div>
                       <p className="text-[11px] text-slate-400">{r.label}</p>
                       <p className="text-[13px] text-slate-700">{r.asked}</p>
@@ -257,7 +277,12 @@ export default function CandidateDrawer({
             </Section>
           )}
 
-          <Section n={5} title="Confirmed by StaffAnchor">
+          <Section n={5} title="Details">
+            <p className="mb-3 text-[12px] text-slate-500">
+              {c.confirmed_on_call_at
+                ? `Confirmed by StaffAnchor on a call, ${new Date(c.confirmed_on_call_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}.`
+                : "As entered by the candidate. Your recruiter can confirm anything that matters to you."}
+            </p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3.5">
               <Fact
                 label="Notice period"
