@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import type { ClientOverview, RoleBoard } from "@/modules/client-portal/v2/types";
 
 export type ClientMandate = {
   id: string;
@@ -122,3 +123,18 @@ export async function getMandateOptionSets(): Promise<MandateOptionSets> {
   };
 }
 export { EMPTY_OPTION_SETS };
+
+export async function getClientOverview(): Promise<ClientOverview> {
+  const { data, error } = await supabase.rpc("get_my_client_overview");
+  if (error) throw new Error(error.message);
+  const d = (data ?? {}) as Partial<ClientOverview>;
+  return { mandates: d.mandates ?? [], upcoming: d.upcoming ?? [] };
+}
+
+export async function getRoleBoard(mandateId: string): Promise<RoleBoard> {
+  const { data, error } = await supabase.rpc("get_my_client_role_board", { p_mandate_id: mandateId });
+  if (error) throw new Error(error.message);
+  const d = data as RoleBoard | null;
+  if (!d?.role) throw new Error("This role could not be loaded.");
+  return { role: d.role, candidates: d.candidates ?? [] };
+}
