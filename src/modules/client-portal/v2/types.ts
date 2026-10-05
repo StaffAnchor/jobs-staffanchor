@@ -105,6 +105,8 @@ export type BoardCandidate = {
   stage_updated_at: string | null;
   shortlisted_at: string | null;
   client_feedback: string | null;
+  client_pass_reason?: string | null;
+  client_pass_note?: string | null;
   requested_interview_at: string | null;
   confirmed_interview_at: string | null;
   selling: {

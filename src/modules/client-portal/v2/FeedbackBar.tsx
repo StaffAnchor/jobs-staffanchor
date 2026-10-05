@@ -5,6 +5,7 @@ import { CalendarClock, Check, ThumbsDown, ThumbsUp, Video } from "lucide-react"
 import { toast } from "sonner";
 import type { BoardCandidate, FeedbackValue } from "./types";
 import { formatSlot } from "./ui";
+import PassReasonDialog from "./PassReasonDialog";
 
 export default function FeedbackBar({
   candidate,
@@ -13,7 +14,7 @@ export default function FeedbackBar({
   onOpenProfile,
 }: {
   candidate: BoardCandidate;
-  onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string) => Promise<void>;
+  onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string, extra?: { reason: string; note: string }) => Promise<void>;
   compact?: boolean;
   onOpenProfile?: () => void;
 }) {
@@ -23,11 +24,14 @@ export default function FeedbackBar({
   const [time, setTime] = useState("");
   const current = candidate.client_feedback;
 
-  async function send(value: FeedbackValue, at?: string) {
+  const [passing, setPassing] = useState(false);
+
+  async function send(value: FeedbackValue, at?: string, extra?: { reason: string; note: string }) {
     setBusy(true);
     try {
-      await onFeedback(candidate.link_id, value, at);
+      await onFeedback(candidate.link_id, value, at, extra);
       setScheduling(false);
+      setPassing(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save. Please try again.");
     } finally {
@@ -64,7 +68,7 @@ export default function FeedbackBar({
         <button
           type="button"
           disabled={busy}
-          onClick={() => send("not_interested")}
+          onClick={() => setPassing(true)}
           className={`${base} ${size} ${current === "not_interested" ? "bg-slate-700 text-white" : off}`}
         >
           <ThumbsDown className="h-3.5 w-3.5" /> Pass
@@ -97,6 +101,8 @@ export default function FeedbackBar({
           </button>
         </div>
       )}
+
+      {passing && <PassReasonDialog candidateName={candidate.full_name} busy={busy} onCancel={() => setPassing(false)} onConfirm={(reason, note) => send("not_interested", undefined, { reason, note })} />}
 
       {(confirmed || requested) && (
         <p className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-500">

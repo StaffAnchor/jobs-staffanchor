@@ -70,7 +70,7 @@ export default function CandidateDrawer({
   role: Role;
   c: BoardCandidate;
   onClose: () => void;
-  onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string) => Promise<void>;
+  onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string, extra?: { reason: string; note: string }) => Promise<void>;
   getResumeUrl?: (path: string) => Promise<string | null>;
 }) {
   const fit = computeFit(role, c);
