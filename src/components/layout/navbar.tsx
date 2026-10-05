@@ -62,6 +62,9 @@ export function Navbar() {
                 <Link href="/client-portal">
                   <Button variant={pathname === "/client-portal" ? "default" : "ghost"}>My Hiring</Button>
                 </Link>
+                <Link href="/client-portal/team">
+                  <Button variant={pathname.startsWith("/client-portal/team") ? "default" : "ghost"}>Team</Button>
+                </Link>
                 <Link href="/client-portal/request-mandate">
                   <Button variant={pathname.startsWith("/client-portal/request-mandate") ? "default" : "ghost"}>
                     Request a Role

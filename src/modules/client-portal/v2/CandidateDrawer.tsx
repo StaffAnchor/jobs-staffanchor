@@ -58,6 +58,7 @@ export default function CandidateDrawer({
 }) {
   const fit = computeFit(role, c);
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+  const [resumeState, setResumeState] = useState<"idle" | "loading" | "ok" | "error">(c.resume_file_url && getResumeUrl ? "loading" : "idle");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -68,7 +69,11 @@ export default function CandidateDrawer({
   useEffect(() => {
     let cancelled = false;
     if (c.resume_file_url && getResumeUrl) {
-      getResumeUrl(c.resume_file_url).then((u) => !cancelled && setResumeUrl(u));
+      getResumeUrl(c.resume_file_url).then((u) => {
+        if (cancelled) return;
+        setResumeUrl(u);
+        setResumeState(u ? "ok" : "error");
+      });
     }
     return () => {
       cancelled = true;
@@ -103,6 +108,18 @@ export default function CandidateDrawer({
             <p className="mt-0.5 text-[12px] text-slate-400">
               {[c.current_location, c.total_experience_years !== null && c.total_experience_years !== "" ? `${Number(c.total_experience_years)} yrs experience` : null].filter(Boolean).join(" · ")}
             </p>
+            {c.resume_file_url && getResumeUrl && (
+              <div className="mt-2">
+                {resumeState === "ok" && resumeUrl ? (
+                  <ResumePreview signedUrl={resumeUrl} fileName={c.resume_file_url.replace(/^resumes\//, "")} label="View resume" />
+                ) : resumeState === "error" ? (
+                  <p className="text-[12px] text-amber-700">Resume can&apos;t be opened right now. Ask your StaffAnchor recruiter to send it.</p>
+                ) : (
+                  <p className="text-[12px] text-slate-400">Loading resume…</p>
+                )}
+              </div>
+            )}
+            {!c.resume_file_url && <p className="mt-2 text-[12px] text-slate-400">No resume on file yet.</p>}
           </div>
           <FitRing fit={fit} size={56} />
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
@@ -246,11 +263,6 @@ export default function CandidateDrawer({
               <Fact label="Expected fixed CTC" value={lakhLabel(c.expected_fixed_ctc)} />
               <Fact label="Work mode" value={c.work_mode} />
             </div>
-            {c.resume_file_url && resumeUrl && (
-              <div className="mt-4">
-                <ResumePreview signedUrl={resumeUrl} fileName={c.resume_file_url.replace(/^resumes\//, "")} label="Preview resume" />
-              </div>
-            )}
           </Section>
         </div>
 

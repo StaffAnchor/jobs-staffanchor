@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CalendarClock, Plus } from "lucide-react";
+import { ArrowRight, CalendarClock, Plus, UserPlus } from "lucide-react";
 import type { ClientOverview, OverviewMandate } from "./types";
 import { LABEL, formatSlot, lakhLabel } from "./ui";
 
@@ -37,11 +37,13 @@ export default function OverviewView({
   data,
   roleHref,
   requestHref,
+  teamHref,
   banner,
 }: {
   data: ClientOverview;
   roleHref: (id: string) => string;
   requestHref?: string;
+  teamHref?: string;
   banner?: React.ReactNode;
 }) {
   const open = data.mandates.filter((m) => m.status === "open");
@@ -91,11 +93,18 @@ export default function OverviewView({
             Your hiring, <span className="font-[family-name:var(--font-fraunces)] italic text-[#d9694a]">at a glance</span>
           </h1>
         </div>
-        {requestHref && (
-          <Link href={requestHref} className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-[13px] font-medium text-white hover:bg-slate-800">
-            <Plus className="h-3.5 w-3.5" /> Request a new role
-          </Link>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {teamHref && (
+            <Link href={teamHref} className="inline-flex items-center gap-1.5 rounded-xl border border-[#e3ddd1] bg-white px-4 py-2.5 text-[13px] font-medium text-slate-700 hover:bg-[#f4efe6]">
+              <UserPlus className="h-3.5 w-3.5" /> Invite a colleague
+            </Link>
+          )}
+          {requestHref && (
+            <Link href={requestHref} className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-[13px] font-medium text-white hover:bg-slate-800">
+              <Plus className="h-3.5 w-3.5" /> Request a new role
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

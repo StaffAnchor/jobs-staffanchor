@@ -56,7 +56,22 @@ export default function ClientMandateDetailPage() {
       board={board}
       backHref="/client-portal"
       getResumeUrl={getResumeSignedUrl}
-      onFeedback={(linkId, value, at) => submitMyFeedback(linkId, value, at)}
+      onFeedback={async (linkId, value, at) => {
+        await submitMyFeedback(linkId, value, at);
+        // A proposed interview time is the one thing a recruiter must act on: email them.
+        if (value === "interview_requested") {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (session) {
+            fetch("/api/client/interview-request", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+              body: JSON.stringify({ linkId }),
+            }).catch(() => {});
+          }
+        }
+      }}
     />
   );
 }

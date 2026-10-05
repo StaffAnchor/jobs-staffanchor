@@ -83,10 +83,24 @@ export async function submitMyFeedback(linkId: string, feedback: string, intervi
 }
 
 export async function getResumeSignedUrl(resumeFileUrl: string): Promise<string | null> {
-  const cleanPath = resumeFileUrl.replace(/^resumes\//, "");
-  const { data, error } = await supabase.storage.from("resumes").createSignedUrl(cleanPath, 3600);
-  if (error) return null;
-  return data?.signedUrl ?? null;
+  // Served by our own API route: a client's database session cannot see the
+  // shortlist tables, so the access check happens server-side.
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) return null;
+  try {
+    const res = await fetch("/api/client/resume-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ path: resumeFileUrl }),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { url?: string };
+    return json.url ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // Self-service hiring-brief intake for a client who already has portal
