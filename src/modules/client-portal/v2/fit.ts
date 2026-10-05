@@ -104,20 +104,35 @@ export function computeFit(role: Role, c: BoardCandidate): Fit {
     });
   }
 
-  // AI must-have checks, when a recruiter has run them for this role
-  const ai = (list: AiCheck[] | undefined, kind: string) =>
-    (list ?? []).forEach((chk, i) =>
+  // The requirements the client set, as confirmed by their StaffAnchor recruiter. Anything not
+  // met is shown as such, with the recruiter's note, so the client decides with full information.
+  if (c.share_review?.requirements?.length) {
+    c.share_review.requirements.forEach((r, i) =>
       rows.push({
-        key: `${kind}-${i}`,
-        label: kind === "must" ? "Must-have" : "Nice to have",
-        asked: chk.requirement,
-        got: chk.status === "met" ? chk.evidence ?? "Confirmed from CV" : chk.question ?? "To confirm on the call",
-        state: chk.status === "met" ? "met" : "partial",
-        note: chk.status === "doubt" ? "To confirm on the call" : undefined,
+        key: `req-${i}`,
+        label: r.kind === "must" ? "Must-have" : "Nice to have",
+        asked: r.requirement,
+        got: r.status === "met" ? r.note || "Confirmed by your recruiter" : r.note || (r.status === "partial" ? "Partly met" : "Not met"),
+        state: r.status === "met" ? "met" : r.status === "partial" ? "partial" : "unmet",
+        note: r.status === "partial" ? "Partly met" : r.status === "not_met" ? "Not met" : undefined,
       })
     );
-  ai(c.ai_checks?.must, "must");
-  ai(c.ai_checks?.good, "good");
+  } else {
+    // Older shares with no recruiter review: fall back to the AI check, when one was run.
+    const ai = (list: AiCheck[] | undefined, kind: string) =>
+      (list ?? []).forEach((chk, i) =>
+        rows.push({
+          key: `${kind}-${i}`,
+          label: kind === "must" ? "Must-have" : "Nice to have",
+          asked: chk.requirement,
+          got: chk.status === "met" ? chk.evidence ?? "Confirmed from CV" : chk.question ?? "To confirm on the call",
+          state: chk.status === "met" ? "met" : "partial",
+          note: chk.status === "doubt" ? "To confirm on the call" : undefined,
+        })
+      );
+    ai(c.ai_checks?.must, "must");
+    ai(c.ai_checks?.good, "good");
+  }
 
   const scored = rows.filter((r) => r.state !== "unknown");
   const points = scored.reduce((s, r) => s + (r.state === "met" ? 1 : r.state === "partial" ? 0.5 : 0), 0);

@@ -129,6 +129,13 @@ export type BoardCandidate = {
   cv_certifications: string[] | null;
   career_timeline: TimelineEntry[] | null;
   ai_checks: { must: AiCheck[]; good: AiCheck[] } | null;
+  // The recruiter's own review of each requirement the client set, including any not met.
+  share_review: {
+    requirements: { requirement: string; kind: "must" | "good"; status: "met" | "partial" | "not_met"; note?: string }[];
+    reviewed_at?: string | null;
+    reviewer_name?: string | null;
+  } | null;
+  confirmed_on_call_at: string | null;
 };
 
 export type RoleBoard = { role: Role; candidates: BoardCandidate[] };
