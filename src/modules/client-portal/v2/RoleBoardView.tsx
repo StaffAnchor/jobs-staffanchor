@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, LayoutGrid, List, MapPin, Search } from "lucide-react";
+import { ArrowLeft, Download, LayoutGrid, List, MapPin, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { BoardCandidate, FeedbackValue, RoleBoard } from "./types";
 import { columnOf, computeFit, type Column } from "./fit";
 import { Chip, LABEL, lakhLabel } from "./ui";
 import CandidateCard from "./CandidateCard";
 import CandidateDrawer from "./CandidateDrawer";
+import { shortlistCsv } from "./exportSheet";
 
 const COLUMNS: { key: Column; title: string; hint: string; dot: string }[] = [
   { key: "review", title: "To review", hint: "Waiting for your decision", dot: "bg-[#e8896a]" },
@@ -31,7 +32,7 @@ export default function RoleBoardView({
   banner,
 }: {
   board: RoleBoard;
-  onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string) => Promise<void>;
+  onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string, extra?: { reason: string; note: string }) => Promise<void>;
   getResumeUrl?: (path: string) => Promise<string | null>;
   backHref: string;
   banner?: React.ReactNode;
@@ -42,7 +43,7 @@ export default function RoleBoardView({
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
-  async function handleFeedback(linkId: string, value: FeedbackValue, at?: string) {
+  async function handleFeedback(linkId: string, value: FeedbackValue, at?: string, extra?: { reason: string; note: string }) {
     const prev = cands;
     setCands((list) =>
       list.map((c) =>
@@ -51,13 +52,15 @@ export default function RoleBoardView({
           : {
               ...c,
               client_feedback: value,
+              client_pass_reason: value === "not_interested" ? extra?.reason ?? c.client_pass_reason : c.client_pass_reason,
+              client_pass_note: value === "not_interested" ? extra?.note ?? c.client_pass_note : c.client_pass_note,
               stage: value === "interview_requested" ? "client_interview" : c.stage,
               requested_interview_at: value === "interview_requested" ? at ?? c.requested_interview_at : c.requested_interview_at,
             }
       )
     );
     try {
-      await onFeedback(linkId, value, at);
+      await onFeedback(linkId, value, at, extra);
       toast.success(value === "interview_requested" ? "Interview request sent to your recruiter." : value === "interested" ? "Marked as interested." : "Marked as passed.");
     } catch (e) {
       setCands(prev);
@@ -151,6 +154,24 @@ export default function RoleBoardView({
             className="w-full rounded-xl border border-[#e3ddd1] bg-white py-2 pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-indigo-200"
           />
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            const url = `${window.location.origin}/client-portal/mandates/${role.id}`;
+            const blob = new Blob([shortlistCsv(role, cands, url)], { type: "text/csv;charset=utf-8" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `${role.role_title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "shortlist"}-shortlist.csv`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }}
+          disabled={cands.length === 0}
+          title="Opens in Excel or Google Sheets"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-[#e3ddd1] bg-white px-3 py-2 text-[12.5px] font-medium text-slate-700 hover:bg-[#f4efe6] disabled:opacity-50"
+        >
+          <Download className="h-3.5 w-3.5" /> Download spreadsheet
+        </button>
         <div className="inline-flex rounded-xl border border-[#e3ddd1] bg-white p-0.5">
           {(["board", "list"] as const).map((v) => (
             <button
@@ -163,6 +184,7 @@ export default function RoleBoardView({
               {v === "board" ? "Board" : "List"}
             </button>
           ))}
+        </div>
         </div>
       </div>
 

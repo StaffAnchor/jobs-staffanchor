@@ -82,6 +82,11 @@ export async function submitMyFeedback(linkId: string, feedback: string, intervi
   if (error) throw new Error(error.message);
 }
 
+export async function submitMyPass(linkId: string, reason: string, note?: string): Promise<void> {
+  const { error } = await supabase.rpc("submit_my_client_pass", { p_link_id: linkId, p_reason: reason, p_note: note?.trim() || null });
+  if (error) throw new Error(error.message);
+}
+
 export async function getResumeSignedUrl(resumeFileUrl: string): Promise<string | null> {
   // Served by our own API route: a client's database session cannot see the
   // shortlist tables, so the access check happens server-side.

@@ -4,6 +4,7 @@ import { MapPin } from "lucide-react";
 import type { BoardCandidate, FeedbackValue, Role } from "./types";
 import { computeFit, closedReason, columnOf } from "./fit";
 import { Chip, FitRing, initials, lakhLabel } from "./ui";
+import { passReasonLabel } from "./PassReasonDialog";
 import FeedbackBar from "./FeedbackBar";
 
 function firstSentence(s: string | null) {
@@ -21,7 +22,7 @@ export default function CandidateCard({
   role: Role;
   c: BoardCandidate;
   onOpen: () => void;
-  onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string) => Promise<void>;
+  onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string, extra?: { reason: string; note: string }) => Promise<void>;
 }) {
   const fit = computeFit(role, c);
   const col = columnOf(c);
@@ -57,6 +58,7 @@ export default function CandidateCard({
             <MapPin className="h-3 w-3" /> {c.current_location}
           </p>
         )}
+        {col === "closed" && c.client_pass_reason && <p className="mt-2 text-[12px] leading-5 text-slate-500">Passed: {passReasonLabel(c.client_pass_reason)}</p>}
         {summary && <p className="mt-2 line-clamp-2 text-[12.5px] leading-5 text-slate-600">{summary}</p>}
       </button>
 
