@@ -52,5 +52,5 @@ export default function ClientPortalPage() {
       </div>
     );
   }
-  return <OverviewView data={data} roleHref={(id) => `/client-portal/mandates/${id}`} requestHref="/client-portal/request-mandate" />;
+  return <OverviewView data={data} roleHref={(id) => `/client-portal/mandates/${id}`} requestHref="/client-portal/request-mandate" teamHref="/client-portal/team" />;
 }
