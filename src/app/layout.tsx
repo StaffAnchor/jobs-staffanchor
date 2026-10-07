@@ -3,6 +3,7 @@ import { Manrope, Space_Grotesk, Fraunces } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import GlobalWhatsApp from "@/components/GlobalWhatsApp";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -48,6 +49,7 @@ export default function RootLayout({
             <div className="flex-1">{children}</div>
             <Footer />
           </div>
+          <GlobalWhatsApp />
         </AppProviders>
       </body>
     </html>
