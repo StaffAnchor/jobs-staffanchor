@@ -28,6 +28,7 @@ import {
 } from "@/modules/jobs/api";
 import { getRecentlyViewedJobs, type RecentlyViewedJob } from "@/lib/recentlyViewed";
 import { supabase } from "@/lib/supabaseClient";
+import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import {
   createJobAlert,
   loadJobMatches,
@@ -249,6 +250,7 @@ export default function JobsPage() {
 
   return (
     <div className="bg-slate-50/70">
+      <FloatingWhatsApp source="jobs_list_floating" text="Hi StaffAnchor, I'm looking for sales roles. Could you help me find the right one?" />
       {/* ───────── Hero ───────── */}
       <section className="relative overflow-hidden bg-[#0A1630] text-white">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_70%_at_90%_0%,rgba(76,123,255,0.32),transparent_60%),radial-gradient(40%_60%_at_0%_100%,rgba(16,185,129,0.14),transparent_60%)]" />

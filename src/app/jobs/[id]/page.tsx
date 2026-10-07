@@ -11,6 +11,7 @@ import { getOpenJob, listOpenJobs, logQuickApplyClick, categoryLabel, budgetLabe
 import CandidateIntakeForm from "@/modules/apply/CandidateIntakeForm";
 import SignedInApplyCard from "@/modules/apply/SignedInApplyCard";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
+import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import EmailGate from "@/modules/apply/EmailGate";
 import JobMatchBanner from "@/modules/jobs/JobMatchBanner";
 import PriorityFloatingNudge from "@/components/priority/priority-floating-nudge";
@@ -457,6 +458,13 @@ export default function QuickApplyPage() {
         )}
       </div>
     </div>
+
+    {/* Always-visible WhatsApp button; lifted above the phone "Apply now" bar. */}
+    <FloatingWhatsApp
+      source="job_page_floating"
+      bottomClass={!(signedIn && appliedAlready) ? "bottom-24 md:bottom-6" : "bottom-6"}
+      text={`Hi StaffAnchor, I'm interested in the ${job.role_title ?? "Sales"} role${jobCities.length ? ` in ${jobCities.join(", ")}` : ""}. Could you tell me more?`}
+    />
 
     {/* Phone: the apply action stays within thumb reach while reading. */}
     {!(signedIn && appliedAlready) && (
