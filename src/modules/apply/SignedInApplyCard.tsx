@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } from "@/modules/candidate-portal/profile-score";
 import ApplicationTimeline from "./ApplicationTimeline";
+import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import PriorityApplicantCard from "@/components/priority/priority-applicant-card";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
@@ -222,6 +223,15 @@ export default function SignedInApplyCard({
             .
           </p>
           <ApplicationTimeline stage={pipelineStage} rejected={pipelineStage === "rejected"} />
+          {pipelineStage !== "rejected" && (
+            <div className="mt-6 border-t border-emerald-200/70 pt-5">
+              <p className="mb-3 text-sm text-slate-600">Want a quicker reply? Message us on WhatsApp.</p>
+              <WhatsAppChatButton
+                source="apply_success"
+                text={`Hi StaffAnchor, I'm ${candidate.full_name ?? "a candidate"}. I just applied${mandateTitle ? ` for ${mandateTitle}` : ""}. Could you update me on the next step?`}
+              />
+            </div>
+          )}
         </div>
         {/* Signed-in candidates skip ApplyForm's own confirmation screen
             entirely (this card renders instead), so its Priority Applicant

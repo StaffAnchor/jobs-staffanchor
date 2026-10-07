@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { getOpenJob, listOpenJobs, logQuickApplyClick, categoryLabel, budgetLabel, experienceLabel, timeAgo, type JobListing } from "@/modules/jobs/api";
 import CandidateIntakeForm from "@/modules/apply/CandidateIntakeForm";
 import SignedInApplyCard from "@/modules/apply/SignedInApplyCard";
+import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import EmailGate from "@/modules/apply/EmailGate";
 import JobMatchBanner from "@/modules/jobs/JobMatchBanner";
 import PriorityFloatingNudge from "@/components/priority/priority-floating-nudge";
@@ -352,6 +353,13 @@ export default function QuickApplyPage() {
                 <Zap className="h-4 w-4" /> Apply now
               </a>
             )}
+            <WhatsAppChatButton
+              source="job_page"
+              variant="outline"
+              label="Ask about this role on WhatsApp"
+              className="mt-3 w-full"
+              text={`Hi StaffAnchor, I'm interested in the ${job.role_title ?? "Sales"} role${jobCities.length ? ` in ${jobCities.join(", ")}` : ""}. Could you tell me more?`}
+            />
           </div>
 
           {/* Addresses the skepticism a candidate has right at the moment of

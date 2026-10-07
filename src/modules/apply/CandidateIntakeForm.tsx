@@ -1,5 +1,6 @@
 "use client";
 
+import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -639,6 +640,14 @@ export default function CandidateIntakeForm({
               ? `A StaffAnchor recruiter will review your profile${mandateTitle ? ` for ${mandateTitle}` : ""} and reach out.`
               : "A StaffAnchor recruiter will review your profile and reach out when a role fits."}
           </p>
+        </div>
+        <div className="mt-5 text-center">
+          <p className="mb-2 text-xs text-slate-500">Prefer a faster reply?</p>
+          <WhatsAppChatButton
+            source={mandateId ? "intake_applied" : "intake_registered"}
+            variant="outline"
+            text={`Hi StaffAnchor, I'm ${fullName.trim() || "a candidate"}. I just ${mandateId ? `applied${mandateTitle ? ` for ${mandateTitle}` : ""}` : "registered"} on jobs.staffanchor.com. Could you tell me what happens next?`}
+          />
         </div>
         {!skippedVerify ? (
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

@@ -24,6 +24,7 @@ import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion, type ApplicationAnswerPayload } from "./applicationQuestions";
 import { logQuickApplyFormOpened } from "@/modules/jobs/api";
 import PriorityApplicantCard from "@/components/priority/priority-applicant-card";
+import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import {
   computeCareerGaps,
   computeStabilityScore,
@@ -4246,6 +4247,14 @@ export default function ApplyForm({
               A StaffAnchor recruiter will review your profile and reach out if there&apos;s a mandate fit. A couple
               more optional things below boost your shortlisting odds.
             </p>
+            <div className="mt-5">
+              <p className="mb-2 text-xs text-slate-500">Prefer a faster reply?</p>
+              <WhatsAppChatButton
+                source={mandateId ? "apply_form_applied" : "apply_form_registered"}
+                variant="outline"
+                text={`Hi StaffAnchor, I'm ${values.fullName.trim() || "a candidate"}. I just ${mandateId ? `applied${mandateTitle ? ` for ${mandateTitle}` : ""}` : "registered"} on jobs.staffanchor.com. Could you tell me what happens next?`}
+              />
+            </div>
           </div>
         )}
 
