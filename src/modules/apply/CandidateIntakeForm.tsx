@@ -1,5 +1,6 @@
 "use client";
 
+import { indianMobileFromInput } from "@/lib/phone";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -316,7 +317,7 @@ export default function CandidateIntakeForm({
         extractionRef.current = fields;
         // Only ever fill blanks -- never overwrite something already typed.
         setFullName((prev) => prev || fields.full_name || "");
-        setPhone((prev) => prev || (fields.phone ? fields.phone.replace(/\D/g, "").slice(-10) : ""));
+        setPhone((prev) => prev || (fields.phone ? indianMobileFromInput(fields.phone) : ""));
         setTotalExperienceYears(
           (prev) =>
             prev ||
@@ -354,7 +355,7 @@ export default function CandidateIntakeForm({
     if (id === 0) {
       if (!resumeFile && !hasExistingResume) return "Please upload your resume.";
       if (!fullName.trim()) return "Please enter your full name.";
-      if (phone.replace(/\D/g, "").length !== 10) return "Please enter a valid 10-digit phone number.";
+      if (indianMobileFromInput(phone).length !== 10) return "Please enter a valid 10-digit phone number.";
       if (!cityChoice) return "Please select your current city.";
       if (cityChoice === "Other" && !customCity.trim()) return "Please enter your city.";
     }
@@ -436,7 +437,7 @@ export default function CandidateIntakeForm({
     const checks: boolean[] = [
       !!(resumeFile || hasExistingResume),
       !!fullName.trim(),
-      phone.length === 10,
+      indianMobileFromInput(phone).length === 10,
       !!cityChoice,
       !!category,
       isSalesCategory(category) ? soldNow.length > 0 : !!practice,
@@ -477,7 +478,7 @@ export default function CandidateIntakeForm({
       const payload: Record<string, unknown> = {
         full_name: fullName.trim(),
         email: email.trim(),
-        phone: phone.trim(),
+        phone: indianMobileFromInput(phone),
         current_location: state ? `${city}, ${state}` : city,
         resume_file_url: resumePath,
         category,
@@ -801,7 +802,8 @@ export default function CandidateIntakeForm({
                     inputMode="numeric"
                     autoComplete="tel-national"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 13))}
+                    onBlur={() => setPhone((p) => indianMobileFromInput(p))}
                     placeholder="10-digit number"
                     className="si-phone"
                   />
