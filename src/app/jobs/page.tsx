@@ -594,6 +594,8 @@ export default function JobsPage() {
                 <div className="flex gap-3">
                   <Link
                     href={`/jobs/${selected.id}#apply-form`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
                   >
                     {matches.get(selected.id)?.applied ? "View application" : "Apply now"}
