@@ -844,7 +844,7 @@ export default function JobsPage() {
                   </button>
                 </div>
                 <Link href={`/jobs/${selected.id}`} className="flex items-center justify-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline">
-                  View full details <ArrowRight className="h-4 w-4" />
+                  View full job description <ArrowRight className="h-4 w-4" />
                 </Link>
                 <p className="flex items-center justify-center gap-1.5 border-t border-slate-100 pt-4 text-xs text-slate-500">
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Verified mandate, a StaffAnchor recruiter will get back to you
