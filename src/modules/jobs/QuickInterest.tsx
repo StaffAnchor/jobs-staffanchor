@@ -15,11 +15,13 @@ export default function QuickInterest({
   jobId,
   roleTitle,
   client,
+  pipeline = false,
   onClose,
 }: {
   jobId: string;
   roleTitle: string;
   client: string | null;
+  pipeline?: boolean;
   onClose: () => void;
 }) {
   const [name, setName] = useState("");
@@ -98,8 +100,9 @@ export default function QuickInterest({
             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
             <p className="text-lg font-extrabold text-slate-900">You&apos;re on the list.</p>
             <p className="text-sm leading-6 text-slate-600">
-              A StaffAnchor recruiter will call or message you about this role. Adding a few more details now makes the call faster and the
-              shortlist more likely.
+              {pipeline
+                ? "This is a pipeline role: we are building a shortlist for companies hiring in this space. A StaffAnchor recruiter will contact you when a matching role opens. Adding a few more details now puts you ahead in that shortlist."
+                : "A StaffAnchor recruiter will call or message you about this role. Adding a few more details now makes the call faster and the shortlist more likely."}
             </p>
             <Link
               href={`/jobs/${jobId}#apply-form`}

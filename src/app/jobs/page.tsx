@@ -102,6 +102,10 @@ function shareLink(job: JobListing) {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
 
+function isPipeline(job: { listing_kind?: string | null }) {
+  return job.listing_kind === "pipeline";
+}
+
 function isFresh(createdAt: string) {
   return new Date().getTime() - new Date(createdAt).getTime() < 3 * 86_400_000;
 }
@@ -273,14 +277,15 @@ export default function JobsPage() {
   }, [jobs, industry, location, experienceBand, payBand, workMode, posted, search, savedOnly, matchesOnly, saved, matches]);
 
   const ordered = useMemo(() => {
-    if (sortBy === "pay") return [...filtered].sort((a, b) => (b.budget_max ?? b.budget_min ?? 0) - (a.budget_max ?? a.budget_min ?? 0));
-    if (sortBy === "experience") return [...filtered].sort((a, b) => (b.experience_max ?? b.experience_min ?? 0) - (a.experience_max ?? a.experience_min ?? 0));
-    if (sortBy !== "match" || matches.size === 0) return filtered;
-    return [...filtered].sort((a, b) => (matches.get(b.id)?.score ?? 0) - (matches.get(a.id)?.score ?? 0));
+    const liveFirst = (list: JobListing[]) => [...list.filter((j) => !isPipeline(j)), ...list.filter(isPipeline)];
+    if (sortBy === "pay") return liveFirst([...filtered].sort((a, b) => (b.budget_max ?? b.budget_min ?? 0) - (a.budget_max ?? a.budget_min ?? 0)));
+    if (sortBy === "experience") return liveFirst([...filtered].sort((a, b) => (b.experience_max ?? b.experience_min ?? 0) - (a.experience_max ?? a.experience_min ?? 0)));
+    if (sortBy !== "match" || matches.size === 0) return liveFirst(filtered);
+    return liveFirst([...filtered].sort((a, b) => (matches.get(b.id)?.score ?? 0) - (matches.get(a.id)?.score ?? 0)));
   }, [filtered, sortBy, matches]);
 
   const stats = useMemo(() => {
-    const list = jobs ?? [];
+    const list = (jobs ?? []).filter((j) => !isPipeline(j));
     const cities = new Set(list.flatMap(jobCitiesOf));
     const top = list.reduce((m, j) => Math.max(m, j.budget_max ?? j.budget_min ?? 0), 0);
     return { roles: list.length, cities: cities.size, top };
@@ -616,7 +621,12 @@ export default function JobsPage() {
                           )}
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
-                          {isFresh(job.created_at) && !m?.applied && (
+                          {isPipeline(job) && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 ring-1 ring-indigo-200">
+                              Pipeline role
+                            </span>
+                          )}
+                          {isFresh(job.created_at) && !isPipeline(job) && !m?.applied && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200">
                               <Flame className="h-3 w-3" /> New
                             </span>
@@ -785,6 +795,12 @@ export default function JobsPage() {
                   ) : null;
                 })()}
 
+                {isPipeline(selected) && (
+                  <p className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3.5 text-[13px] leading-6 text-indigo-900">
+                    <span className="font-bold">Pipeline role.</span> We are building a shortlist for companies hiring in this space. Apply and a
+                    recruiter will contact you when a matching role opens.
+                  </p>
+                )}
                 <p className="text-[13.5px] leading-6 text-slate-600">{summaryOf(selected)}</p>
 
                 <div className="space-y-3">
@@ -855,7 +871,7 @@ export default function JobsPage() {
         </div>
       </div>
       {interestFor && (
-        <QuickInterest jobId={interestFor.id} roleTitle={interestFor.role_title ?? "Open role"} client={interestFor.client_display ?? null} onClose={() => setInterestFor(null)} />
+        <QuickInterest pipeline={isPipeline(interestFor)} jobId={interestFor.id} roleTitle={interestFor.role_title ?? "Open role"} client={interestFor.client_display ?? null} onClose={() => setInterestFor(null)} />
       )}
     </div>
   );
