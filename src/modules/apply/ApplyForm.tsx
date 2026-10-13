@@ -1,5 +1,6 @@
 "use client";
 
+import { indianMobileFromInput } from "@/lib/phone";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -2753,7 +2754,7 @@ export default function ApplyForm({
                   inputMode="numeric"
                   maxLength={10}
                   value={values.phone}
-                  onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  onChange={(e) => update("phone", indianMobileFromInput(e.target.value))}
                 />
               </FormField>
               {/* Consented WhatsApp channel -- profile-completion nudges,

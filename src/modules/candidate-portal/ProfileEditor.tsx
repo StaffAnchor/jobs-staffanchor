@@ -1,5 +1,6 @@
 "use client";
 
+import { indianMobileFromInput } from "@/lib/phone";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Circle, LogOut, MapPin, Upload } from "lucide-react";
@@ -571,7 +572,7 @@ export default function ProfileEditor({
               <FormField label="Phone" required>
                 <Input
                   value={profile.phone ?? ""}
-                  onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  onChange={(e) => set("phone", indianMobileFromInput(e.target.value))}
                   inputMode="numeric"
                 />
               </FormField>
