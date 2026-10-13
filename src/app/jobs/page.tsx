@@ -11,6 +11,7 @@ import {
   Building2,
   Clock,
   Flame,
+  FileText,
   ShieldCheck,
   Share2,
   Zap,
@@ -786,41 +787,60 @@ export default function JobsPage() {
 
                 <p className="text-[13.5px] leading-6 text-slate-600">{summaryOf(selected)}</p>
 
-                {!matches.get(selected.id)?.applied && (
-                  <button
-                    type="button"
-                    onClick={() => setInterestFor(selected)}
-                    className="group/quick flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
-                  >
-                    <Zap className="h-4 w-4" /> Express interest · 30 seconds
-                  </button>
-                )}
-                <div className="flex gap-3">
+                <div className="space-y-3">
+                  {!matches.get(selected.id)?.applied && (
+                    <button
+                      type="button"
+                      onClick={() => setInterestFor(selected)}
+                      className="group/quick flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3.5 text-left text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                        <Zap className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[15px] font-extrabold leading-tight">Express interest</span>
+                        <span className="block text-[12.5px] font-medium text-blue-100">30 seconds, no CV needed</span>
+                      </span>
+                      <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/quick:translate-x-0.5" />
+                    </button>
+                  )}
                   <Link
                     href={`/jobs/${selected.id}#apply-form`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group/apply flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-800 transition hover:border-blue-300 hover:text-blue-700"
+                    className="group/apply relative flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-600/35"
                   >
-                    {matches.get(selected.id)?.applied ? "View application" : "Full application"}
-                    <ArrowRight className="h-4 w-4 transition group-hover/apply:translate-x-0.5" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                      <FileText className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] font-extrabold leading-tight">
+                        {matches.get(selected.id)?.applied ? "View application" : "Full application"}
+                      </span>
+                      <span className="block text-[12.5px] font-medium text-emerald-50">
+                        {matches.get(selected.id)?.applied ? "See where it stands" : "The preferred way to get a recruiter's attention"}
+                      </span>
+                    </span>
+                    <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/apply:translate-x-0.5" />
                   </Link>
+                </div>
+                <div className="flex gap-3">
                   <a
                     href={shareLink(selected)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label="Share this role on WhatsApp"
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600"
+                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
                   >
-                    <Share2 className="h-5 w-5" />
+                    <Share2 className="h-4 w-4" /> Share
                   </a>
                   <button
                     type="button"
                     onClick={(e) => handleToggleSave(e, selected.id)}
                     aria-label={saved.has(selected.id) ? "Remove from saved roles" : "Save this role"}
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
                   >
-                    <Heart className={`h-5 w-5 ${saved.has(selected.id) ? "fill-rose-500 text-rose-500" : ""}`} />
+                    <Heart className={`h-4 w-4 ${saved.has(selected.id) ? "fill-rose-500 text-rose-500" : ""}`} />
+                    {saved.has(selected.id) ? "Saved" : "Save"}
                   </button>
                 </div>
                 <Link href={`/jobs/${selected.id}`} className="flex items-center justify-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline">
