@@ -27,6 +27,7 @@ export type JobListing = {
   selling_style?: string | null;
   // 'pipeline' = a role StaffAnchor shortlists for, not a specific live vacancy.
   listing_kind?: string | null;
+  short_code?: string | null;
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -72,6 +73,11 @@ export function timeAgo(iso: string) {
   return `Posted ${months} month${months === 1 ? "" : "s"} ago`;
 }
 
+/** The short address for a role, falling back to the long one. */
+export function jobPath(job: { id: string; short_code?: string | null }): string {
+  return job.short_code ? `/j/${job.short_code}` : `/jobs/${job.id}`;
+}
+
 export async function listOpenJobs(): Promise<JobListing[]> {
   const { data, error } = await supabase.rpc("get_open_job_listings");
   if (error) throw new Error(error.message);
@@ -106,15 +112,17 @@ async function logQuickApplyEvent(mandateId: string, eventType: "click" | "form_
       if (ownProfile) return; // signed in as staff -- don't count this event
     }
     const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const fromLinkedInLink = typeof window !== "undefined" && window.location.pathname.startsWith("/l/");
     await fetch("/api/log-click", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mandateId,
         eventType,
-        utmSource: params?.get("utm_source") ?? undefined,
-        utmMedium: params?.get("utm_medium") ?? undefined,
-        utmCampaign: params?.get("utm_campaign") ?? undefined,
+        // /l/<code> is the short link used on LinkedIn posts, so it carries its own source.
+        utmSource: params?.get("utm_source") ?? (fromLinkedInLink ? "linkedin" : undefined),
+        utmMedium: params?.get("utm_medium") ?? (fromLinkedInLink ? "social" : undefined),
+        utmCampaign: params?.get("utm_campaign") ?? (fromLinkedInLink ? "pipeline" : undefined),
       }),
       keepalive: true,
     });

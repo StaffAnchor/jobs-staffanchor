@@ -33,6 +33,7 @@ import {
   budgetLabel,
   experienceLabel,
   salesFacts,
+  jobPath,
   timeAgo,
   type JobListing,
 } from "@/modules/jobs/api";
@@ -97,7 +98,7 @@ function initials(title: string | null) {
 }
 
 function shareLink(job: JobListing) {
-  const url = `https://jobs.staffanchor.com/jobs/${job.id}`;
+  const url = `https://jobs.staffanchor.com${jobPath(job)}`;
   const text = `${job.role_title ?? "A sales role"}${job.client_display ? ` — ${job.client_display}` : ""}. Take a look: ${url}`;
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
@@ -587,7 +588,7 @@ export default function JobsPage() {
               return (
                 <Link
                   key={job.id}
-                  href={`/jobs/${job.id}`}
+                  href={jobPath(job)}
                   onClick={(e) => handleCardClick(e, job.id)}
                   style={{ animationDelay: `${Math.min(ordered.indexOf(job), 8) * 55}ms` }}
                   className={`jobs-rise group relative block overflow-hidden rounded-3xl border bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-6 ${
@@ -821,7 +822,7 @@ export default function JobsPage() {
                     </button>
                   )}
                   <Link
-                    href={`/jobs/${selected.id}#apply-form`}
+                    href={`${jobPath(selected)}#apply-form`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group/apply relative flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-600/35"
@@ -859,7 +860,7 @@ export default function JobsPage() {
                     {saved.has(selected.id) ? "Saved" : "Save"}
                   </button>
                 </div>
-                <Link href={`/jobs/${selected.id}`} className="flex items-center justify-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline">
+                <Link href={jobPath(selected)} className="flex items-center justify-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline">
                   View full job description <ArrowRight className="h-4 w-4" />
                 </Link>
                 <p className="flex items-center justify-center gap-1.5 border-t border-slate-100 pt-4 text-xs text-slate-500">
