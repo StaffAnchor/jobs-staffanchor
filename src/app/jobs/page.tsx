@@ -285,6 +285,10 @@ export default function JobsPage() {
     return liveFirst([...filtered].sort((a, b) => (matches.get(b.id)?.score ?? 0) - (matches.get(a.id)?.score ?? 0)));
   }, [filtered, sortBy, matches]);
 
+  const liveCount = ordered.filter((j) => !isPipeline(j)).length;
+  const pipelineCount = ordered.length - liveCount;
+  const sectioned = pipelineCount > 0;
+
   const stats = useMemo(() => {
     const list = (jobs ?? []).filter((j) => !isPipeline(j));
     const cities = new Set(list.flatMap(jobCitiesOf));
@@ -578,7 +582,8 @@ export default function JobsPage() {
           {/* ───────── List ───────── */}
           <div className="min-w-0 space-y-4">
             {jobs === null && !error && [0, 1, 2, 3].map((i) => <div key={i} className="h-36 animate-pulse rounded-3xl bg-slate-100" />)}
-            {ordered.map((job) => {
+            {ordered.map((job, idx) => {
+              const kindHeader = sectioned && (idx === 0 || isPipeline(ordered[idx - 1]) !== isPipeline(job));
               const exp = experienceLabel(job.experience_min, job.experience_max);
               const cities = jobCitiesOf(job);
               const subDomains = subDomainsOf(job);
@@ -586,8 +591,23 @@ export default function JobsPage() {
               const tier = m && !m.applied ? matchTier(m.score) : null;
               const isSelected = selected?.id === job.id;
               return (
+                <div key={job.id} className="space-y-4">
+                {kindHeader && (
+                  <div className={idx === 0 ? "" : "pt-4"}>
+                    <h2 className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-slate-950">
+                      {isPipeline(job) ? "Pipeline roles" : "Live jobs"}
+                      <span className="rounded-full bg-slate-200/70 px-2.5 py-0.5 text-xs font-bold text-slate-600">
+                        {isPipeline(job) ? pipelineCount : liveCount}
+                      </span>
+                    </h2>
+                    <p className="mt-0.5 text-[13px] text-slate-500">
+                      {isPipeline(job)
+                        ? "Roles we regularly place into. Apply and we'll shortlist you for companies hiring in this space."
+                        : "Open now with a hiring company. Apply and a recruiter will get back to you."}
+                    </p>
+                  </div>
+                )}
                 <Link
-                  key={job.id}
                   href={jobPath(job)}
                   onClick={(e) => handleCardClick(e, job.id)}
                   style={{ animationDelay: `${Math.min(ordered.indexOf(job), 8) * 55}ms` }}
@@ -722,6 +742,7 @@ export default function JobsPage() {
                     </div>
                   </div>
                 </Link>
+                </div>
               );
             })}
           </div>
