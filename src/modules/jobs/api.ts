@@ -25,6 +25,8 @@ export type JobListing = {
   deal_size_band?: string | null;
   deal_size_currency?: string | null;
   selling_style?: string | null;
+  // 'pipeline' = a role StaffAnchor shortlists for, not a specific live vacancy.
+  listing_kind?: string | null;
 };
 
 const CATEGORY_LABEL: Record<string, string> = {

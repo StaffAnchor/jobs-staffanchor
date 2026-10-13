@@ -231,6 +231,12 @@ export default function QuickApplyPage() {
               {job.role_title ?? "Sales Role"}
             </h1>
             {job.client_display && <p className="mt-2 text-base text-blue-100/90">{job.client_display}</p>}
+            {job.listing_kind === "pipeline" && (
+              <p className="mt-3 max-w-xl rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm leading-6 text-blue-50">
+                <span className="font-bold">Pipeline role.</span> We are building a shortlist for companies hiring in this space. Apply and a
+                recruiter will contact you when a matching role opens.
+              </p>
+            )}
           </div>
           <div className="shrink-0">
             {signedIn && appliedAlready ? (
