@@ -8,6 +8,10 @@ import {
   ArrowRight,
   BellPlus,
   Briefcase,
+  Building2,
+  Clock,
+  Flame,
+  ShieldCheck,
   Check,
   Heart,
   History,
@@ -85,6 +89,10 @@ const MONOGRAM_GRADIENT: Record<string, string> = {
 function initials(title: string | null) {
   const words = (title ?? "Sales").split(/\s+/).filter(Boolean);
   return ((words[0]?.[0] ?? "S") + (words[1]?.[0] ?? "")).toUpperCase();
+}
+
+function isFresh(createdAt: string) {
+  return new Date().getTime() - new Date(createdAt).getTime() < 3 * 86_400_000;
 }
 
 function jobCitiesOf(job: JobListing) {
@@ -258,6 +266,13 @@ export default function JobsPage() {
     return [...filtered].sort((a, b) => (matches.get(b.id)?.score ?? 0) - (matches.get(a.id)?.score ?? 0));
   }, [filtered, sortBy, matches]);
 
+  const stats = useMemo(() => {
+    const list = jobs ?? [];
+    const cities = new Set(list.flatMap(jobCitiesOf));
+    const top = list.reduce((m, j) => Math.max(m, j.budget_max ?? j.budget_min ?? 0), 0);
+    return { roles: list.length, cities: cities.size, top };
+  }, [jobs]);
+
   const selected = ordered.find((j) => j.id === selectedId) ?? ordered[0] ?? null;
   const hasFilters = industry || location || experienceBand || payBand || workMode || posted || search;
 
@@ -285,7 +300,9 @@ export default function JobsPage() {
       <FloatingWhatsApp source="jobs_list_floating" text="Hi StaffAnchor, I'm looking for sales roles. Could you help me find the right one?" />
       {/* ───────── Hero ───────── */}
       <section className="relative overflow-hidden bg-[#0A1630] text-white">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_70%_at_90%_0%,rgba(76,123,255,0.32),transparent_60%),radial-gradient(40%_60%_at_0%_100%,rgba(16,185,129,0.14),transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_70%_at_90%_0%,rgba(76,123,255,0.38),transparent_60%),radial-gradient(40%_60%_at_0%_100%,rgba(16,185,129,0.18),transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:radial-gradient(#fff_1px,transparent_1px)] [background-size:26px_26px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+        <div className="jobs-drift pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#4C7BFF]/25 blur-3xl" />
         <div className="relative mx-auto max-w-6xl px-4 pb-10 pt-12 sm:px-6 md:pt-16 lg:px-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-blue-100">
             <Sparkles className="h-3.5 w-3.5 text-amber-300" /> StaffAnchor careers
@@ -298,7 +315,28 @@ export default function JobsPage() {
             Verified mandates from companies hiring right now, with role context included, not a pile of unread resumes.
           </p>
 
-          <div className="mt-8 flex max-w-3xl gap-2 rounded-2xl border border-white/15 bg-white p-2 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)]">
+          {stats.roles > 0 && (
+            <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
+              <div>
+                <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-none">{stats.roles}</p>
+                <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-200/70">Live roles</p>
+              </div>
+              {stats.cities > 0 && (
+                <div>
+                  <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-none">{stats.cities}</p>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-200/70">Cities</p>
+                </div>
+              )}
+              {stats.top > 0 && (
+                <div>
+                  <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-none text-emerald-300">₹{stats.top}L</p>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-200/70">Top pay on offer</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-8 flex max-w-3xl gap-2 rounded-2xl border border-white/20 bg-white p-2 shadow-[0_30px_80px_-24px_rgba(76,123,255,0.65)] ring-4 ring-white/10 transition focus-within:ring-[#8FB0FF]/40">
             <div className="flex flex-1 items-center gap-3 px-3">
               <Search className="h-5 w-5 shrink-0 text-slate-400" />
               <input
@@ -519,10 +557,17 @@ export default function JobsPage() {
                   key={job.id}
                   href={`/jobs/${job.id}`}
                   onClick={(e) => handleCardClick(e, job.id)}
-                  className={`group relative block rounded-3xl border bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-6 ${
+                  style={{ animationDelay: `${Math.min(ordered.indexOf(job), 8) * 55}ms` }}
+                  className={`jobs-rise group relative block overflow-hidden rounded-3xl border bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-6 ${
                     isSelected ? "border-blue-500 ring-2 ring-blue-500/15 lg:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)]" : "border-slate-200 hover:border-blue-200"
                   }`}
                 >
+                  <span
+                    aria-hidden
+                    className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b opacity-0 transition group-hover:opacity-100 ${isSelected ? "opacity-100" : ""} ${
+                      MONOGRAM_GRADIENT[job.category ?? ""]?.split(" shadow")[0] ?? "from-slate-600 to-slate-800"
+                    }`}
+                  />
                   <div className="flex gap-4">
                     <span
                       className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-base font-extrabold text-white shadow-md ${
@@ -537,9 +582,18 @@ export default function JobsPage() {
                           <h2 className="text-[17px] font-extrabold leading-snug tracking-tight text-slate-950 group-hover:text-blue-700">
                             {job.role_title ?? "Open role"}
                           </h2>
-                          {job.client_display && <p className="mt-0.5 text-sm text-slate-500">{job.client_display}</p>}
+                          {job.client_display && (
+                            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500">
+                              <Building2 className="h-3.5 w-3.5 text-slate-400" /> {job.client_display}
+                            </p>
+                          )}
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
+                          {isFresh(job.created_at) && !m?.applied && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200">
+                              <Flame className="h-3 w-3" /> New
+                            </span>
+                          )}
                           {m?.applied ? (
                             <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">Applied</span>
                           ) : tier ? (
@@ -568,8 +622,8 @@ export default function JobsPage() {
                         )}
                         {exp && <span>{exp}</span>}
                         {job.budget_min || job.budget_max ? (
-                          <span className="flex items-center gap-1">
-                            <IndianRupee className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 font-bold text-emerald-700 ring-1 ring-emerald-200">
+                            <IndianRupee className="h-3.5 w-3.5" />
                             {budgetLabel(job.budget_min, job.budget_max).replace("₹", "")}
                           </span>
                         ) : (
@@ -578,14 +632,14 @@ export default function JobsPage() {
                       </div>
 
                       {salesFacts(job).length > 0 && (
-                        <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-slate-600">
+                        <div className="mt-3 flex flex-wrap gap-2">
                           {salesFacts(job).map((f) => (
-                            <span key={f.label}>
-                              <span className="text-slate-400">{f.label}: </span>
-                              <span className="font-medium text-slate-800">{f.value}</span>
+                            <span key={f.label} className="inline-flex items-baseline gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-[12px] ring-1 ring-slate-100">
+                              <span className="text-slate-400">{f.label}</span>
+                              <span className="font-semibold text-slate-800">{f.value}</span>
                             </span>
                           ))}
-                        </p>
+                        </div>
                       )}
 
                       {tier && m && m.reasons.length > 0 && (
@@ -621,6 +675,17 @@ export default function JobsPage() {
                 </p>
                 <h2 className="mt-2 text-2xl font-extrabold leading-tight tracking-tight">{selected.role_title ?? "Open role"}</h2>
                 {selected.client_display && <p className="mt-1 text-sm text-blue-100/90">{selected.client_display}</p>}
+                <div className="mt-5 flex items-end justify-between gap-3 border-t border-white/10 pt-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-200/70">Fixed pay</p>
+                    <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-tight text-emerald-300">
+                      {selected.budget_min || selected.budget_max ? budgetLabel(selected.budget_min, selected.budget_max) : "On request"}
+                    </p>
+                  </div>
+                  <p className="flex items-center gap-1.5 pb-1 text-xs font-medium text-blue-100/80">
+                    <Clock className="h-3.5 w-3.5" /> {timeAgo(selected.created_at)}
+                  </p>
+                </div>
               </div>
               <div className="space-y-5 p-6">
                 <dl className="grid grid-cols-2 gap-3 text-[13px]">
@@ -677,9 +742,10 @@ export default function JobsPage() {
                     href={`/jobs/${selected.id}#apply-form`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
+                    className="group/apply flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
                   >
                     {matches.get(selected.id)?.applied ? "View application" : "Apply now"}
+                    <ArrowRight className="h-4 w-4 transition group-hover/apply:translate-x-0.5" />
                   </Link>
                   <button
                     type="button"
@@ -693,6 +759,9 @@ export default function JobsPage() {
                 <Link href={`/jobs/${selected.id}`} className="flex items-center justify-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline">
                   View full details <ArrowRight className="h-4 w-4" />
                 </Link>
+                <p className="flex items-center justify-center gap-1.5 border-t border-slate-100 pt-4 text-xs text-slate-500">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Verified mandate, a StaffAnchor recruiter will get back to you
+                </p>
               </div>
             </aside>
           )}
