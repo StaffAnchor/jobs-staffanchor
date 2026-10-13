@@ -8,6 +8,13 @@ import {
   ArrowRight,
   BellPlus,
   Briefcase,
+  Building2,
+  Clock,
+  Flame,
+  ShieldCheck,
+  Share2,
+  Zap,
+  SlidersHorizontal,
   Check,
   Heart,
   History,
@@ -18,11 +25,13 @@ import {
   X,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import QuickInterest from "@/modules/jobs/QuickInterest";
 import {
   listOpenJobs,
   categoryLabel,
   budgetLabel,
   experienceLabel,
+  salesFacts,
   timeAgo,
   type JobListing,
 } from "@/modules/jobs/api";
@@ -49,6 +58,19 @@ const EXPERIENCE_BANDS: { label: string; min: number; max: number }[] = [
   { label: "20+ Yrs", min: 20, max: 999 },
 ];
 
+const PAY_BANDS: { label: string; min: number }[] = [
+  { label: "₹10L and above", min: 10 },
+  { label: "₹15L and above", min: 15 },
+  { label: "₹20L and above", min: 20 },
+  { label: "₹30L and above", min: 30 },
+  { label: "₹50L and above", min: 50 },
+];
+
+const POSTED_WINDOWS: { label: string; days: number }[] = [
+  { label: "Last 7 days", days: 7 },
+  { label: "Last 30 days", days: 30 },
+];
+
 const CATEGORY_TABS: { value: string; label: string }[] = [
   { value: "", label: "All roles" },
   { value: "b2b_sales", label: "B2B Sales" },
@@ -73,6 +95,16 @@ function initials(title: string | null) {
   return ((words[0]?.[0] ?? "S") + (words[1]?.[0] ?? "")).toUpperCase();
 }
 
+function shareLink(job: JobListing) {
+  const url = `https://jobs.staffanchor.com/jobs/${job.id}`;
+  const text = `${job.role_title ?? "A sales role"}${job.client_display ? ` — ${job.client_display}` : ""}. Take a look: ${url}`;
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+function isFresh(createdAt: string) {
+  return new Date().getTime() - new Date(createdAt).getTime() < 3 * 86_400_000;
+}
+
 function jobCitiesOf(job: JobListing) {
   return job.cities?.length ? job.cities : job.city ? [job.city] : [];
 }
@@ -95,15 +127,20 @@ export default function JobsPage() {
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [matchesOnly, setMatchesOnly] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<"newest" | "match">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "match" | "pay" | "experience">("newest");
   const [alertBusy, setAlertBusy] = useState(false);
   const [jobs, setJobs] = useState<JobListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [interestFor, setInterestFor] = useState<JobListing | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   const [industry, setIndustry] = useState("");
   const [location, setLocation] = useState("");
   const [experienceBand, setExperienceBand] = useState("");
+  const [payBand, setPayBand] = useState("");
+  const [workMode, setWorkMode] = useState("");
+  const [posted, setPosted] = useState("");
   const [search, setSearch] = useState("");
   const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedJob[]>([]);
 
@@ -189,6 +226,11 @@ export default function JobsPage() {
     return Array.from(new Set(all)).sort();
   }, [jobs]);
 
+  const workModes = useMemo(() => {
+    const all = (jobs ?? []).map((j) => j.work_mode).filter((v): v is string => !!v);
+    return Array.from(new Set(all)).sort();
+  }, [jobs]);
+
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { "": jobs?.length ?? 0 };
     for (const j of jobs ?? []) counts[j.category ?? ""] = (counts[j.category ?? ""] ?? 0) + 1;
@@ -215,6 +257,11 @@ export default function JobsPage() {
           .toLowerCase();
         if (!haystack.includes(q)) return false;
       }
+      const pay = PAY_BANDS.find((b) => b.label === payBand);
+      if (pay && (job.budget_max ?? job.budget_min ?? 0) < pay.min) return false;
+      if (workMode && job.work_mode !== workMode) return false;
+      const win = POSTED_WINDOWS.find((w) => w.label === posted);
+      if (win && new Date().getTime() - new Date(job.created_at).getTime() > win.days * 86_400_000) return false;
       if (savedOnly && !saved.has(job.id)) return false;
       if (matchesOnly) {
         const m = matches.get(job.id);
@@ -222,20 +269,33 @@ export default function JobsPage() {
       }
       return true;
     });
-  }, [jobs, industry, location, experienceBand, search, savedOnly, matchesOnly, saved, matches]);
+  }, [jobs, industry, location, experienceBand, payBand, workMode, posted, search, savedOnly, matchesOnly, saved, matches]);
 
   const ordered = useMemo(() => {
+    if (sortBy === "pay") return [...filtered].sort((a, b) => (b.budget_max ?? b.budget_min ?? 0) - (a.budget_max ?? a.budget_min ?? 0));
+    if (sortBy === "experience") return [...filtered].sort((a, b) => (b.experience_max ?? b.experience_min ?? 0) - (a.experience_max ?? a.experience_min ?? 0));
     if (sortBy !== "match" || matches.size === 0) return filtered;
     return [...filtered].sort((a, b) => (matches.get(b.id)?.score ?? 0) - (matches.get(a.id)?.score ?? 0));
   }, [filtered, sortBy, matches]);
 
+  const stats = useMemo(() => {
+    const list = jobs ?? [];
+    const cities = new Set(list.flatMap(jobCitiesOf));
+    const top = list.reduce((m, j) => Math.max(m, j.budget_max ?? j.budget_min ?? 0), 0);
+    return { roles: list.length, cities: cities.size, top };
+  }, [jobs]);
+
   const selected = ordered.find((j) => j.id === selectedId) ?? ordered[0] ?? null;
-  const hasFilters = industry || location || experienceBand || search;
+  const activeFilterCount = [location, experienceBand, payBand, workMode, posted].filter(Boolean).length;
+  const hasFilters = industry || location || experienceBand || payBand || workMode || posted || search;
 
   function clearFilters() {
     setIndustry("");
     setLocation("");
     setExperienceBand("");
+    setPayBand("");
+    setWorkMode("");
+    setPosted("");
     setSearch("");
   }
 
@@ -250,10 +310,12 @@ export default function JobsPage() {
 
   return (
     <div className="bg-slate-50/70">
-      <FloatingWhatsApp source="jobs_list_floating" text="Hi StaffAnchor, I'm looking for sales roles. Could you help me find the right one?" />
+      <FloatingWhatsApp compact source="jobs_list_floating" text="Hi StaffAnchor, I'm looking for sales roles. Could you help me find the right one?" />
       {/* ───────── Hero ───────── */}
       <section className="relative overflow-hidden bg-[#0A1630] text-white">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_70%_at_90%_0%,rgba(76,123,255,0.32),transparent_60%),radial-gradient(40%_60%_at_0%_100%,rgba(16,185,129,0.14),transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_70%_at_90%_0%,rgba(76,123,255,0.38),transparent_60%),radial-gradient(40%_60%_at_0%_100%,rgba(16,185,129,0.18),transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:radial-gradient(#fff_1px,transparent_1px)] [background-size:26px_26px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+        <div className="jobs-drift pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#4C7BFF]/25 blur-3xl" />
         <div className="relative mx-auto max-w-6xl px-4 pb-10 pt-12 sm:px-6 md:pt-16 lg:px-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-blue-100">
             <Sparkles className="h-3.5 w-3.5 text-amber-300" /> StaffAnchor careers
@@ -266,7 +328,28 @@ export default function JobsPage() {
             Verified mandates from companies hiring right now, with role context included, not a pile of unread resumes.
           </p>
 
-          <div className="mt-8 flex max-w-3xl gap-2 rounded-2xl border border-white/15 bg-white p-2 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)]">
+          {stats.roles > 0 && (
+            <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
+              <div>
+                <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-none">{stats.roles}</p>
+                <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-200/70">Live roles</p>
+              </div>
+              {stats.cities > 0 && (
+                <div>
+                  <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-none">{stats.cities}</p>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-200/70">Cities</p>
+                </div>
+              )}
+              {stats.top > 0 && (
+                <div>
+                  <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-none text-emerald-300">₹{stats.top}L</p>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-200/70">Top pay on offer</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-8 flex max-w-3xl gap-2 rounded-2xl border border-white/20 bg-white p-2 shadow-[0_30px_80px_-24px_rgba(76,123,255,0.65)] ring-4 ring-white/10 transition focus-within:ring-[#8FB0FF]/40">
             <div className="flex flex-1 items-center gap-3 px-3">
               <Search className="h-5 w-5 shrink-0 text-slate-400" />
               <input
@@ -304,6 +387,19 @@ export default function JobsPage() {
               );
             })}
             <span className="mx-1 hidden h-6 w-px bg-white/15 sm:block" />
+            <button
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              aria-expanded={showFilters}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                showFilters || activeFilterCount > 0 ? "border-[#8FB0FF] bg-[#8FB0FF]/15 text-white" : "border-white/20 bg-white/5 text-blue-100 hover:bg-white/15"
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" /> Filters
+              {activeFilterCount > 0 && <span className="rounded-full bg-white px-1.5 text-[11px] font-bold text-slate-900">{activeFilterCount}</span>}
+            </button>
+          </div>
+          <div className={`mt-3 flex-wrap items-center gap-2 ${showFilters ? "flex" : "hidden"}`}>
             <Select
               value={location}
               onChange={(e) => setLocation(e.target.value)}
@@ -327,6 +423,32 @@ export default function JobsPage() {
               {EXPERIENCE_BANDS.map((b) => (
                 <option key={b.label} value={b.label}>
                   {b.label}
+                </option>
+              ))}
+            </Select>
+            <Select value={payBand} onChange={(e) => setPayBand(e.target.value)} aria-label="Pay" className="h-10 w-44 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900">
+              <option value="">Any pay</option>
+              {PAY_BANDS.map((b) => (
+                <option key={b.label} value={b.label}>
+                  {b.label}
+                </option>
+              ))}
+            </Select>
+            {workModes.length > 0 && (
+              <Select value={workMode} onChange={(e) => setWorkMode(e.target.value)} aria-label="Work mode" className="h-10 w-40 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900">
+                <option value="">Any work mode</option>
+                {workModes.map((w) => (
+                  <option key={w} value={w}>
+                    {w}
+                  </option>
+                ))}
+              </Select>
+            )}
+            <Select value={posted} onChange={(e) => setPosted(e.target.value)} aria-label="Posted" className="h-10 w-40 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900">
+              <option value="">Posted any time</option>
+              {POSTED_WINDOWS.map((w) => (
+                <option key={w.label} value={w.label}>
+                  {w.label}
                 </option>
               ))}
             </Select>
@@ -390,17 +512,19 @@ export default function JobsPage() {
               >
                 <Heart className="h-3.5 w-3.5" /> Saved{saved.size > 0 ? ` (${saved.size})` : ""}
               </button>
-              <Select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as "newest" | "match")}
-                aria-label="Sort roles"
-                className="h-9 w-40 rounded-full border-slate-200 bg-white text-[13px] focus-visible:ring-blue-500"
-              >
-                <option value="newest">Newest first</option>
-                <option value="match">Best match first</option>
-              </Select>
             </>
           )}
+          <Select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "newest" | "match" | "pay" | "experience")}
+            aria-label="Sort roles"
+            className="h-9 w-44 rounded-full border-slate-200 bg-white text-[13px] focus-visible:ring-blue-500"
+          >
+            <option value="newest">Newest first</option>
+            <option value="pay">Highest pay first</option>
+            <option value="experience">Most senior first</option>
+            {signedIn && matches.size > 0 && <option value="match">Best match first</option>}
+          </Select>
           <button
             onClick={handleCreateAlert}
             disabled={alertBusy}
@@ -459,10 +583,17 @@ export default function JobsPage() {
                   key={job.id}
                   href={`/jobs/${job.id}`}
                   onClick={(e) => handleCardClick(e, job.id)}
-                  className={`group relative block rounded-3xl border bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-6 ${
+                  style={{ animationDelay: `${Math.min(ordered.indexOf(job), 8) * 55}ms` }}
+                  className={`jobs-rise group relative block overflow-hidden rounded-3xl border bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-6 ${
                     isSelected ? "border-blue-500 ring-2 ring-blue-500/15 lg:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)]" : "border-slate-200 hover:border-blue-200"
                   }`}
                 >
+                  <span
+                    aria-hidden
+                    className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b opacity-0 transition group-hover:opacity-100 ${isSelected ? "opacity-100" : ""} ${
+                      MONOGRAM_GRADIENT[job.category ?? ""]?.split(" shadow")[0] ?? "from-slate-600 to-slate-800"
+                    }`}
+                  />
                   <div className="flex gap-4">
                     <span
                       className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-base font-extrabold text-white shadow-md ${
@@ -477,9 +608,18 @@ export default function JobsPage() {
                           <h2 className="text-[17px] font-extrabold leading-snug tracking-tight text-slate-950 group-hover:text-blue-700">
                             {job.role_title ?? "Open role"}
                           </h2>
-                          {job.client_display && <p className="mt-0.5 text-sm text-slate-500">{job.client_display}</p>}
+                          {job.client_display && (
+                            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500">
+                              <Building2 className="h-3.5 w-3.5 text-slate-400" /> {job.client_display}
+                            </p>
+                          )}
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
+                          {isFresh(job.created_at) && !m?.applied && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200">
+                              <Flame className="h-3 w-3" /> New
+                            </span>
+                          )}
                           {m?.applied ? (
                             <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">Applied</span>
                           ) : tier ? (
@@ -487,6 +627,16 @@ export default function JobsPage() {
                               {MATCH_TIER_LABEL[tier]} · {m!.score}%
                             </span>
                           ) : null}
+                          <a
+                            href={shareLink(job)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Share this role on WhatsApp"
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600"
+                          >
+                            <Share2 className="h-[18px] w-[18px]" />
+                          </a>
                           <button
                             type="button"
                             onClick={(e) => handleToggleSave(e, job.id)}
@@ -508,14 +658,25 @@ export default function JobsPage() {
                         )}
                         {exp && <span>{exp}</span>}
                         {job.budget_min || job.budget_max ? (
-                          <span className="flex items-center gap-1">
-                            <IndianRupee className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 font-bold text-emerald-700 ring-1 ring-emerald-200">
+                            <IndianRupee className="h-3.5 w-3.5" />
                             {budgetLabel(job.budget_min, job.budget_max).replace("₹", "")}
                           </span>
                         ) : (
                           <span className="text-slate-400">Pay on request</span>
                         )}
                       </div>
+
+                      {salesFacts(job).length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {salesFacts(job).map((f) => (
+                            <span key={f.label} className="inline-flex items-baseline gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-[12px] ring-1 ring-slate-100">
+                              <span className="text-slate-400">{f.label}</span>
+                              <span className="font-semibold text-slate-800">{f.value}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
                       {tier && m && m.reasons.length > 0 && (
                         <p className="mt-2.5 text-[12.5px] font-medium text-emerald-700">{m.reasons.slice(0, 2).join(" · ")}</p>
@@ -532,6 +693,19 @@ export default function JobsPage() {
                         ))}
                         {subDomains.length > 2 && <span className="text-[11px] font-medium text-slate-400">+{subDomains.length - 2}</span>}
                         <span className="ml-auto text-[11px] font-medium text-slate-400">{timeAgo(job.created_at)}</span>
+                        {!m?.applied && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setInterestFor(job);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1 text-[12px] font-bold text-white transition hover:bg-blue-700 lg:hidden"
+                          >
+                            <Zap className="h-3 w-3" /> Express interest
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -550,6 +724,17 @@ export default function JobsPage() {
                 </p>
                 <h2 className="mt-2 text-2xl font-extrabold leading-tight tracking-tight">{selected.role_title ?? "Open role"}</h2>
                 {selected.client_display && <p className="mt-1 text-sm text-blue-100/90">{selected.client_display}</p>}
+                <div className="mt-5 flex items-end justify-between gap-3 border-t border-white/10 pt-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-200/70">Fixed pay</p>
+                    <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-tight text-emerald-300">
+                      {selected.budget_min || selected.budget_max ? budgetLabel(selected.budget_min, selected.budget_max) : "On request"}
+                    </p>
+                  </div>
+                  <p className="flex items-center gap-1.5 pb-1 text-xs font-medium text-blue-100/80">
+                    <Clock className="h-3.5 w-3.5" /> {timeAgo(selected.created_at)}
+                  </p>
+                </div>
               </div>
               <div className="space-y-5 p-6">
                 <dl className="grid grid-cols-2 gap-3 text-[13px]">
@@ -557,13 +742,23 @@ export default function JobsPage() {
                     <dt className="text-xs text-slate-400">Location</dt>
                     <dd className="mt-0.5 font-semibold text-slate-800">{jobCitiesOf(selected).slice(0, 2).join(", ") || "—"}</dd>
                   </div>
-                  <div className="rounded-2xl bg-slate-50 p-3.5">
-                    <dt className="text-xs text-slate-400">Experience</dt>
-                    <dd className="mt-0.5 font-semibold text-slate-800">{experienceLabel(selected.experience_min, selected.experience_max) ?? "—"}</dd>
-                  </div>
+                  {experienceLabel(selected.experience_min, selected.experience_max) && (
+                    <div className="rounded-2xl bg-slate-50 p-3.5">
+                      <dt className="text-xs text-slate-400">Experience</dt>
+                      <dd className="mt-0.5 font-semibold text-slate-800">{experienceLabel(selected.experience_min, selected.experience_max)}</dd>
+                    </div>
+                  )}
+                  {salesFacts(selected).map((f) => (
+                    <div key={f.label} className="rounded-2xl bg-slate-50 p-3.5">
+                      <dt className="text-xs text-slate-400">{f.label}</dt>
+                      <dd className="mt-0.5 font-semibold text-slate-800">{f.value}</dd>
+                    </div>
+                  ))}
                   <div className="col-span-2 rounded-2xl bg-slate-50 p-3.5">
                     <dt className="text-xs text-slate-400">Compensation</dt>
-                    <dd className="mt-0.5 font-semibold text-slate-800">{budgetLabel(selected.budget_min, selected.budget_max)}</dd>
+                    <dd className="mt-0.5 font-semibold text-slate-800">
+                      {selected.budget_min || selected.budget_max ? budgetLabel(selected.budget_min, selected.budget_max) : "Shared on the first call"}
+                    </dd>
                   </div>
                 </dl>
 
@@ -591,13 +786,34 @@ export default function JobsPage() {
 
                 <p className="text-[13.5px] leading-6 text-slate-600">{summaryOf(selected)}</p>
 
+                {!matches.get(selected.id)?.applied && (
+                  <button
+                    type="button"
+                    onClick={() => setInterestFor(selected)}
+                    className="group/quick flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
+                  >
+                    <Zap className="h-4 w-4" /> Express interest · 30 seconds
+                  </button>
+                )}
                 <div className="flex gap-3">
                   <Link
                     href={`/jobs/${selected.id}#apply-form`}
-                    className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group/apply flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-800 transition hover:border-blue-300 hover:text-blue-700"
                   >
-                    {matches.get(selected.id)?.applied ? "View application" : "Apply now"}
+                    {matches.get(selected.id)?.applied ? "View application" : "Full application"}
+                    <ArrowRight className="h-4 w-4 transition group-hover/apply:translate-x-0.5" />
                   </Link>
+                  <a
+                    href={shareLink(selected)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Share this role on WhatsApp"
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600"
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </a>
                   <button
                     type="button"
                     onClick={(e) => handleToggleSave(e, selected.id)}
@@ -610,11 +826,17 @@ export default function JobsPage() {
                 <Link href={`/jobs/${selected.id}`} className="flex items-center justify-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline">
                   View full details <ArrowRight className="h-4 w-4" />
                 </Link>
+                <p className="flex items-center justify-center gap-1.5 border-t border-slate-100 pt-4 text-xs text-slate-500">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Verified mandate, a StaffAnchor recruiter will get back to you
+                </p>
               </div>
             </aside>
           )}
         </div>
       </div>
+      {interestFor && (
+        <QuickInterest jobId={interestFor.id} roleTitle={interestFor.role_title ?? "Open role"} client={interestFor.client_display ?? null} onClose={() => setInterestFor(null)} />
+      )}
     </div>
   );
 }

@@ -19,6 +19,12 @@ export type JobListing = {
   jd_candidate_profile: string | null;
   jd_compensation_benefits: string | null;
   created_at: string;
+  // How the role sells. Optional because older rows and recruiters may not have filled them in.
+  work_mode?: string | null;
+  sales_cycle?: string | null;
+  deal_size_band?: string | null;
+  deal_size_currency?: string | null;
+  selling_style?: string | null;
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -42,6 +48,16 @@ export function experienceLabel(min: number | null, max: number | null) {
   if (min == null && max == null) return null;
   if (min != null && max != null && min !== max) return `${min}-${max} yrs`;
   return `${min ?? max} yrs`;
+}
+
+/** The sales facts a seller cares about, in the order they read best. Empty ones are left out. */
+export function salesFacts(job: JobListing): { label: string; value: string }[] {
+  const out: { label: string; value: string }[] = [];
+  if (job.deal_size_band) out.push({ label: "Deal size", value: job.deal_size_band.replace(/^</, "Under ").replace(/\+$/, " and above") });
+  if (job.sales_cycle) out.push({ label: "Sales cycle", value: job.sales_cycle });
+  if (job.selling_style) out.push({ label: "Selling style", value: job.selling_style });
+  if (job.work_mode) out.push({ label: "Work mode", value: job.work_mode });
+  return out;
 }
 
 export function timeAgo(iso: string) {

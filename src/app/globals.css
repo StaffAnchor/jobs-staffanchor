@@ -53,3 +53,17 @@ body {
   .animate-float, .animate-float-slow { animation: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
 }
+
+@keyframes jobs-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes jobs-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(0, -14px, 0) scale(1.06); }
+}
+.jobs-rise { animation: jobs-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.jobs-drift { animation: jobs-drift 9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .jobs-rise, .jobs-drift { animation: none; }
+}
