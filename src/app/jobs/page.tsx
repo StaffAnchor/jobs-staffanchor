@@ -23,6 +23,7 @@ import {
   categoryLabel,
   budgetLabel,
   experienceLabel,
+  salesFacts,
   timeAgo,
   type JobListing,
 } from "@/modules/jobs/api";
@@ -47,6 +48,19 @@ const EXPERIENCE_BANDS: { label: string; min: number; max: number }[] = [
   { label: "10-15 Yrs", min: 10, max: 15 },
   { label: "15-20 Yrs", min: 15, max: 20 },
   { label: "20+ Yrs", min: 20, max: 999 },
+];
+
+const PAY_BANDS: { label: string; min: number }[] = [
+  { label: "₹10L and above", min: 10 },
+  { label: "₹15L and above", min: 15 },
+  { label: "₹20L and above", min: 20 },
+  { label: "₹30L and above", min: 30 },
+  { label: "₹50L and above", min: 50 },
+];
+
+const POSTED_WINDOWS: { label: string; days: number }[] = [
+  { label: "Last 7 days", days: 7 },
+  { label: "Last 30 days", days: 30 },
 ];
 
 const CATEGORY_TABS: { value: string; label: string }[] = [
@@ -95,7 +109,7 @@ export default function JobsPage() {
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [matchesOnly, setMatchesOnly] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<"newest" | "match">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "match" | "pay" | "experience">("newest");
   const [alertBusy, setAlertBusy] = useState(false);
   const [jobs, setJobs] = useState<JobListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +118,9 @@ export default function JobsPage() {
   const [industry, setIndustry] = useState("");
   const [location, setLocation] = useState("");
   const [experienceBand, setExperienceBand] = useState("");
+  const [payBand, setPayBand] = useState("");
+  const [workMode, setWorkMode] = useState("");
+  const [posted, setPosted] = useState("");
   const [search, setSearch] = useState("");
   const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedJob[]>([]);
 
@@ -189,6 +206,11 @@ export default function JobsPage() {
     return Array.from(new Set(all)).sort();
   }, [jobs]);
 
+  const workModes = useMemo(() => {
+    const all = (jobs ?? []).map((j) => j.work_mode).filter((v): v is string => !!v);
+    return Array.from(new Set(all)).sort();
+  }, [jobs]);
+
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { "": jobs?.length ?? 0 };
     for (const j of jobs ?? []) counts[j.category ?? ""] = (counts[j.category ?? ""] ?? 0) + 1;
@@ -215,6 +237,11 @@ export default function JobsPage() {
           .toLowerCase();
         if (!haystack.includes(q)) return false;
       }
+      const pay = PAY_BANDS.find((b) => b.label === payBand);
+      if (pay && (job.budget_max ?? job.budget_min ?? 0) < pay.min) return false;
+      if (workMode && job.work_mode !== workMode) return false;
+      const win = POSTED_WINDOWS.find((w) => w.label === posted);
+      if (win && new Date().getTime() - new Date(job.created_at).getTime() > win.days * 86_400_000) return false;
       if (savedOnly && !saved.has(job.id)) return false;
       if (matchesOnly) {
         const m = matches.get(job.id);
@@ -222,20 +249,25 @@ export default function JobsPage() {
       }
       return true;
     });
-  }, [jobs, industry, location, experienceBand, search, savedOnly, matchesOnly, saved, matches]);
+  }, [jobs, industry, location, experienceBand, payBand, workMode, posted, search, savedOnly, matchesOnly, saved, matches]);
 
   const ordered = useMemo(() => {
+    if (sortBy === "pay") return [...filtered].sort((a, b) => (b.budget_max ?? b.budget_min ?? 0) - (a.budget_max ?? a.budget_min ?? 0));
+    if (sortBy === "experience") return [...filtered].sort((a, b) => (b.experience_max ?? b.experience_min ?? 0) - (a.experience_max ?? a.experience_min ?? 0));
     if (sortBy !== "match" || matches.size === 0) return filtered;
     return [...filtered].sort((a, b) => (matches.get(b.id)?.score ?? 0) - (matches.get(a.id)?.score ?? 0));
   }, [filtered, sortBy, matches]);
 
   const selected = ordered.find((j) => j.id === selectedId) ?? ordered[0] ?? null;
-  const hasFilters = industry || location || experienceBand || search;
+  const hasFilters = industry || location || experienceBand || payBand || workMode || posted || search;
 
   function clearFilters() {
     setIndustry("");
     setLocation("");
     setExperienceBand("");
+    setPayBand("");
+    setWorkMode("");
+    setPosted("");
     setSearch("");
   }
 
@@ -330,6 +362,32 @@ export default function JobsPage() {
                 </option>
               ))}
             </Select>
+            <Select value={payBand} onChange={(e) => setPayBand(e.target.value)} aria-label="Pay" className="h-10 w-44 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900">
+              <option value="">Any pay</option>
+              {PAY_BANDS.map((b) => (
+                <option key={b.label} value={b.label}>
+                  {b.label}
+                </option>
+              ))}
+            </Select>
+            {workModes.length > 0 && (
+              <Select value={workMode} onChange={(e) => setWorkMode(e.target.value)} aria-label="Work mode" className="h-10 w-40 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900">
+                <option value="">Any work mode</option>
+                {workModes.map((w) => (
+                  <option key={w} value={w}>
+                    {w}
+                  </option>
+                ))}
+              </Select>
+            )}
+            <Select value={posted} onChange={(e) => setPosted(e.target.value)} aria-label="Posted" className="h-10 w-40 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900">
+              <option value="">Posted any time</option>
+              {POSTED_WINDOWS.map((w) => (
+                <option key={w.label} value={w.label}>
+                  {w.label}
+                </option>
+              ))}
+            </Select>
           </div>
         </div>
       </section>
@@ -390,17 +448,19 @@ export default function JobsPage() {
               >
                 <Heart className="h-3.5 w-3.5" /> Saved{saved.size > 0 ? ` (${saved.size})` : ""}
               </button>
-              <Select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as "newest" | "match")}
-                aria-label="Sort roles"
-                className="h-9 w-40 rounded-full border-slate-200 bg-white text-[13px] focus-visible:ring-blue-500"
-              >
-                <option value="newest">Newest first</option>
-                <option value="match">Best match first</option>
-              </Select>
             </>
           )}
+          <Select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "newest" | "match" | "pay" | "experience")}
+            aria-label="Sort roles"
+            className="h-9 w-44 rounded-full border-slate-200 bg-white text-[13px] focus-visible:ring-blue-500"
+          >
+            <option value="newest">Newest first</option>
+            <option value="pay">Highest pay first</option>
+            <option value="experience">Most senior first</option>
+            {signedIn && matches.size > 0 && <option value="match">Best match first</option>}
+          </Select>
           <button
             onClick={handleCreateAlert}
             disabled={alertBusy}
@@ -517,6 +577,17 @@ export default function JobsPage() {
                         )}
                       </div>
 
+                      {salesFacts(job).length > 0 && (
+                        <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-slate-600">
+                          {salesFacts(job).map((f) => (
+                            <span key={f.label}>
+                              <span className="text-slate-400">{f.label}: </span>
+                              <span className="font-medium text-slate-800">{f.value}</span>
+                            </span>
+                          ))}
+                        </p>
+                      )}
+
                       {tier && m && m.reasons.length > 0 && (
                         <p className="mt-2.5 text-[12.5px] font-medium text-emerald-700">{m.reasons.slice(0, 2).join(" · ")}</p>
                       )}
@@ -557,13 +628,23 @@ export default function JobsPage() {
                     <dt className="text-xs text-slate-400">Location</dt>
                     <dd className="mt-0.5 font-semibold text-slate-800">{jobCitiesOf(selected).slice(0, 2).join(", ") || "—"}</dd>
                   </div>
-                  <div className="rounded-2xl bg-slate-50 p-3.5">
-                    <dt className="text-xs text-slate-400">Experience</dt>
-                    <dd className="mt-0.5 font-semibold text-slate-800">{experienceLabel(selected.experience_min, selected.experience_max) ?? "—"}</dd>
-                  </div>
+                  {experienceLabel(selected.experience_min, selected.experience_max) && (
+                    <div className="rounded-2xl bg-slate-50 p-3.5">
+                      <dt className="text-xs text-slate-400">Experience</dt>
+                      <dd className="mt-0.5 font-semibold text-slate-800">{experienceLabel(selected.experience_min, selected.experience_max)}</dd>
+                    </div>
+                  )}
+                  {salesFacts(selected).map((f) => (
+                    <div key={f.label} className="rounded-2xl bg-slate-50 p-3.5">
+                      <dt className="text-xs text-slate-400">{f.label}</dt>
+                      <dd className="mt-0.5 font-semibold text-slate-800">{f.value}</dd>
+                    </div>
+                  ))}
                   <div className="col-span-2 rounded-2xl bg-slate-50 p-3.5">
                     <dt className="text-xs text-slate-400">Compensation</dt>
-                    <dd className="mt-0.5 font-semibold text-slate-800">{budgetLabel(selected.budget_min, selected.budget_max)}</dd>
+                    <dd className="mt-0.5 font-semibold text-slate-800">
+                      {selected.budget_min || selected.budget_max ? budgetLabel(selected.budget_min, selected.budget_max) : "Shared on the first call"}
+                    </dd>
                   </div>
                 </dl>
 
