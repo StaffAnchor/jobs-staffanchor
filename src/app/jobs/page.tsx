@@ -12,6 +12,9 @@ import {
   Clock,
   Flame,
   ShieldCheck,
+  Share2,
+  Zap,
+  SlidersHorizontal,
   Check,
   Heart,
   History,
@@ -22,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import QuickInterest from "@/modules/jobs/QuickInterest";
 import {
   listOpenJobs,
   categoryLabel,
@@ -91,6 +95,12 @@ function initials(title: string | null) {
   return ((words[0]?.[0] ?? "S") + (words[1]?.[0] ?? "")).toUpperCase();
 }
 
+function shareLink(job: JobListing) {
+  const url = `https://jobs.staffanchor.com/jobs/${job.id}`;
+  const text = `${job.role_title ?? "A sales role"}${job.client_display ? ` — ${job.client_display}` : ""}. Take a look: ${url}`;
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
 function isFresh(createdAt: string) {
   return new Date().getTime() - new Date(createdAt).getTime() < 3 * 86_400_000;
 }
@@ -122,6 +132,8 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<JobListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [interestFor, setInterestFor] = useState<JobListing | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   const [industry, setIndustry] = useState("");
   const [location, setLocation] = useState("");
@@ -274,6 +286,7 @@ export default function JobsPage() {
   }, [jobs]);
 
   const selected = ordered.find((j) => j.id === selectedId) ?? ordered[0] ?? null;
+  const activeFilterCount = [location, experienceBand, payBand, workMode, posted].filter(Boolean).length;
   const hasFilters = industry || location || experienceBand || payBand || workMode || posted || search;
 
   function clearFilters() {
@@ -297,7 +310,7 @@ export default function JobsPage() {
 
   return (
     <div className="bg-slate-50/70">
-      <FloatingWhatsApp source="jobs_list_floating" text="Hi StaffAnchor, I'm looking for sales roles. Could you help me find the right one?" />
+      <FloatingWhatsApp compact source="jobs_list_floating" text="Hi StaffAnchor, I'm looking for sales roles. Could you help me find the right one?" />
       {/* ───────── Hero ───────── */}
       <section className="relative overflow-hidden bg-[#0A1630] text-white">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_70%_at_90%_0%,rgba(76,123,255,0.38),transparent_60%),radial-gradient(40%_60%_at_0%_100%,rgba(16,185,129,0.18),transparent_60%)]" />
@@ -374,6 +387,19 @@ export default function JobsPage() {
               );
             })}
             <span className="mx-1 hidden h-6 w-px bg-white/15 sm:block" />
+            <button
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              aria-expanded={showFilters}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                showFilters || activeFilterCount > 0 ? "border-[#8FB0FF] bg-[#8FB0FF]/15 text-white" : "border-white/20 bg-white/5 text-blue-100 hover:bg-white/15"
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" /> Filters
+              {activeFilterCount > 0 && <span className="rounded-full bg-white px-1.5 text-[11px] font-bold text-slate-900">{activeFilterCount}</span>}
+            </button>
+          </div>
+          <div className={`mt-3 flex-wrap items-center gap-2 ${showFilters ? "flex" : "hidden"}`}>
             <Select
               value={location}
               onChange={(e) => setLocation(e.target.value)}
@@ -601,6 +627,16 @@ export default function JobsPage() {
                               {MATCH_TIER_LABEL[tier]} · {m!.score}%
                             </span>
                           ) : null}
+                          <a
+                            href={shareLink(job)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Share this role on WhatsApp"
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600"
+                          >
+                            <Share2 className="h-[18px] w-[18px]" />
+                          </a>
                           <button
                             type="button"
                             onClick={(e) => handleToggleSave(e, job.id)}
@@ -657,6 +693,19 @@ export default function JobsPage() {
                         ))}
                         {subDomains.length > 2 && <span className="text-[11px] font-medium text-slate-400">+{subDomains.length - 2}</span>}
                         <span className="ml-auto text-[11px] font-medium text-slate-400">{timeAgo(job.created_at)}</span>
+                        {!m?.applied && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setInterestFor(job);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1 text-[12px] font-bold text-white transition hover:bg-blue-700 lg:hidden"
+                          >
+                            <Zap className="h-3 w-3" /> Express interest
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -737,16 +786,34 @@ export default function JobsPage() {
 
                 <p className="text-[13.5px] leading-6 text-slate-600">{summaryOf(selected)}</p>
 
+                {!matches.get(selected.id)?.applied && (
+                  <button
+                    type="button"
+                    onClick={() => setInterestFor(selected)}
+                    className="group/quick flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
+                  >
+                    <Zap className="h-4 w-4" /> Express interest · 30 seconds
+                  </button>
+                )}
                 <div className="flex gap-3">
                   <Link
                     href={`/jobs/${selected.id}#apply-form`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group/apply flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
+                    className="group/apply flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-800 transition hover:border-blue-300 hover:text-blue-700"
                   >
-                    {matches.get(selected.id)?.applied ? "View application" : "Apply now"}
+                    {matches.get(selected.id)?.applied ? "View application" : "Full application"}
                     <ArrowRight className="h-4 w-4 transition group-hover/apply:translate-x-0.5" />
                   </Link>
+                  <a
+                    href={shareLink(selected)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Share this role on WhatsApp"
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600"
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </a>
                   <button
                     type="button"
                     onClick={(e) => handleToggleSave(e, selected.id)}
@@ -767,6 +834,9 @@ export default function JobsPage() {
           )}
         </div>
       </div>
+      {interestFor && (
+        <QuickInterest jobId={interestFor.id} roleTitle={interestFor.role_title ?? "Open role"} client={interestFor.client_display ?? null} onClose={() => setInterestFor(null)} />
+      )}
     </div>
   );
 }

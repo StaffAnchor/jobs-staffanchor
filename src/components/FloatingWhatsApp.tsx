@@ -11,10 +11,13 @@ export default function FloatingWhatsApp({
   text,
   source,
   bottomClass = "bottom-5",
+  compact = false,
 }: {
   text: string;
   source: string;
   bottomClass?: string;
+  /** Icon only, so it never sits over page content. */
+  compact?: boolean;
 }) {
   return (
     <a
@@ -29,10 +32,10 @@ export default function FloatingWhatsApp({
           // analytics must never block opening the chat
         }
       }}
-      className={`fixed right-4 z-40 flex h-14 items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 text-sm font-bold text-white shadow-xl shadow-emerald-900/25 transition hover:bg-[#1fb857] sm:px-5 ${bottomClass}`}
+      className={`fixed right-4 z-40 flex h-14 items-center justify-center gap-2 rounded-full bg-[#25D366] text-sm font-bold text-white shadow-xl shadow-emerald-900/25 transition hover:bg-[#1fb857] ${compact ? "w-14" : "px-4 sm:px-5"} ${bottomClass}`}
     >
       <MessageCircle className="h-6 w-6" />
-      <span className="hidden sm:inline">Chat with a recruiter</span>
+      {!compact && <span className="hidden sm:inline">Chat with a recruiter</span>}
     </a>
   );
 }
