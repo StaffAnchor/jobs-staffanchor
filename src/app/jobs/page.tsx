@@ -33,6 +33,7 @@ import {
   budgetLabel,
   experienceLabel,
   salesFacts,
+  jobPath,
   timeAgo,
   type JobListing,
 } from "@/modules/jobs/api";
@@ -97,7 +98,7 @@ function initials(title: string | null) {
 }
 
 function shareLink(job: JobListing) {
-  const url = `https://jobs.staffanchor.com/jobs/${job.id}`;
+  const url = `https://jobs.staffanchor.com${jobPath(job)}`;
   const text = `${job.role_title ?? "A sales role"}${job.client_display ? ` — ${job.client_display}` : ""}. Take a look: ${url}`;
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
@@ -283,6 +284,10 @@ export default function JobsPage() {
     if (sortBy !== "match" || matches.size === 0) return liveFirst(filtered);
     return liveFirst([...filtered].sort((a, b) => (matches.get(b.id)?.score ?? 0) - (matches.get(a.id)?.score ?? 0)));
   }, [filtered, sortBy, matches]);
+
+  const liveCount = ordered.filter((j) => !isPipeline(j)).length;
+  const pipelineCount = ordered.length - liveCount;
+  const sectioned = pipelineCount > 0;
 
   const stats = useMemo(() => {
     const list = (jobs ?? []).filter((j) => !isPipeline(j));
@@ -577,7 +582,8 @@ export default function JobsPage() {
           {/* ───────── List ───────── */}
           <div className="min-w-0 space-y-4">
             {jobs === null && !error && [0, 1, 2, 3].map((i) => <div key={i} className="h-36 animate-pulse rounded-3xl bg-slate-100" />)}
-            {ordered.map((job) => {
+            {ordered.map((job, idx) => {
+              const kindHeader = sectioned && (idx === 0 || isPipeline(ordered[idx - 1]) !== isPipeline(job));
               const exp = experienceLabel(job.experience_min, job.experience_max);
               const cities = jobCitiesOf(job);
               const subDomains = subDomainsOf(job);
@@ -585,9 +591,24 @@ export default function JobsPage() {
               const tier = m && !m.applied ? matchTier(m.score) : null;
               const isSelected = selected?.id === job.id;
               return (
+                <div key={job.id} className="space-y-4">
+                {kindHeader && (
+                  <div className={idx === 0 ? "" : "pt-4"}>
+                    <h2 className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-slate-950">
+                      {isPipeline(job) ? "Pipeline roles" : "Live jobs"}
+                      <span className="rounded-full bg-slate-200/70 px-2.5 py-0.5 text-xs font-bold text-slate-600">
+                        {isPipeline(job) ? pipelineCount : liveCount}
+                      </span>
+                    </h2>
+                    <p className="mt-0.5 text-[13px] text-slate-500">
+                      {isPipeline(job)
+                        ? "Roles we regularly place into. Apply and we'll shortlist you for companies hiring in this space."
+                        : "Open now with a hiring company. Apply and a recruiter will get back to you."}
+                    </p>
+                  </div>
+                )}
                 <Link
-                  key={job.id}
-                  href={`/jobs/${job.id}`}
+                  href={jobPath(job)}
                   onClick={(e) => handleCardClick(e, job.id)}
                   style={{ animationDelay: `${Math.min(ordered.indexOf(job), 8) * 55}ms` }}
                   className={`jobs-rise group relative block overflow-hidden rounded-3xl border bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-6 ${
@@ -721,6 +742,7 @@ export default function JobsPage() {
                     </div>
                   </div>
                 </Link>
+                </div>
               );
             })}
           </div>
@@ -821,7 +843,7 @@ export default function JobsPage() {
                     </button>
                   )}
                   <Link
-                    href={`/jobs/${selected.id}#apply-form`}
+                    href={`${jobPath(selected)}#apply-form`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group/apply relative flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-600/35"
@@ -859,7 +881,7 @@ export default function JobsPage() {
                     {saved.has(selected.id) ? "Saved" : "Save"}
                   </button>
                 </div>
-                <Link href={`/jobs/${selected.id}`} className="flex items-center justify-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline">
+                <Link href={jobPath(selected)} className="flex items-center justify-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline">
                   View full job description <ArrowRight className="h-4 w-4" />
                 </Link>
                 <p className="flex items-center justify-center gap-1.5 border-t border-slate-100 pt-4 text-xs text-slate-500">
