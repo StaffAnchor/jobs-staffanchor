@@ -738,7 +738,7 @@ export default function JobsPage() {
                           e.stopPropagation();
                           window.open(`${jobPath(job)}#apply-form`, "_blank", "noopener,noreferrer");
                         }}
-                        className="flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-[15px] font-extrabold text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98]"
+                        className="flex h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 text-[14px] font-extrabold text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98]"
                       >
                         {m?.applied ? "View application" : "Apply"} <ArrowRight className="h-4 w-4" />
                       </button>
@@ -750,7 +750,7 @@ export default function JobsPage() {
                             e.stopPropagation();
                             setInterestFor(job);
                           }}
-                          className="flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-[15px] font-extrabold text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98]"
+                          className="flex h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 text-[14px] font-extrabold text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98]"
                         >
                           <Zap className="h-4 w-4" /> Express interest
                         </button>
