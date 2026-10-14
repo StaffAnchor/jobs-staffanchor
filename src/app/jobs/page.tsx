@@ -725,6 +725,21 @@ export default function JobsPage() {
                         ))}
                         {subDomains.length > 2 && <span className="text-[11px] font-medium text-slate-400">+{subDomains.length - 2}</span>}
                         <span className="ml-auto text-[11px] font-medium text-slate-400">{timeAgo(job.created_at)}</span>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-2.5 lg:hidden">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.open(`${jobPath(job)}#apply-form`, "_blank", "noopener,noreferrer");
+                          }}
+                          className="flex h-11 flex-col items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/25"
+                        >
+                          <span className="text-[13.5px] font-extrabold leading-tight">{m?.applied ? "View application" : "Apply"}</span>
+                          <span className="text-[10.5px] font-medium leading-tight text-emerald-50">{m?.applied ? "See where it stands" : "Preferred by recruiters"}</span>
+                        </button>
                         {!m?.applied && (
                           <button
                             type="button"
@@ -733,9 +748,12 @@ export default function JobsPage() {
                               e.stopPropagation();
                               setInterestFor(job);
                             }}
-                            className="inline-flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1 text-[12px] font-bold text-white transition hover:bg-blue-700 lg:hidden"
+                            className="flex h-11 flex-col items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25"
                           >
-                            <Zap className="h-3 w-3" /> Express interest
+                            <span className="flex items-center gap-1 text-[13.5px] font-extrabold leading-tight">
+                              <Zap className="h-3.5 w-3.5" /> Express interest
+                            </span>
+                            <span className="text-[10.5px] font-medium leading-tight text-blue-100">30 seconds</span>
                           </button>
                         )}
                       </div>
