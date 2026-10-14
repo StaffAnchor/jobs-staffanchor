@@ -727,37 +727,43 @@ export default function JobsPage() {
                         <span className="ml-auto text-[11px] font-medium text-slate-400">{timeAgo(job.created_at)}</span>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-2.5 lg:hidden">
+                    </div>
+                  </div>
+                  <div className="mt-4 lg:hidden">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          window.open(`${jobPath(job)}#apply-form`, "_blank", "noopener,noreferrer");
+                        }}
+                        className="flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-[15px] font-extrabold text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98]"
+                      >
+                        {m?.applied ? "View application" : "Apply"} <ArrowRight className="h-4 w-4" />
+                      </button>
+                      {!m?.applied ? (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            window.open(`${jobPath(job)}#apply-form`, "_blank", "noopener,noreferrer");
+                            setInterestFor(job);
                           }}
-                          className="flex h-11 flex-col items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/25"
+                          className="flex h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-[15px] font-extrabold text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98]"
                         >
-                          <span className="text-[13.5px] font-extrabold leading-tight">{m?.applied ? "View application" : "Apply"}</span>
-                          <span className="text-[10.5px] font-medium leading-tight text-emerald-50">{m?.applied ? "See where it stands" : "Preferred by recruiters"}</span>
+                          <Zap className="h-4 w-4" /> Express interest
                         </button>
-                        {!m?.applied && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setInterestFor(job);
-                            }}
-                            className="flex h-11 flex-col items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/25"
-                          >
-                            <span className="flex items-center gap-1 text-[13.5px] font-extrabold leading-tight">
-                              <Zap className="h-3.5 w-3.5" /> Express interest
-                            </span>
-                            <span className="text-[10.5px] font-medium leading-tight text-blue-100">30 seconds</span>
-                          </button>
-                        )}
-                      </div>
+                      ) : (
+                        <span className="flex h-12 items-center justify-center rounded-xl bg-blue-50 text-[13px] font-bold text-blue-700">Already applied</span>
+                      )}
                     </div>
+                    {!m?.applied && (
+                      <p className="mt-2 text-center text-[11.5px] leading-4 text-slate-500">
+                        <span className="font-semibold text-emerald-700">Apply</span> is the preferred way to reach a recruiter ·{" "}
+                        <span className="font-semibold text-blue-700">Express interest</span> takes 30 seconds
+                      </p>
+                    )}
                   </div>
                 </Link>
                 </div>
