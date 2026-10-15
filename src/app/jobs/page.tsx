@@ -140,6 +140,7 @@ export default function JobsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [interestFor, setInterestFor] = useState<JobListing | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [view, setView] = useState<"live" | "pipeline">("live");
 
   const [industry, setIndustry] = useState("");
   const [location, setLocation] = useState("");
@@ -156,8 +157,10 @@ export default function JobsPage() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load jobs."));
     setRecentlyViewed(getRecentlyViewedJobs());
     // The homepage search lands here as /jobs?q=... -- start with it applied.
-    const q = new URLSearchParams(window.location.search).get("q");
+    const sp = new URLSearchParams(window.location.search);
+    const q = sp.get("q");
     if (q) setSearch(q);
+    if (sp.get("view") === "pipeline") setView("pipeline");
   }, []);
 
   // Personalisation only exists for a signed-in candidate; everyone else sees
@@ -287,7 +290,11 @@ export default function JobsPage() {
 
   const liveCount = ordered.filter((j) => !isPipeline(j)).length;
   const pipelineCount = ordered.length - liveCount;
-  const sectioned = pipelineCount > 0;
+  const hasPipeline = (jobs ?? []).some(isPipeline);
+  const hasLive = (jobs ?? []).some((j) => !isPipeline(j));
+  // With no live roles at all, open on the pipeline tab so the page is never empty.
+  const activeView: "live" | "pipeline" = hasPipeline && (view === "pipeline" || !hasLive) ? "pipeline" : "live";
+  const shown = hasPipeline ? ordered.filter((j) => isPipeline(j) === (activeView === "pipeline")) : ordered;
 
   const stats = useMemo(() => {
     const list = (jobs ?? []).filter((j) => !isPipeline(j));
@@ -296,7 +303,7 @@ export default function JobsPage() {
     return { roles: list.length, cities: cities.size, top };
   }, [jobs]);
 
-  const selected = ordered.find((j) => j.id === selectedId) ?? ordered[0] ?? null;
+  const selected = shown.find((j) => j.id === selectedId) ?? shown[0] ?? null;
   const activeFilterCount = [location, experienceBand, payBand, workMode, posted].filter(Boolean).length;
   const hasFilters = industry || location || experienceBand || payBand || workMode || posted || search;
 
@@ -488,12 +495,47 @@ export default function JobsPage() {
           </div>
         )}
 
+        {hasPipeline && (
+          <div className="mb-6">
+            <div role="tablist" aria-label="Current openings" className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+              {([
+                { key: "live", label: "Live jobs", count: liveCount },
+                { key: "pipeline", label: "Pipeline roles", count: pipelineCount },
+              ] as const).map((t) => {
+                const on = activeView === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => {
+                      setView(t.key);
+                      setSelectedId(null);
+                    }}
+                    className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-[15px] font-extrabold transition sm:text-base ${
+                      on ? "bg-slate-950 text-white shadow-md" : "text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {t.label}
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${on ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600"}`}>{t.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2.5 px-1 text-[13px] text-slate-500">
+              {activeView === "pipeline"
+                ? "Roles we regularly place into. Apply and we'll shortlist you for companies hiring in this space."
+                : "Open now with a hiring company. Apply and a recruiter will get back to you."}
+            </p>
+          </div>
+        )}
+
         {/* Results bar + personalisation */}
         <div className="mb-5 flex flex-wrap items-center gap-2">
           <p className="mr-auto text-sm text-slate-500">
             {jobs ? (
               <>
-                <span className="font-bold text-slate-900">{ordered.length}</span> role{ordered.length === 1 ? "" : "s"}
+                <span className="font-bold text-slate-900">{shown.length}</span> role{shown.length === 1 ? "" : "s"}
                 {hasFilters && " match your filters"}
               </>
             ) : (
@@ -557,7 +599,7 @@ export default function JobsPage() {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        {jobs && ordered.length === 0 && (
+        {jobs && shown.length === 0 && (
           <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
             <Briefcase className="mx-auto mb-3 h-7 w-7 text-slate-300" />
             <p className="text-base font-semibold text-slate-800">
@@ -582,8 +624,7 @@ export default function JobsPage() {
           {/* ───────── List ───────── */}
           <div className="min-w-0 space-y-4">
             {jobs === null && !error && [0, 1, 2, 3].map((i) => <div key={i} className="h-36 animate-pulse rounded-3xl bg-slate-100" />)}
-            {ordered.map((job, idx) => {
-              const kindHeader = sectioned && (idx === 0 || isPipeline(ordered[idx - 1]) !== isPipeline(job));
+            {shown.map((job) => {
               const exp = experienceLabel(job.experience_min, job.experience_max);
               const cities = jobCitiesOf(job);
               const subDomains = subDomainsOf(job);
@@ -592,25 +633,10 @@ export default function JobsPage() {
               const isSelected = selected?.id === job.id;
               return (
                 <div key={job.id} className="space-y-4">
-                {kindHeader && (
-                  <div className={idx === 0 ? "" : "pt-4"}>
-                    <h2 className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-slate-950">
-                      {isPipeline(job) ? "Pipeline roles" : "Live jobs"}
-                      <span className="rounded-full bg-slate-200/70 px-2.5 py-0.5 text-xs font-bold text-slate-600">
-                        {isPipeline(job) ? pipelineCount : liveCount}
-                      </span>
-                    </h2>
-                    <p className="mt-0.5 text-[13px] text-slate-500">
-                      {isPipeline(job)
-                        ? "Roles we regularly place into. Apply and we'll shortlist you for companies hiring in this space."
-                        : "Open now with a hiring company. Apply and a recruiter will get back to you."}
-                    </p>
-                  </div>
-                )}
                 <Link
                   href={jobPath(job)}
                   onClick={(e) => handleCardClick(e, job.id)}
-                  style={{ animationDelay: `${Math.min(ordered.indexOf(job), 8) * 55}ms` }}
+                  style={{ animationDelay: `${Math.min(shown.indexOf(job), 8) * 55}ms` }}
                   className={`jobs-rise group relative block overflow-hidden rounded-3xl border bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-6 ${
                     isSelected ? "border-blue-500 ring-2 ring-blue-500/15 lg:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)]" : "border-slate-200 hover:border-blue-200"
                   }`}
