@@ -4,6 +4,7 @@ import nodemailer from "nodemailer";
 import { generateAiPassportForCandidate } from "@/lib/ai-passport";
 import { waitUntil } from "@vercel/functions";
 import { decideSubmitAccess } from "@/lib/submit-access";
+import { recordAcquisition } from "@/lib/attribution-server";
 
 export const runtime = "nodejs";
 
@@ -156,6 +157,7 @@ export async function POST(req: NextRequest) {
       // ai_summary/stability_score despite having a resume: the generation
       // was getting cut off mid-flight. waitUntil() keeps the invocation
       // alive until the promise settles, even after the response returns.
+      waitUntil(recordAcquisition(admin, req, { candidateId: candidateId as string, mandateId: mandateId ?? null, isNewSignup }));
       waitUntil(
         generateAiPassportForCandidate(candidateId as string, admin, { note: "auto_generated_on_submit" }).catch(
           (err) => console.error("Auto AI passport generation failed for new candidate", candidateId, err)

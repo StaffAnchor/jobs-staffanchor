@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { LAST_COOKIE, parseTouch } from "@/lib/attribution";
 
 export const runtime = "nodejs";
 
@@ -38,7 +39,10 @@ export async function POST(req: NextRequest) {
     const eventType = body.eventType === "form_opened" ? "form_opened" : "click";
 
     const userAgent = req.headers.get("user-agent") ?? null;
-    const referrer = req.headers.get("referer") ?? null;
+    // The Referer header here is always this site's own page (the beacon is sent from it), so the real origin comes from
+    // the cookie set when the visitor first landed.
+    const remembered = parseTouch(decodeURIComponent(req.cookies.get(LAST_COOKIE)?.value ?? ""));
+    const referrer = remembered ? (remembered.r ? `https://${remembered.r}/` : null) : (req.headers.get("referer") ?? null);
     const city = req.headers.get("x-vercel-ip-city");
     const region = req.headers.get("x-vercel-ip-country-region");
     const country = req.headers.get("x-vercel-ip-country");
@@ -52,9 +56,9 @@ export async function POST(req: NextRequest) {
       mandate_id: mandateId,
       event_type: eventType,
       referrer,
-      utm_source: body.utmSource || null,
-      utm_medium: body.utmMedium || null,
-      utm_campaign: body.utmCampaign || null,
+      utm_source: body.utmSource || remembered?.s || null,
+      utm_medium: body.utmMedium || remembered?.m || null,
+      utm_campaign: body.utmCampaign || remembered?.c || null,
       device_type: classifyDevice(userAgent),
       browser: classifyBrowser(userAgent),
       user_agent: userAgent,
