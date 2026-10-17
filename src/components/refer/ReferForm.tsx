@@ -4,7 +4,7 @@ import { useState } from "react";
 
 const field = "mt-1 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-900 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20";
 
-export default function ReferForm({ candidateId, token }: { candidateId: string; token: string }) {
+export default function ReferForm({ candidateId, token, roleCode = null, roleTitle = null }: { candidateId: string; token: string; roleCode?: string | null; roleTitle?: string | null }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -18,7 +18,7 @@ export default function ReferForm({ candidateId, token }: { candidateId: string;
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/refer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: candidateId, t: token, name, email, phone, note }) });
+      const res = await fetch("/api/refer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: candidateId, t: token, name, email, phone, note, m: roleCode }) });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) setError(d.error ?? "Couldn't send that. Please try again.");
       else setDone(name.trim());
@@ -32,7 +32,7 @@ export default function ReferForm({ candidateId, token }: { candidateId: string;
   if (done !== null) {
     return (
       <div className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
-        <p className="text-lg font-bold text-emerald-900">Thank you. We&apos;ve got {done || "their details"}.</p>
+        <p className="text-lg font-bold text-emerald-900">Thank you. We&apos;ve got {done || "their details"}{roleTitle ? ` for the ${roleTitle} role` : ""}.</p>
         <p className="mt-1 text-sm text-emerald-800">We&apos;ll reach out only with a relevant role. You can refer another person any time with the same link.</p>
         <button type="button" onClick={() => { setDone(null); setName(""); setEmail(""); setPhone(""); setNote(""); }} className="mt-4 text-sm font-semibold text-teal-700 underline">
           Refer someone else

@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return NextResponse.json({ error: "This isn't set up yet." }, { status: 503 });
-  const b = (await req.json().catch(() => ({}))) as { id?: unknown; t?: unknown; name?: unknown; email?: unknown; phone?: unknown; note?: unknown };
+  const b = (await req.json().catch(() => ({}))) as { id?: unknown; t?: unknown; name?: unknown; email?: unknown; phone?: unknown; note?: unknown; m?: unknown };
   const id = typeof b.id === "string" ? b.id : "";
   const t = typeof b.t === "string" ? b.t : "";
   if (!/^[0-9a-f-]{36}$/i.test(id) || !t || !verifyRefer(id, t)) return NextResponse.json({ error: "This link isn't valid." }, { status: 403 });
@@ -31,10 +31,27 @@ export async function POST(req: NextRequest) {
   const { count } = await admin.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_candidate_id", id).gte("created_at", since);
   if ((count ?? 0) >= DAILY_LIMIT) return NextResponse.json({ error: "That's plenty for today. You can send more tomorrow." }, { status: 429 });
 
+  // The role this referral is for, when the link named one that is still open and real.
+  let mandateId: string | null = null;
+  const code = typeof b.m === "string" && /^[a-z0-9]{4,12}$/i.test(b.m) ? b.m.toLowerCase() : null;
+  if (code) {
+    const { data: mid } = await admin.rpc("resolve_job_code", { p_code: code });
+    if (typeof mid === "string") {
+      const { data: r } = await admin.from("mandates").select("status, is_archived, listing_kind").eq("id", mid).maybeSingle();
+      if (r && r.status === "open" && !r.is_archived && r.listing_kind !== "pipeline") mandateId = mid;
+    }
+  }
+
   const { data: dup } = await admin.from("referrals").select("id").eq("referrer_candidate_id", id).ilike("referred_email", email).limit(1).maybeSingle();
+  let referralId: string | null = dup?.id ?? null;
   if (!dup) {
-    const { error } = await admin.from("referrals").insert({ referrer_candidate_id: id, referred_name: name, referred_email: email, referred_phone: phone || null, note: note || null, status: "referred" });
+    const { data: created, error } = await admin.from("referrals").insert({ referrer_candidate_id: id, referred_name: name, referred_email: email, referred_phone: phone || null, note: note || null, status: "referred" }).select("id").single();
     if (error) return NextResponse.json({ error: "Couldn't save that. Please try again." }, { status: 500 });
+    referralId = created?.id ?? null;
+  }
+  // Tie the referral to the role it was for, so it reaches the right mandate.
+  if (referralId && mandateId) {
+    await admin.from("referral_mandates").upsert({ referral_id: referralId, mandate_id: mandateId }, { onConflict: "referral_id,mandate_id", ignoreDuplicates: true });
   }
   // The same answer whether or not they were already referred, so nothing about our records is revealed.
   return NextResponse.json({ ok: true });
