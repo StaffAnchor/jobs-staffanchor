@@ -22,7 +22,6 @@ import {
   IndianRupee,
   MapPin,
   Search,
-  Sparkles,
   X,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
@@ -124,6 +123,35 @@ function summaryOf(job: JobListing) {
   const clean = text.replace(/\s+/g, " ").trim();
   if (!clean) return "A recruiter will share the full role details when you apply.";
   return clean.length > 320 ? `${clean.slice(0, 320).trimEnd()}…` : clean;
+}
+
+function FacetGroup({ title, value, onChange, options }: { title: string; value: string; onChange: (v: string) => void; options: { value: string; label: string; count: number }[] }) {
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-400">{title}</legend>
+      <div className="space-y-0.5">
+        {options.map((o) => {
+          const on = value === o.value;
+          const empty = o.count === 0 && !on;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              disabled={empty}
+              aria-pressed={on}
+              onClick={() => onChange(on ? "" : o.value)}
+              className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm transition ${
+                on ? "bg-blue-50 font-semibold text-blue-700" : empty ? "text-slate-300" : "text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              <span>{o.label}</span>
+              <span className={`text-xs tabular-nums ${on ? "text-blue-600" : "text-slate-400"}`}>{o.count}</span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
 }
 
 export default function JobsPage() {
@@ -246,15 +274,18 @@ export default function JobsPage() {
     return counts;
   }, [jobs]);
 
-  const filtered = useMemo(() => {
-    if (!jobs) return [];
+  // One place that decides whether a role passes the filters. `skip` leaves one filter out, which is how each option in
+  // the sidebar can show how many roles it would give you.
+  const passes = useMemo(() => {
     const band = EXPERIENCE_BANDS.find((b) => b.label === experienceBand);
+    const pay = PAY_BANDS.find((b) => b.label === payBand);
+    const win = POSTED_WINDOWS.find((w) => w.label === posted);
     const q = search.trim().toLowerCase();
-    return jobs.filter((job) => {
+    return (job: JobListing, skip?: "location" | "experience" | "pay" | "workMode" | "posted") => {
       if (industry && job.category !== industry) return false;
       const cities = jobCitiesOf(job);
-      if (location && !cities.includes(location)) return false;
-      if (band) {
+      if (skip !== "location" && location && !cities.includes(location)) return false;
+      if (skip !== "experience" && band) {
         const jMin = job.experience_min ?? 0;
         const jMax = job.experience_max ?? 99;
         if (jMax < band.min || jMin > band.max) return false;
@@ -266,11 +297,17 @@ export default function JobsPage() {
           .toLowerCase();
         if (!haystack.includes(q)) return false;
       }
-      const pay = PAY_BANDS.find((b) => b.label === payBand);
-      if (pay && (job.budget_max ?? job.budget_min ?? 0) < pay.min) return false;
-      if (workMode && job.work_mode !== workMode) return false;
-      const win = POSTED_WINDOWS.find((w) => w.label === posted);
-      if (win && new Date().getTime() - new Date(job.created_at).getTime() > win.days * 86_400_000) return false;
+      if (skip !== "pay" && pay && (job.budget_max ?? job.budget_min ?? 0) < pay.min) return false;
+      if (skip !== "workMode" && workMode && job.work_mode !== workMode) return false;
+      if (skip !== "posted" && win && new Date().getTime() - new Date(job.created_at).getTime() > win.days * 86_400_000) return false;
+      return true;
+    };
+  }, [industry, location, experienceBand, payBand, workMode, posted, search]);
+
+  const filtered = useMemo(() => {
+    if (!jobs) return [];
+    return jobs.filter((job) => {
+      if (!passes(job)) return false;
       if (savedOnly && !saved.has(job.id)) return false;
       if (matchesOnly) {
         const m = matches.get(job.id);
@@ -278,7 +315,19 @@ export default function JobsPage() {
       }
       return true;
     });
-  }, [jobs, industry, location, experienceBand, payBand, workMode, posted, search, savedOnly, matchesOnly, saved, matches]);
+  }, [jobs, passes, savedOnly, matchesOnly, saved, matches]);
+
+  const facetCounts = useMemo(() => {
+    const list = jobs ?? [];
+    const count = (skip: "location" | "experience" | "pay" | "workMode" | "posted", test: (j: JobListing) => boolean) => list.filter((j) => passes(j, skip) && test(j)).length;
+    return {
+      location: Object.fromEntries(locations.map((l) => [l, count("location", (j) => jobCitiesOf(j).includes(l))])),
+      experience: Object.fromEntries(EXPERIENCE_BANDS.map((b) => [b.label, count("experience", (j) => !((j.experience_max ?? 99) < b.min || (j.experience_min ?? 0) > b.max))])),
+      pay: Object.fromEntries(PAY_BANDS.map((b) => [b.label, count("pay", (j) => (j.budget_max ?? j.budget_min ?? 0) >= b.min)])),
+      workMode: Object.fromEntries(workModes.map((w) => [w, count("workMode", (j) => j.work_mode === w)])),
+      posted: Object.fromEntries(POSTED_WINDOWS.map((w) => [w.label, count("posted", (j) => new Date().getTime() - new Date(j.created_at).getTime() <= w.days * 86_400_000)])),
+    };
+  }, [jobs, passes, locations, workModes]);
 
   const ordered = useMemo(() => {
     const liveFirst = (list: JobListing[]) => [...list.filter((j) => !isPipeline(j)), ...list.filter(isPipeline)];
@@ -329,53 +378,24 @@ export default function JobsPage() {
   return (
     <div className="bg-slate-50/70">
       <FloatingWhatsApp compact source="jobs_list_floating" text="Hi StaffAnchor, I'm looking for sales roles. Could you help me find the right one?" />
-      {/* ───────── Hero ───────── */}
-      <section className="relative overflow-hidden bg-[#0A1630] text-white">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_70%_at_90%_0%,rgba(76,123,255,0.38),transparent_60%),radial-gradient(40%_60%_at_0%_100%,rgba(16,185,129,0.18),transparent_60%)]" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:radial-gradient(#fff_1px,transparent_1px)] [background-size:26px_26px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
-        <div className="jobs-drift pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#4C7BFF]/25 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl px-4 pb-10 pt-12 sm:px-6 md:pt-16 lg:px-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-blue-100">
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" /> StaffAnchor careers
-          </div>
-          <h1 className="mt-5 max-w-3xl font-(family-name:--font-space-grotesk) text-4xl font-black leading-[1.05] tracking-tight md:text-6xl">
-            Find your next{" "}
-            <span className="font-(family-name:--font-fraunces) font-medium italic text-[#8FB0FF]">sales role.</span>
-          </h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-blue-100/80">
-            Verified mandates from companies hiring right now, with role context included, not a pile of unread resumes.
-          </p>
-
-          {stats.roles > 0 && (
-            <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
-              <div>
-                <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-none">{stats.roles}</p>
-                <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-200/70">Live roles</p>
-              </div>
-              {stats.cities > 0 && (
-                <div>
-                  <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-none">{stats.cities}</p>
-                  <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-200/70">Cities</p>
-                </div>
-              )}
-              {stats.top > 0 && (
-                <div>
-                  <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-none text-emerald-300">₹{stats.top}L</p>
-                  <p className="mt-1 text-xs font-medium uppercase tracking-wider text-blue-200/70">Top pay on offer</p>
-                </div>
-              )}
+      {/* ───────── Search strip ───────── */}
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div>
+              <h1 className="font-(family-name:--font-space-grotesk) text-2xl font-black leading-none tracking-tight text-slate-950">Sales jobs</h1>
+              <p className="mt-1 text-xs text-slate-500">
+                {stats.roles > 0 ? `${stats.roles} live roles in ${stats.cities} cities` : "Verified roles from companies hiring now"}
+              </p>
             </div>
-          )}
-
-          <div className="mt-8 flex max-w-3xl gap-2 rounded-2xl border border-white/20 bg-white p-2 shadow-[0_30px_80px_-24px_rgba(76,123,255,0.65)] ring-4 ring-white/10 transition focus-within:ring-[#8FB0FF]/40">
-            <div className="flex flex-1 items-center gap-3 px-3">
-              <Search className="h-5 w-5 shrink-0 text-slate-400" />
+            <div className="flex min-w-[260px] flex-1 items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20">
+              <Search className="h-4 w-4 shrink-0 text-slate-400" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 aria-label="Search roles"
                 placeholder="Search role, company or city"
-                className="h-12 w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400"
+                className="h-11 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
               />
               {search && (
                 <button onClick={() => setSearch("")} aria-label="Clear search" className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
@@ -383,9 +403,17 @@ export default function JobsPage() {
                 </button>
               )}
             </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              aria-expanded={showFilters}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 lg:hidden"
+            >
+              <SlidersHorizontal className="h-4 w-4" /> Filters
+              {activeFilterCount > 0 && <span className="rounded-full bg-slate-900 px-1.5 text-xs font-bold text-white">{activeFilterCount}</span>}
+            </button>
           </div>
-
-          <div className="mt-5 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             {CATEGORY_TABS.map((t) => {
               const active = industry === t.value;
               return (
@@ -393,88 +421,20 @@ export default function JobsPage() {
                   key={t.value || "all"}
                   onClick={() => setIndustry(t.value)}
                   aria-pressed={active}
-                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                    active ? "border-white bg-white text-slate-950" : "border-white/20 bg-white/5 text-blue-100 hover:bg-white/15"
+                  className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
+                    active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                   }`}
                 >
                   {t.label}
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${active ? "bg-slate-100 text-slate-600" : "bg-white/10 text-blue-200"}`}>
-                    {categoryCounts[t.value] ?? 0}
-                  </span>
+                  <span className={`rounded-full px-1.5 text-xs font-bold ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>{categoryCounts[t.value] ?? 0}</span>
                 </button>
               );
             })}
-            <span className="mx-1 hidden h-6 w-px bg-white/15 sm:block" />
-            <button
-              type="button"
-              onClick={() => setShowFilters((v) => !v)}
-              aria-expanded={showFilters}
-              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                showFilters || activeFilterCount > 0 ? "border-[#8FB0FF] bg-[#8FB0FF]/15 text-white" : "border-white/20 bg-white/5 text-blue-100 hover:bg-white/15"
-              }`}
-            >
-              <SlidersHorizontal className="h-4 w-4" /> Filters
-              {activeFilterCount > 0 && <span className="rounded-full bg-white px-1.5 text-[11px] font-bold text-slate-900">{activeFilterCount}</span>}
-            </button>
-          </div>
-          <div className={`mt-3 flex-wrap items-center gap-2 ${showFilters ? "flex" : "hidden"}`}>
-            <Select
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              aria-label="Location"
-              className="h-10 w-44 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900"
-            >
-              <option value="">All locations</option>
-              {locations.map((l) => (
-                <option key={l} value={l}>
-                  {l}
-                </option>
-              ))}
-            </Select>
-            <Select
-              value={experienceBand}
-              onChange={(e) => setExperienceBand(e.target.value)}
-              aria-label="Experience"
-              className="h-10 w-40 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900"
-            >
-              <option value="">Any experience</option>
-              {EXPERIENCE_BANDS.map((b) => (
-                <option key={b.label} value={b.label}>
-                  {b.label}
-                </option>
-              ))}
-            </Select>
-            <Select value={payBand} onChange={(e) => setPayBand(e.target.value)} aria-label="Pay" className="h-10 w-44 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900">
-              <option value="">Any pay</option>
-              {PAY_BANDS.map((b) => (
-                <option key={b.label} value={b.label}>
-                  {b.label}
-                </option>
-              ))}
-            </Select>
-            {workModes.length > 0 && (
-              <Select value={workMode} onChange={(e) => setWorkMode(e.target.value)} aria-label="Work mode" className="h-10 w-40 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900">
-                <option value="">Any work mode</option>
-                {workModes.map((w) => (
-                  <option key={w} value={w}>
-                    {w}
-                  </option>
-                ))}
-              </Select>
-            )}
-            <Select value={posted} onChange={(e) => setPosted(e.target.value)} aria-label="Posted" className="h-10 w-40 rounded-full border-white/20 bg-white/10 text-sm text-white focus-visible:ring-white/50 [&>option]:text-slate-900">
-              <option value="">Posted any time</option>
-              {POSTED_WINDOWS.map((w) => (
-                <option key={w.label} value={w.label}>
-                  {w.label}
-                </option>
-              ))}
-            </Select>
           </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
         {recentlyViewed.length > 0 && (
           <div className="mb-5">
             <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -620,9 +580,23 @@ export default function JobsPage() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
+        <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)_400px] lg:items-start">
+          {/* ───────── Filters ───────── */}
+          <aside className={`${showFilters ? "block" : "hidden"} space-y-5 rounded-2xl border border-slate-200 bg-white p-4 lg:sticky lg:top-24 lg:block`}>
+            <FacetGroup title="Location" value={location} onChange={setLocation} options={locations.map((l) => ({ value: l, label: l, count: facetCounts.location[l] ?? 0 }))} />
+            <FacetGroup title="Experience" value={experienceBand} onChange={setExperienceBand} options={EXPERIENCE_BANDS.map((b) => ({ value: b.label, label: b.label, count: facetCounts.experience[b.label] ?? 0 }))} />
+            <FacetGroup title="Pay" value={payBand} onChange={setPayBand} options={PAY_BANDS.map((b) => ({ value: b.label, label: b.label, count: facetCounts.pay[b.label] ?? 0 }))} />
+            {workModes.length > 0 && <FacetGroup title="Work mode" value={workMode} onChange={setWorkMode} options={workModes.map((w) => ({ value: w, label: w, count: facetCounts.workMode[w] ?? 0 }))} />}
+            <FacetGroup title="Posted" value={posted} onChange={setPosted} options={POSTED_WINDOWS.map((w) => ({ value: w.label, label: w.label, count: facetCounts.posted[w.label] ?? 0 }))} />
+            {hasFilters && (
+              <button onClick={clearFilters} className="text-sm font-semibold text-blue-600 hover:underline">
+                Clear all filters
+              </button>
+            )}
+          </aside>
+
           {/* ───────── List ───────── */}
-          <div className="min-w-0 space-y-4">
+          <div className="min-w-0 space-y-2.5">
             {jobs === null && !error && [0, 1, 2, 3].map((i) => <div key={i} className="h-36 animate-pulse rounded-3xl bg-slate-100" />)}
             {shown.map((job) => {
               const exp = experienceLabel(job.experience_min, job.experience_max);
@@ -632,12 +606,12 @@ export default function JobsPage() {
               const tier = m && !m.applied ? matchTier(m.score) : null;
               const isSelected = selected?.id === job.id;
               return (
-                <div key={job.id} className="space-y-4">
+                <div key={job.id}>
                 <Link
                   href={jobPath(job)}
                   onClick={(e) => handleCardClick(e, job.id)}
                   style={{ animationDelay: `${Math.min(shown.indexOf(job), 8) * 55}ms` }}
-                  className={`jobs-rise group relative block overflow-hidden rounded-3xl border bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-6 ${
+                  className={`jobs-rise group relative block overflow-hidden rounded-2xl border bg-white p-4 shadow-sm transition duration-200 hover:shadow-[0_18px_40px_-26px_rgba(37,87,230,0.35)] ${
                     isSelected ? "border-blue-500 ring-2 ring-blue-500/15 lg:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)]" : "border-slate-200 hover:border-blue-200"
                   }`}
                 >
@@ -647,9 +621,9 @@ export default function JobsPage() {
                       MONOGRAM_GRADIENT[job.category ?? ""]?.split(" shadow")[0] ?? "from-slate-600 to-slate-800"
                     }`}
                   />
-                  <div className="flex gap-4">
+                  <div className="flex gap-3">
                     <span
-                      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-base font-extrabold text-white shadow-md ${
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-sm font-extrabold text-white shadow-sm ${
                         MONOGRAM_GRADIENT[job.category ?? ""] ?? MONOGRAM_GRADIENT.non_sales
                       }`}
                     >
@@ -707,7 +681,7 @@ export default function JobsPage() {
                         </div>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-slate-600">
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-slate-600">
                         {cities.length > 0 && (
                           <span className="flex items-center gap-1.5">
                             <MapPin className="h-3.5 w-3.5 text-slate-400" /> {cities.slice(0, 3).join(", ")}
@@ -726,7 +700,7 @@ export default function JobsPage() {
                       </div>
 
                       {salesFacts(job).length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
+                        <div className="mt-2.5 flex flex-wrap gap-2 lg:hidden">
                           {salesFacts(job).map((f) => (
                             <span key={f.label} className="inline-flex items-baseline gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-[12px] ring-1 ring-slate-100">
                               <span className="text-slate-400">{f.label}</span>
@@ -740,7 +714,7 @@ export default function JobsPage() {
                         <p className="mt-2.5 text-[12.5px] font-medium text-emerald-700">{m.reasons.slice(0, 2).join(" · ")}</p>
                       )}
 
-                      <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+                      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                         <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${TAG_COLOR[job.category ?? ""] ?? "bg-slate-100 text-slate-600"}`}>
                           {categoryLabel(job.category)}
                         </span>
@@ -799,7 +773,7 @@ export default function JobsPage() {
 
           {/* ───────── Preview (desktop) ───────── */}
           {selected && (
-            <aside className="sticky top-24 hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_30px_70px_-40px_rgba(15,23,42,0.4)] lg:block">
+            <aside className="sticky top-24 hidden max-h-[calc(100vh-7rem)] overflow-y-auto overflow-x-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_30px_70px_-40px_rgba(15,23,42,0.4)] lg:block">
               <div className="bg-gradient-to-br from-[#0A1630] to-[#14306b] p-6 text-white">
                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-200">
                   {categoryLabel(selected.category)}
