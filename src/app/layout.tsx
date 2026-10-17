@@ -4,6 +4,7 @@ import { AppProviders } from "@/components/providers/app-providers";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import GlobalWhatsApp from "@/components/GlobalWhatsApp";
+import AttributionTracker from "@/components/AttributionTracker";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -50,6 +51,7 @@ export default function RootLayout({
             <Footer />
           </div>
           <GlobalWhatsApp />
+          <AttributionTracker />
         </AppProviders>
       </body>
     </html>
