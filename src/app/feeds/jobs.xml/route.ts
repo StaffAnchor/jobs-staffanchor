@@ -1,5 +1,5 @@
 import { getOpenJobsServer, SITE } from "@/lib/jobs-server";
-import { canonicalUrl, descriptionHtml, isLive } from "@/lib/job-seo";
+import { canonicalUrl, descriptionHtml, isLive, stateFor } from "@/lib/job-seo";
 import { categoryLabel } from "@/modules/jobs/api";
 
 export const revalidate = 3600;
@@ -22,6 +22,7 @@ export async function GET() {
     <url>${cdata(canonicalUrl(j))}</url>
     <company>${cdata(j.client_display || "StaffAnchor")}</company>
     <city>${cdata(city)}</city>
+    <state>${cdata(stateFor(city) ?? "")}</state>
     <country>${cdata("IN")}</country>
     <description>${cdata(descriptionHtml(j))}</description>
     <salary>${cdata(salary)}</salary>
