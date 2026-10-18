@@ -34,6 +34,20 @@ export function descriptionText(j: JobListing, max = 300): string {
   return html.length > max ? `${html.slice(0, max - 1).trimEnd()}…` : html;
 }
 
+// The state for a city, so Google can match a role to people searching by location. Cities not listed are left without one.
+const STATE: Record<string, string> = {
+  mumbai: "Maharashtra", "navi mumbai": "Maharashtra", thane: "Maharashtra", pune: "Maharashtra", nagpur: "Maharashtra", nashik: "Maharashtra",
+  bangalore: "Karnataka", bengaluru: "Karnataka", mysore: "Karnataka", mysuru: "Karnataka", mangalore: "Karnataka",
+  hyderabad: "Telangana", secunderabad: "Telangana", visakhapatnam: "Andhra Pradesh", vijayawada: "Andhra Pradesh",
+  chennai: "Tamil Nadu", coimbatore: "Tamil Nadu", madurai: "Tamil Nadu", kochi: "Kerala", trivandrum: "Kerala", thiruvananthapuram: "Kerala",
+  delhi: "Delhi", "new delhi": "Delhi", "delhi ncr": "Delhi", "ncr": "Delhi",
+  gurgaon: "Haryana", gurugram: "Haryana", faridabad: "Haryana",
+  noida: "Uttar Pradesh", "greater noida": "Uttar Pradesh", ghaziabad: "Uttar Pradesh", lucknow: "Uttar Pradesh", kanpur: "Uttar Pradesh", agra: "Uttar Pradesh",
+  dehradun: "Uttarakhand", jaipur: "Rajasthan", ahmedabad: "Gujarat", surat: "Gujarat", vadodara: "Gujarat",
+  kolkata: "West Bengal", indore: "Madhya Pradesh", bhopal: "Madhya Pradesh", chandigarh: "Chandigarh", patna: "Bihar", bhubaneswar: "Odisha",
+};
+export const stateFor = (city: string | null | undefined): string | undefined => (city ? STATE[city.trim().toLowerCase()] : undefined);
+
 const LAKH = 100_000;
 
 /** schema.org JobPosting, as Google for Jobs reads it. Pay is included only when the role states it. */
@@ -48,7 +62,7 @@ export function jobPostingJsonLd(j: JobListing) {
     datePosted: new Date(j.created_at).toISOString().slice(0, 10),
     employmentType: "FULL_TIME",
     hiringOrganization: { "@type": "Organization", name: j.client_display || "StaffAnchor", sameAs: j.client_display ? undefined : "https://staffanchor.com" },
-    jobLocation: (locs.length ? locs : ["India"]).map((c) => ({ "@type": "Place", address: { "@type": "PostalAddress", addressLocality: c === "India" ? undefined : c, addressCountry: "IN" } })),
+    jobLocation: (locs.length ? locs : ["India"]).map((c) => ({ "@type": "Place", address: { "@type": "PostalAddress", addressLocality: c === "India" ? undefined : c, addressRegion: stateFor(c), addressCountry: "IN" } })),
     directApply: false,
     url: canonicalUrl(j),
     identifier: { "@type": "PropertyValue", name: "StaffAnchor", value: j.short_code ?? j.id },
