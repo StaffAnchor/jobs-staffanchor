@@ -1077,6 +1077,7 @@ export default function ApplyForm({
           notice_period: values.noticePeriod || undefined,
           // Saved as soon as it is picked, so someone who leaves part-way still leaves their current CTC.
           current_fixed_ctc: values.currentFixedCtc ? Math.min(Number(values.currentFixedCtc), 120) : undefined,
+          expected_fixed_ctc: values.expectedFixedCtc ? Math.min(Number(values.expectedFixedCtc), 120) : undefined,
           highest_qualification: values.highestQualification || undefined,
           current_industry: values.currentIndustry || undefined,
           skills: values.selectedSkills.length ? values.selectedSkills.join(", ") : undefined,
@@ -1115,6 +1116,7 @@ export default function ApplyForm({
     values.totalExperienceYears,
     values.noticePeriod,
     values.currentFixedCtc,
+    values.expectedFixedCtc,
     values.highestQualification,
     values.currentIndustry,
     values.selectedSkills,
