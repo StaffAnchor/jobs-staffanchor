@@ -18,8 +18,8 @@ function initials(title: string | null) {
 
 // Real, current roles as the main body of the page -- the strongest proof
 // there is that this is a live, working place to find a job.
-export default function OpenRolesGrid() {
-  const [jobs, setJobs] = useState<JobListing[] | null>(null);
+export default function OpenRolesGrid({ initial = null }: { initial?: JobListing[] | null }) {
+  const [jobs, setJobs] = useState<JobListing[] | null>(initial);
 
   useEffect(() => {
     let cancelled = false;

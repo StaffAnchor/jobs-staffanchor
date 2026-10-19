@@ -29,8 +29,19 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://jobs.staffanchor.com"),
   title: "StaffAnchor | Sales Recruitment Specialists",
   description: "StaffAnchor is a specialist recruitment firm for B2B and B2C sales talent — BDRs, AEs, sales managers, and sales leadership.",
+  // Each page points at itself unless it sets its own canonical. The share image comes from app/opengraph-image.png.
+  alternates: { canonical: "./" },
+  openGraph: {
+    title: "StaffAnchor | Sales Recruitment Specialists",
+    description: "Live sales roles for BDRs, AEs, sales managers and leaders. Free for candidates.",
+    url: "https://jobs.staffanchor.com",
+    siteName: "StaffAnchor Jobs",
+    type: "website",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({

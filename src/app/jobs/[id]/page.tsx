@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import JobDetail from "@/modules/jobs/JobDetail";
-import { getJobByIdServer } from "@/lib/jobs-server";
+import { getJobByIdServer, SHARE_IMAGES } from "@/lib/jobs-server";
 import { canonicalUrl, descriptionText, isLive, jobPostingJsonLd, jsonLdString } from "@/lib/job-seo";
 
 export const revalidate = 600;
@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     alternates: { canonical: canonicalUrl(job) },
     // Pipeline roles are shortlists, not vacancies: kept out of search results.
     robots: isLive(job) ? undefined : { index: false, follow: true },
-    openGraph: { title, description: descriptionText(job, 155), url: canonicalUrl(job), type: "website" },
+    openGraph: { title, description: descriptionText(job, 155), url: canonicalUrl(job), type: "website", images: SHARE_IMAGES },
   };
 }
 

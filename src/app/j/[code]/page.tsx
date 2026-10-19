@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import ShortJobPage from "@/modules/jobs/ShortJobPage";
-import { getJobByCodeServer } from "@/lib/jobs-server";
+import { getJobByCodeServer, SHARE_IMAGES } from "@/lib/jobs-server";
 import { canonicalUrl, descriptionText, isLive, jobPostingJsonLd, jsonLdString } from "@/lib/job-seo";
 
 export const revalidate = 600;
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     description: descriptionText(job, 155),
     alternates: { canonical: canonicalUrl(job) },
     robots: isLive(job) ? undefined : { index: false, follow: true },
-    openGraph: { title, description: descriptionText(job, 155), url: canonicalUrl(job), type: "website" },
+    openGraph: { title, description: descriptionText(job, 155), url: canonicalUrl(job), type: "website", images: SHARE_IMAGES },
   };
 }
 
