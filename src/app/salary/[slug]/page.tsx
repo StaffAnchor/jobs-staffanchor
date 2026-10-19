@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SHARE_IMAGES } from "@/lib/jobs-server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { benchmarkSlug, cityLabel, getBenchmarks, roleTitle } from "@/lib/salary-pages";
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!b) return { robots: { index: false } };
   const title = `${roleTitle(b.cluster_slug)} salary in ${cityLabel(b.metro)} | StaffAnchor`;
   const description = `${roleTitle(b.cluster_slug)} fixed pay in ${cityLabel(b.metro)}: typically ${b.median} LPA, with most between ${b.p25} and ${b.p75} LPA, from ${b.n} StaffAnchor candidate profiles.`;
-  return { title, description, alternates: { canonical: `https://jobs.staffanchor.com/salary/${slug}` }, openGraph: { title, description, type: "article" } };
+  return { title, description, alternates: { canonical: `https://jobs.staffanchor.com/salary/${slug}` }, openGraph: { title, description, type: "article", images: SHARE_IMAGES } };
 }
 
 export default async function SalaryPage({ params }: { params: Promise<{ slug: string }> }) {

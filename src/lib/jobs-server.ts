@@ -6,6 +6,9 @@ import type { JobListing } from "@/modules/jobs/api";
 const client = () =>
   createClient(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://qdbxrspvnglbrvzfqhhg.supabase.co", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "sb_publishable_ZeMpC0wNCzhnQV5ElaqoqQ_PXE6XzHN", { auth: { persistSession: false } });
 
+// The default share picture (1200x630), for pages that set their own sharing data and so do not inherit it.
+export const SHARE_IMAGES = [{ url: "https://jobs.staffanchor.com/opengraph-image.png", width: 1200, height: 630, alt: "StaffAnchor Jobs" }];
+
 export const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://jobs.staffanchor.com";
 
 export async function getOpenJobsServer(): Promise<JobListing[]> {

@@ -17,6 +17,10 @@ import HeroVisual from "@/components/home/hero-visual";
 import OpenRolesCount from "@/components/home/open-roles-count";
 import OpenRolesGrid from "@/components/home/open-roles-grid";
 import Reveal from "@/components/home/reveal";
+import { getOpenJobsServer } from "@/lib/jobs-server";
+
+// Rebuilt in the background every 5 minutes, so the open-roles number is real in the page itself.
+export const revalidate = 300;
 
 const audience = [
   { title: "BDRs and AEs", description: "Show quota history and selling approach in a format hiring teams actually read." },
@@ -27,7 +31,8 @@ const audience = [
 
 const SECTION_TITLE = "font-(family-name:--font-space-grotesk) text-3xl font-black tracking-tight md:text-4xl";
 
-export default function Home() {
+export default async function Home() {
+  const jobs = await getOpenJobsServer().catch(() => null);
   return (
     <main className="bg-white text-slate-900">
       {/* ───────── Hero ───────── */}
@@ -88,7 +93,7 @@ export default function Home() {
       <section className="container-page relative z-10 -mt-14 md:-mt-16">
         <div className="grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-slate-200 bg-slate-200 shadow-[0_30px_70px_-35px_rgba(10,22,48,0.5)] md:grid-cols-4">
           {[
-            { value: <OpenRolesCount />, label: "open roles right now" },
+            ...(jobs ? [{ value: <OpenRolesCount initial={jobs.length} />, label: "open roles right now" }] : []),
             { value: "1 min", label: "to create your profile" },
             { value: "Free", label: "always, for candidates" },
             { value: "Live", label: "status on every application" },
@@ -102,7 +107,7 @@ export default function Home() {
       </section>
 
       {/* ───────── Live roles ───────── */}
-      <OpenRolesGrid />
+      <OpenRolesGrid initial={jobs} />
 
       {/* ───────── How it works ───────── */}
       <section id="workflow" className="border-y border-slate-200 bg-gradient-to-b from-slate-50 to-white">
