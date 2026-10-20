@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "StaffAnchor Edge | Mock Interview, Job Search Strategy and Resume Rebuild",
   description:
     "1:1 video sessions with Gagan Sharma, founder of StaffAnchor, for sales and leadership professionals: a full mock interview, a job search strategy with a resume rebuild, and resume writing.",
-  alternates: { canonical: "https://www.staffanchor.com/edge" },
+  alternates: { canonical: "https://jobs.staffanchor.com/edge" },
 };
 
 const BOOK = "/edge/book";
@@ -24,7 +24,7 @@ const SESSIONS = [
       "A plain debrief on exactly where you'd have been screened out, and how to fix it.",
       "Bring a specific role or JD if you have one.",
     ],
-    href: `${BOOK}/mock-interview?src=jobs_site`,
+    href: `${BOOK}/mock-interview`,
     cta: "Book this session",
   },
   {
@@ -40,7 +40,7 @@ const SESSIONS = [
       "A map of where your next role actually comes from: which companies, which route in, what to say.",
       "Send your resume 24 hours before, so the call is spent on strategy and not on reading.",
     ],
-    href: `${BOOK}/job-search-strategy?src=jobs_site`,
+    href: `${BOOK}/job-search-strategy`,
     cta: "Book this session",
   },
   {
@@ -61,7 +61,12 @@ const STEPS = [
 ];
 const H = "font-(family-name:--font-space-grotesk) font-black tracking-tight text-slate-950";
 
-export default function ProSessionsPage() {
+// A source tag in the link (for example ?src=linkedin_profile) is carried to the booking pages, so each booking
+// records where the visitor came from. Anything else falls back to jobs_site.
+const cleanSrc = (raw: string | undefined) => (raw && /^[a-z0-9_-]{1,40}$/i.test(raw) ? raw : "jobs_site");
+
+export default async function ProSessionsPage({ searchParams }: { searchParams: Promise<{ src?: string }> }) {
+  const src = cleanSrc((await searchParams).src);
   return (
     <main>
       <section className="bg-slate-50 px-4 py-14 sm:px-6">
@@ -92,7 +97,7 @@ export default function ProSessionsPage() {
               </ul>
               <div className="flex items-center justify-between border-t border-slate-200 pt-4">
                 <span className={`${H} text-lg`}>{s.price} <span className="text-xs font-normal text-slate-500">incl. GST</span></span>
-                <Link href={s.href} className="group inline-flex items-center rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">
+                <Link href={s.slug === "resume-writing" ? s.href : `${s.href}?src=${src}`} className="group inline-flex items-center rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">
                   {s.cta} <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </div>
