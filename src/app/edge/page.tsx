@@ -101,6 +101,26 @@ export default function ProSessionsPage() {
         </div>
       </section>
 
+      <section id="free-tools" className="bg-slate-50 px-4 py-14 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <span className="mb-3 inline-block rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Free · no sign-up needed</span>
+          <h2 className={`${H} mb-2 text-3xl`}>Start with a free tool</h2>
+          <p className="mb-8 max-w-2xl text-[15px] leading-7 text-slate-600">Warm up before you book a session. Both tools are free and open to anyone.</p>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Link href="/mock-interview" className="group rounded-2xl border border-slate-200 bg-white p-7 transition hover:border-slate-900">
+              <h3 className={`${H} mb-2 text-xl`}>AI Mock Interview</h3>
+              <p className="mb-5 text-[15px] leading-relaxed text-slate-600">Answer real discovery, objection-handling, pitching and closing questions, and get instant, specific feedback before your next interview.</p>
+              <span className="inline-flex items-center text-sm font-semibold text-indigo-700">Start practising <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+            </Link>
+            <Link href="/ats-score" className="group rounded-2xl border border-slate-200 bg-white p-7 transition hover:border-slate-900">
+              <h3 className={`${H} mb-2 text-xl`}>ATS Score Checker</h3>
+              <p className="mb-5 text-[15px] leading-relaxed text-slate-600">Upload your resume to see how it scores for ATS-parsability and keyword match, against a specific job description or general best practices.</p>
+              <span className="inline-flex items-center text-sm font-semibold text-indigo-700">Check my score <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-slate-50 px-4 py-14 sm:px-6">
         <div className="mx-auto max-w-5xl">
           <h2 className={`${H} mb-8 text-center text-3xl`}>How it works</h2>

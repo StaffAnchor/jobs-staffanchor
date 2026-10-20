@@ -241,8 +241,8 @@ export default async function Home() {
 
             {[
               { icon: BellRing, tone: "bg-amber-500/15 text-amber-300", title: "Saved roles and alerts", text: "Heart the roles you like and set an alert for the kind of job you want next.", href: "/jobs", cta: "Browse roles" },
-              { icon: Mic, tone: "bg-violet-500/15 text-violet-300", title: "Practise your interview", text: "Run a mock interview before the real one and get feedback on your answers.", href: "/mock-interview", cta: "Try Mock Interview" },
-              { icon: FileCheck2, tone: "bg-sky-500/15 text-sky-300", title: "Check your resume", text: "See how your resume scores with applicant tracking systems and what to fix.", href: "/ats-score", cta: "Check my resume" },
+              { icon: Mic, tone: "bg-violet-500/15 text-violet-300", title: "Practise your interview", text: "Run a mock interview before the real one and get feedback on your answers.", href: "/edge#free-tools", cta: "Practise free" },
+              { icon: FileCheck2, tone: "bg-sky-500/15 text-sky-300", title: "Check your resume", text: "See how your resume scores with applicant tracking systems and what to fix.", href: "/edge#free-tools", cta: "Check my resume" },
               { icon: ShieldCheck, tone: "bg-emerald-500/15 text-emerald-300", title: "You stay in control", text: "Free for candidates. Your details go to hiring teams for matching only, never sold." },
             ].map((f, i) => {
               const Icon = f.icon;
