@@ -244,7 +244,7 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
                     <p className={`${DISPLAY} text-2xl font-semibold`}>From ₹1,199</p>
                     <p className="text-xs text-slate-500">incl. GST</p>
                   </div>
-                  <Link href="https://www.staffanchor.com/resume-writing" className="group inline-flex items-center whitespace-nowrap rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900">
+                  <Link href="/resume-writing?src=edge_page" className="group inline-flex items-center whitespace-nowrap rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900">
                     See resume writing <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </div>
