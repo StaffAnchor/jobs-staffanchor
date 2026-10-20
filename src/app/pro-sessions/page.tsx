@@ -48,7 +48,7 @@ const SESSIONS = [
     title: "Resume Writing",
     tagline: "Written for you by StaffAnchor, ready for applicant tracking systems.",
     meta: "Delivered in Word and PDF",
-    price: "From ₹999",
+    price: "From ₹1,199",
     points: ["Priced by experience level, from early career to senior.", "ATS-friendly structure with role-specific keywords and impact-led bullet points.", "Revision round included."],
     href: "https://www.staffanchor.com/resume-writing",
     cta: "See resume writing",
