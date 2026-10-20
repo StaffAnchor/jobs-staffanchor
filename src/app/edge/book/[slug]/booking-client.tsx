@@ -119,6 +119,23 @@ export default function BookingClient({ service }: { service: Service }) {
   const yearsOk = !byExp || (Number.isFinite(yearsNum) && yearsNum >= 0 && yearsNum <= 60);
   const combo = byExp && yearsOk ? comboFor(yearsNum) : null;
   const payable = combo ? combo.total : service.price_inr;
+  const expBox = byExp ? (
+    <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3.5">
+                  <label className="text-sm font-medium text-slate-900" htmlFor="yrs">Years of total work experience</label>
+                  <input id="yrs" className={`${field} mt-2`} placeholder="For example 8" inputMode="numeric" value={form.years} onChange={(e) => setForm({ ...form, years: e.target.value.replace(/\D/g, "").slice(0, 2) })} />
+                  {combo ? (
+                    <dl className="mt-3 space-y-1 text-sm text-slate-700">
+                      <div className="flex justify-between"><dt>Job strategy session (45 mins)</dt><dd>{rupees(combo.strategy)}</dd></div>
+                      <div className="flex justify-between"><dt>Resume Writing, {yearsNum} yrs</dt><dd>{rupees(combo.resume)}</dd></div>
+                      <div className="flex justify-between text-slate-500"><dt>Total</dt><dd className="line-through">{rupees(combo.subtotal)}</dd></div>
+                      <div className="flex justify-between font-medium text-emerald-700"><dt>Combo discount (20%)</dt><dd>-{rupees(combo.discount)}</dd></div>
+                      <div className="flex justify-between border-t border-indigo-100 pt-1.5 text-base font-semibold text-slate-900"><dt>You pay</dt><dd>{rupees(combo.total)}</dd></div>
+                    </dl>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-500">Your price depends on your experience: Resume Writing is priced for 0-5, 6-12 and 13+ years, and the combo takes 20% off.</p>
+                  )}
+                </div>
+  ) : null;
   const detailsOk = yearsOk && form.name.trim().length > 1 && /\S+@\S+\.\S+/.test(form.email) && form.phone.replace(/\D/g, "").length >= 10 && form.consent;
   const paras = service.description.split(/\n{2,}/);
 
@@ -137,7 +154,7 @@ export default function BookingClient({ service }: { service: Service }) {
             <p className="mt-2 text-sm text-slate-600">with Gagan Sharma, Founder, StaffAnchor</p>
           </div>
           <div className="grid grid-cols-3 divide-x divide-slate-100 border-y border-slate-100 text-sm">
-            <div className="px-5 py-4 font-semibold">{byExp ? <span className="text-xs font-normal text-slate-500">from </span> : null}{rupees(payable)} <span className="text-xs font-normal text-slate-500">incl. GST</span></div>
+            <div className="px-5 py-4 font-semibold">{byExp && !combo ? <span className="text-xs font-normal text-slate-500">from </span> : null}{rupees(payable)} <span className="text-xs font-normal text-slate-500">incl. GST</span></div>
             <div className="flex items-center gap-2 px-5 py-4"><CalendarDays className="h-4 w-4" /> {service.duration_min} mins</div>
             <div className="flex items-center gap-2 px-5 py-4"><Video className="h-4 w-4" /> Video meeting</div>
           </div>
@@ -177,24 +194,8 @@ export default function BookingClient({ service }: { service: Service }) {
             <div className="space-y-3">
               <button onClick={() => setStep("time")} className="mb-1 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"><ArrowLeft className="h-4 w-4" /> Change time</button>
               <p className="flex items-center gap-2 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700"><Clock className="h-4 w-4" /> {slot ? longWhen(slot) : ""} IST</p>
+              {combo && <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">{yearsNum} yrs experience: {rupees(combo.subtotal)} less 20% = <b>{rupees(combo.total)}</b></p>}
               <h2 className="pt-1 text-lg font-semibold text-slate-900">Your details</h2>
-              {byExp && (
-                <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3.5">
-                  <label className="text-sm font-medium text-slate-900" htmlFor="yrs">Years of total work experience</label>
-                  <input id="yrs" className={`${field} mt-2`} placeholder="For example 8" inputMode="numeric" value={form.years} onChange={(e) => setForm({ ...form, years: e.target.value.replace(/\D/g, "").slice(0, 2) })} />
-                  {combo ? (
-                    <dl className="mt-3 space-y-1 text-sm text-slate-700">
-                      <div className="flex justify-between"><dt>Job strategy session (45 mins)</dt><dd>{rupees(combo.strategy)}</dd></div>
-                      <div className="flex justify-between"><dt>Resume Writing, {yearsNum} yrs</dt><dd>{rupees(combo.resume)}</dd></div>
-                      <div className="flex justify-between text-slate-500"><dt>Total</dt><dd className="line-through">{rupees(combo.subtotal)}</dd></div>
-                      <div className="flex justify-between font-medium text-emerald-700"><dt>Combo discount (20%)</dt><dd>-{rupees(combo.discount)}</dd></div>
-                      <div className="flex justify-between border-t border-indigo-100 pt-1.5 text-base font-semibold text-slate-900"><dt>You pay</dt><dd>{rupees(combo.total)}</dd></div>
-                    </dl>
-                  ) : (
-                    <p className="mt-2 text-xs text-slate-500">Your price depends on your experience: Resume Writing is priced for 0-5, 6-12 and 13+ years, and the combo takes 20% off.</p>
-                  )}
-                </div>
-              )}
               <input className={field} placeholder="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="name" />
               <input className={field} placeholder="Email (the invite goes here)" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} autoComplete="email" />
               <input className={field} placeholder="Mobile number" inputMode="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} autoComplete="tel" />
@@ -212,6 +213,7 @@ export default function BookingClient({ service }: { service: Service }) {
             </div>
           ) : (
             <div className="space-y-5">
+              {expBox}
               <h2 className="text-lg font-semibold text-slate-900">When should we meet?</h2>
               {!slots ? (
                 <p className="text-sm text-slate-500">Loading available times…</p>
@@ -248,8 +250,8 @@ export default function BookingClient({ service }: { service: Service }) {
                   </div>
                   <p className="text-xs text-slate-500">All times are in India Standard Time (GMT+5:30).</p>
                   {error && <p className="text-sm text-red-600">{error}</p>}
-                  <button onClick={() => { setError(null); setStep("details"); }} disabled={!slot} className="flex w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-3.5 text-[15px] font-semibold text-white disabled:opacity-40">
-                    Continue
+                  <button onClick={() => { setError(null); setStep("details"); }} disabled={!slot || !yearsOk} className="flex w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-3.5 text-[15px] font-semibold text-white disabled:opacity-40">
+                    {yearsOk ? "Continue" : "Enter your years of experience to continue"}
                   </button>
                 </>
               )}
