@@ -8,4 +8,14 @@ export const PLANS: Record<PlanKey, { label: string; band: string; price: number
   senior: { label: "Senior / CXO", band: "13+ years", price: 2499, revisions: 2, finalDelivery: "about 7 working days" },
 };
 
+// Job Strategy + Resume Rebuild: the 45-minute strategy session (999) plus Resume Writing for the band, less 20%. Display
+// only; the CRM works the price out again when the session is held.
+export function comboFor(years: number) {
+  const plan = planForYears(years);
+  const resume = PLANS[plan].price;
+  const subtotal = 999 + resume;
+  const total = Math.round((subtotal * 80) / 100);
+  return { plan, strategy: 999, resume, subtotal, discount: subtotal - total, total };
+}
+
 export const planForYears = (years: number): PlanKey => (years <= 5 ? "early" : years <= 12 ? "mid" : "senior");
