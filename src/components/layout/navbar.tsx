@@ -149,11 +149,8 @@ export function Navbar() {
           <Link href="/jobs">
             <Button variant={pathname.startsWith("/jobs") ? "default" : "ghost"}>Current Openings</Button>
           </Link>
-          <Link href="/mock-interview">
-            <Button variant={pathname.startsWith("/mock-interview") ? "default" : "ghost"}>Mock Interview</Button>
-          </Link>
-          <Link href="/ats-score">
-            <Button variant={pathname.startsWith("/ats-score") ? "default" : "ghost"}>ATS Score</Button>
+          <Link href="/edge">
+            <Button variant={pathname.startsWith("/edge") ? "default" : "ghost"}>Edge</Button>
           </Link>
           {/* Standout gradient pill -- the one paid upsell in the nav, so it
               is deliberately not styled like the free utility links. */}
@@ -242,8 +239,7 @@ export function Navbar() {
         <div className="max-h-[calc(100vh-6.25rem)] overflow-y-auto border-t border-slate-200 bg-white px-4 pb-5 pt-3 shadow-lg md:hidden">
           <div className="flex flex-col gap-1">
             {mobileLink("/jobs", "Current Openings", pathname.startsWith("/jobs"))}
-            {mobileLink("/mock-interview", "Mock Interview", pathname.startsWith("/mock-interview"))}
-            {mobileLink("/ats-score", "ATS Score", pathname.startsWith("/ats-score"))}
+            {mobileLink("/edge", "Edge", pathname.startsWith("/edge"))}
             <Link
               href="/priority-applicant"
               onClick={() => {
