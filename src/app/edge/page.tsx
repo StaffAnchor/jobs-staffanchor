@@ -58,25 +58,26 @@ const SESSIONS = [
   {
     id: "job-search-strategy",
     icon: Compass,
-    title: "Job Search Strategy + Resume Rebuild",
+    title: "Job Strategy + Resume Rebuild",
     sub: "",
-    tagline: "Fix the resume. Then fix how you're using it.",
-    meta: "45 mins · Video meeting",
-    price: "₹1,999",
+    tagline: "Get the resume written. Then fix how you're using it.",
+    meta: "45 mins · Video meeting · Resume in Word and PDF",
+    price: "From ₹1,758",
+    was: "From ₹2,198",
+    note: "20% off the two, incl. GST",
     popular: true,
     points: [
-      "Your resume reworked line by line, so it shows numbers, scale, ownership and the levers behind the result.",
-      "A sharper LinkedIn headline and About section.",
-      "A map of where your next role actually comes from: which companies, which route in, what to say.",
-      "Send your resume 24 hours before, so the call is spent on strategy and not on reading.",
+      "A 45-minute 1:1 strategy session (₹999): where your next role comes from, which companies, which route in, what to say, and a sharper LinkedIn headline and About.",
+      "Plus Resume Writing, written for you for your experience level (from ₹1,199), as Word and PDF.",
+      "Pay one price, 20% less than buying the two separately. Enter your years of experience to see yours.",
     ],
   },
 ];
 
 const GUIDE = [
   { when: "I have an interview coming up", then: "Mock interview", href: "#mock-interview" },
-  { when: "I'm not getting shortlisted or called", then: "Job Search Strategy + Resume Rebuild", href: "#job-search-strategy" },
   { when: "I just want a great resume, written for me", then: "Resume Writing", href: "#resume-writing" },
+  { when: "I'm not getting shortlisted or called", then: "Job Strategy + Resume Rebuild", href: "#job-search-strategy" },
 ];
 
 const LOOP = [
@@ -99,13 +100,39 @@ const FAQ = [
   { q: "Can I reschedule?", a: "Yes. Reply to your confirmation email and we'll move it." },
   { q: "Do prices include GST? Can I get an invoice?", a: "Yes, prices include GST. A tax invoice is generated for every payment. Reply to your confirmation email and we'll send it to you." },
   { q: "Are the sessions only for sales professionals?", a: "They're built for sales and revenue professionals, from BDRs to leaders. If you're in another field you can still book, but the interview scenarios and examples are sales-focused." },
-  { q: "What's the difference between the strategy session and Resume Writing?", a: "In the 45-minute session we work through your resume together and plan your search, live on a call. Resume Writing is done for you: you fill in a short form and receive a finished resume as Word and PDF." },
+  { q: "What do I get in the Job Strategy + Resume Rebuild combo?", a: "Resume Writing is done for you: you fill in a short form and receive a finished resume as Word and PDF. The combo adds a 45-minute 1:1 strategy session (₹999) to Resume Writing and takes 20% off the total." },
 ];
 
 export default async function EdgePage({ searchParams }: { searchParams: Promise<{ src?: string }> }) {
   const src = cleanSrc((await searchParams).src);
   const next = await nextOpenSlot();
   const book = (id: string) => `${BOOK}/${id}?src=${src}`;
+  const sessionCard = (s: (typeof SESSIONS)[number], i: number) => (
+    <Reveal key={s.id} delay={i * 90}>
+                <div id={s.id} className={`relative flex h-full scroll-mt-24 flex-col rounded-3xl bg-white p-7 transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-900/10 ${s.popular ? "border-2 border-indigo-500 shadow-xl shadow-indigo-900/10" : "border border-slate-200 shadow-sm"}`}>
+                  {s.popular && <span className="absolute -top-3 left-7 rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow-md">Most popular</span>}
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600"><s.icon className="h-6 w-6" /></span>
+                  <p className="mt-5 text-xs font-medium text-slate-500">{s.meta}</p>
+                  <h3 className={`${DISPLAY} mt-1 text-[22px] font-semibold leading-snug tracking-tight`}>{s.title}{s.sub ? <span className="block text-base font-medium text-slate-500">{s.sub}</span> : null}</h3>
+                  <p className="mt-3 font-medium text-slate-900">{s.tagline}</p>
+                  <ul className="mt-4 flex-1 space-y-2.5 text-[14.5px] leading-relaxed text-slate-600">
+                    {s.points.map((p) => (
+                      <li key={p} className="flex gap-2.5"><BadgeCheck className="mt-0.5 h-4.5 w-4.5 shrink-0 text-indigo-500" /> <span>{p}</span></li>
+                    ))}
+                  </ul>
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
+                    <div>
+                      {"was" in s && <p className="text-xs text-slate-400 line-through">{s.was}</p>}
+                      <p className={`${DISPLAY} text-2xl font-semibold`}>{s.price}</p>
+                      <p className="text-xs text-slate-500">{"note" in s ? s.note : "incl. GST"}</p>
+                    </div>
+                    <Link href={book(s.id)} className="group inline-flex items-center whitespace-nowrap rounded-xl bg-[#12131A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-600">
+                      {s.id === "job-search-strategy" ? "Book the combo" : "Book this session"} <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Link>
+                  </div>
+                </div>
+              </Reveal>
+  );
 
   return (
     <main className="overflow-x-clip bg-white text-[#12131A]">
@@ -202,33 +229,9 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
           </Reveal>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-3">
-            {SESSIONS.map((s, i) => (
-              <Reveal key={s.id} delay={i * 90}>
-                <div id={s.id} className={`relative flex h-full scroll-mt-24 flex-col rounded-3xl bg-white p-7 transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-900/10 ${s.popular ? "border-2 border-indigo-500 shadow-xl shadow-indigo-900/10" : "border border-slate-200 shadow-sm"}`}>
-                  {s.popular && <span className="absolute -top-3 left-7 rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow-md">Most popular</span>}
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600"><s.icon className="h-6 w-6" /></span>
-                  <p className="mt-5 text-xs font-medium text-slate-500">{s.meta}</p>
-                  <h3 className={`${DISPLAY} mt-1 text-[22px] font-semibold leading-snug tracking-tight`}>{s.title}{s.sub ? <span className="block text-base font-medium text-slate-500">{s.sub}</span> : null}</h3>
-                  <p className="mt-3 font-medium text-slate-900">{s.tagline}</p>
-                  <ul className="mt-4 flex-1 space-y-2.5 text-[14.5px] leading-relaxed text-slate-600">
-                    {s.points.map((p) => (
-                      <li key={p} className="flex gap-2.5"><BadgeCheck className="mt-0.5 h-4.5 w-4.5 shrink-0 text-indigo-500" /> <span>{p}</span></li>
-                    ))}
-                  </ul>
-                  <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
-                    <div>
-                      <p className={`${DISPLAY} text-2xl font-semibold`}>{s.price}</p>
-                      <p className="text-xs text-slate-500">incl. GST</p>
-                    </div>
-                    <Link href={book(s.id)} className="group inline-flex items-center whitespace-nowrap rounded-xl bg-[#12131A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-600">
-                      Book this session <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Link>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
+            {sessionCard(SESSIONS[0], 0)}
 
-            <Reveal delay={180}>
+            <Reveal delay={90}>
               <div id="resume-writing" className="flex h-full scroll-mt-24 flex-col rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-900/10">
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600"><FileText className="h-6 w-6" /></span>
                 <p className="mt-5 text-xs font-medium text-slate-500">Delivered in Word and PDF</p>
@@ -250,6 +253,8 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
                 </div>
               </div>
             </Reveal>
+
+            {sessionCard(SESSIONS[1], 2)}
           </div>
         </div>
       </section>
@@ -380,7 +385,7 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
           <p className="mx-auto mt-4 max-w-xl text-lg text-slate-300">Pick a time that suits you. You will have your invite in minutes.</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <a href={`${BOOK}/job-search-strategy?src=${src}`} className="group inline-flex items-center rounded-xl bg-white px-7 py-4 text-[15px] font-semibold text-[#12131A] transition hover:bg-indigo-100">
-              Book strategy + resume <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              Book the combo <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
             <a href={`${BOOK}/mock-interview?src=${src}`} className="inline-flex items-center rounded-xl border border-white/30 px-7 py-4 text-[15px] font-semibold text-white transition hover:bg-white/10">
               Book a mock interview

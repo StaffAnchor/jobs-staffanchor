@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   if (b.consent !== true) return NextResponse.json({ ok: false, error: "Please accept the terms and privacy policy." }, { status: 400 });
 
   const hold = await crmCall<{ bookingId?: string; amountInr?: number; title?: string }>("/api/internal/pro/hold", {
-    service: b.service, slotStart: b.slotStart, name: b.name, email: b.email, phone: b.phone, targetRole: b.targetRole, notes: b.notes, src: b.src,
+    service: b.service, slotStart: b.slotStart, name: b.name, email: b.email, phone: b.phone, targetRole: b.targetRole, notes: b.notes, src: b.src, experienceYears: b.experienceYears,
   });
   if (!hold.json.ok || !hold.json.bookingId || !hold.json.amountInr) {
     return NextResponse.json({ ok: false, error: hold.json.error ?? "Couldn't hold that time. Please try again." }, { status: hold.status >= 400 ? hold.status : 502 });
