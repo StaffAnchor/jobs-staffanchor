@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://www.staffanchor.com/pro-sessions" },
 };
 
-const BOOK = "https://clients.staffanchor.com/book";
+const BOOK = "/pro-sessions/book";
 const SESSIONS = [
   {
     slug: "mock-interview",

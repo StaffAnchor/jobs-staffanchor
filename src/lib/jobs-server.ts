@@ -29,3 +29,12 @@ export async function getJobByCodeServer(code: string): Promise<JobListing | nul
   const { data } = await client().rpc("resolve_job_code", { p_code: clean });
   return typeof data === "string" ? getJobByIdServer(data) : null;
 }
+
+export type ProService = { slug: string; title: string; tagline: string | null; description: string; duration_min: number; price_inr: number; popular: boolean };
+
+// One Pro Sessions listing (public read), for the booking page.
+export async function getProService(slug: string): Promise<ProService | null> {
+  if (!/^[a-z0-9-]{2,60}$/.test(slug)) return null;
+  const { data } = await client().from("pro_services").select("slug, title, tagline, description, duration_min, price_inr, popular").eq("slug", slug).eq("active", true).maybeSingle();
+  return (data as ProService | null) ?? null;
+}
