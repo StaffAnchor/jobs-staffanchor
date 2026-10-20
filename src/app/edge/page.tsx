@@ -3,15 +3,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CalendarCheck, CreditCard, Video } from "lucide-react";
 
-// The same content as staffanchor.com/pro-sessions, so search engines treat that one as the original.
+// The same content as staffanchor.com/edge, so search engines treat that one as the original.
 export const metadata: Metadata = {
-  title: "Pro Sessions | Mock Interview, Job Search Strategy and Resume Rebuild | StaffAnchor",
+  title: "StaffAnchor Edge | Mock Interview, Job Search Strategy and Resume Rebuild",
   description:
     "1:1 video sessions with Gagan Sharma, founder of StaffAnchor, for sales and leadership professionals: a full mock interview, a job search strategy with a resume rebuild, and resume writing.",
-  alternates: { canonical: "https://www.staffanchor.com/pro-sessions" },
+  alternates: { canonical: "https://www.staffanchor.com/edge" },
 };
 
-const BOOK = "/pro-sessions/book";
+const BOOK = "/edge/book";
 const SESSIONS = [
   {
     slug: "mock-interview",
@@ -66,8 +66,8 @@ export default function ProSessionsPage() {
     <main>
       <section className="bg-slate-50 px-4 py-14 sm:px-6">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="mb-4 inline-block rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-700">Pro Sessions</span>
-          <h1 className={`${H} text-4xl md:text-5xl`}>1:1 sessions to land your next sales role</h1>
+          <span className="mb-4 inline-block rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-700">StaffAnchor Edge</span>
+          <h1 className={`${H} text-4xl md:text-5xl`}>Your edge in sales hiring</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-slate-600">
             Practise with a hiring leader, fix your resume, and get a plan for where your next role really comes from. Book a time that suits you and pay securely online.
           </p>

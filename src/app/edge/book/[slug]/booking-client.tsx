@@ -121,7 +121,7 @@ export default function BookingClient({ service }: { service: Service }) {
         {/* The session */}
         <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
           <div className="bg-[#F3E9E4] p-6 md:p-8">
-            <a href="/pro-sessions" className="mb-5 inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
+            <a href="/edge" className="mb-5 inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
               <ArrowLeft className="h-4 w-4" /> All sessions
             </a>
             {service.popular && <span className="mb-3 block w-fit rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">Popular</span>}
