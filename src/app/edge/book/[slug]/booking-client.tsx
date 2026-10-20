@@ -129,7 +129,7 @@ export default function BookingClient({ service }: { service: Service }) {
             <p className="mt-2 text-sm text-slate-600">with Gagan Sharma, Founder, StaffAnchor</p>
           </div>
           <div className="grid grid-cols-3 divide-x divide-slate-100 border-y border-slate-100 text-sm">
-            <div className="px-5 py-4 font-semibold">₹{service.price_inr.toLocaleString("en-IN")}</div>
+            <div className="px-5 py-4 font-semibold">₹{service.price_inr.toLocaleString("en-IN")} <span className="text-xs font-normal text-slate-500">incl. GST</span></div>
             <div className="flex items-center gap-2 px-5 py-4"><CalendarDays className="h-4 w-4" /> {service.duration_min} mins</div>
             <div className="flex items-center gap-2 px-5 py-4"><Video className="h-4 w-4" /> Video meeting</div>
           </div>

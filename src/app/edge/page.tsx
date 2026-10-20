@@ -91,7 +91,7 @@ export default function ProSessionsPage() {
                 ))}
               </ul>
               <div className="flex items-center justify-between border-t border-slate-200 pt-4">
-                <span className={`${H} text-lg`}>{s.price}</span>
+                <span className={`${H} text-lg`}>{s.price} <span className="text-xs font-normal text-slate-500">incl. GST</span></span>
                 <Link href={s.href} className="group inline-flex items-center rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">
                   {s.cta} <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>

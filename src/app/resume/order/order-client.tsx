@@ -92,7 +92,7 @@ export default function OrderClient() {
           <div className="space-y-6">
             <div>
               <h1 className="text-[28px] font-bold leading-tight text-slate-900">Order your resume</h1>
-              <p className="mt-2 text-[15px] leading-relaxed text-slate-600">Professionally written, ATS-friendly, and delivered as Word and PDF. The price depends on your years of experience, nothing else.</p>
+              <p className="mt-2 text-[15px] leading-relaxed text-slate-600">Professionally written, ATS-friendly, and delivered as Word and PDF. The price depends on your years of experience, nothing else, and includes GST.</p>
             </div>
 
             <div>
@@ -109,6 +109,7 @@ export default function OrderClient() {
                     <p className="font-semibold text-slate-900">{p.label}</p>
                     <p className="text-slate-500">{p.band}</p>
                     <p className="mt-2 text-lg font-bold text-slate-900">{inr(p.price)}</p>
+                    <p className="text-xs text-slate-500">incl. GST</p>
                     <p className="mt-1 text-xs text-slate-500">{p.revisions} revision round{p.revisions > 1 ? "s" : ""}</p>
                   </div>
                 );
