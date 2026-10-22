@@ -10,6 +10,7 @@ import { useAuthStore } from "@/modules/auth/store";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 import NotificationBell from "./notification-bell";
+import EdgeBanner from "./edge-banner";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -108,6 +109,8 @@ export function Navbar() {
   );
 
   return (
+    <>
+    <EdgeBanner pathname={pathname} />
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
       {/* Which StaffAnchor site you are on, and a way across. The company site
           (employers, services, about) and this Job Portal are separate
@@ -153,21 +156,20 @@ export function Navbar() {
               stays apart from the Priority Applicant pill beside it. */}
           <Link
             href="/edge"
-            className={`group relative mx-0.5 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 px-3.5 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/20 transition-transform duration-200 hover:scale-105 hover:shadow-md hover:shadow-indigo-500/30 ${
+            className={`group relative mx-0.5 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 px-4.5 py-2.5 text-[15px] font-bold text-white shadow-md shadow-indigo-500/30 transition-transform duration-200 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/40 ${
               pathname.startsWith("/edge") ? "ring-2 ring-indigo-300 ring-offset-2" : ""
             }`}
           >
-            <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+            <Sparkles className="h-4 w-4 animate-pulse" />
             Edge
           </Link>
-          {/* Standout gradient pill -- the one paid upsell in the nav, so it
-              is deliberately not styled like the free utility links. */}
+          {/* The paid Priority Applicant upsell, kept quieter than Edge: an outlined pill, so Edge leads. */}
           <Link
             href="/priority-applicant"
             onClick={() => logPriorityClick("nav_pill")}
-            className="group relative mx-0.5 flex items-center gap-1.5 overflow-hidden rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/25 transition-transform duration-200 hover:scale-105 hover:shadow-md hover:shadow-indigo-500/35"
+            className="group relative mx-0.5 flex items-center gap-1.5 overflow-hidden rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-[13px] font-semibold text-indigo-700 transition duration-200 hover:border-indigo-300 hover:bg-indigo-50"
           >
-            <Zap className="h-3.5 w-3.5 animate-pulse" />
+            <Zap className="h-3.5 w-3.5" />
             Priority Applicant
           </Link>
           {candidateSignedIn && (
@@ -250,7 +252,7 @@ export function Navbar() {
             <Link
               href="/edge"
               onClick={closeMenu}
-              className={`flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-500 px-4 text-[15px] font-semibold text-white ${
+              className={`flex h-14 items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-500 px-4 text-base font-bold text-white shadow-md shadow-indigo-500/25 ${
                 pathname.startsWith("/edge") ? "ring-2 ring-indigo-300 ring-offset-2" : ""
               }`}
             >
@@ -262,7 +264,7 @@ export function Navbar() {
                 logPriorityClick("nav_pill");
                 closeMenu();
               }}
-              className="mt-1 flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 text-[15px] font-semibold text-white"
+              className="mt-1 flex h-11 items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 text-sm font-semibold text-indigo-700"
             >
               <Zap className="h-4 w-4" /> Priority Applicant
             </Link>
@@ -319,5 +321,6 @@ export function Navbar() {
         </div>
       )}
     </header>
+    </>
   );
 }
