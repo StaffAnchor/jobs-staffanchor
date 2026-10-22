@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, Menu, X, Zap } from "lucide-react";
+import { ArrowUpRight, Menu, Sparkles, X, Zap } from "lucide-react";
 import { logPriorityClick } from "@/lib/priority-click";
 import { useAuthStore } from "@/modules/auth/store";
 import { Button } from "@/components/ui/button";
@@ -149,8 +149,16 @@ export function Navbar() {
           <Link href="/jobs">
             <Button variant={pathname.startsWith("/jobs") ? "default" : "ghost"}>Current Openings</Button>
           </Link>
-          <Link href="/edge">
-            <Button variant={pathname.startsWith("/edge") ? "default" : "ghost"}>Edge</Button>
+          {/* Highlighted like the Edge tab on staffanchor.com: blue to indigo, so it reads as the same product and
+              stays apart from the Priority Applicant pill beside it. */}
+          <Link
+            href="/edge"
+            className={`group relative mx-0.5 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 px-3.5 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/20 transition-transform duration-200 hover:scale-105 hover:shadow-md hover:shadow-indigo-500/30 ${
+              pathname.startsWith("/edge") ? "ring-2 ring-indigo-300 ring-offset-2" : ""
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+            Edge
           </Link>
           {/* Standout gradient pill -- the one paid upsell in the nav, so it
               is deliberately not styled like the free utility links. */}
@@ -239,7 +247,15 @@ export function Navbar() {
         <div className="max-h-[calc(100vh-6.25rem)] overflow-y-auto border-t border-slate-200 bg-white px-4 pb-5 pt-3 shadow-lg md:hidden">
           <div className="flex flex-col gap-1">
             {mobileLink("/jobs", "Current Openings", pathname.startsWith("/jobs"))}
-            {mobileLink("/edge", "Edge", pathname.startsWith("/edge"))}
+            <Link
+              href="/edge"
+              onClick={closeMenu}
+              className={`flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-500 px-4 text-[15px] font-semibold text-white ${
+                pathname.startsWith("/edge") ? "ring-2 ring-indigo-300 ring-offset-2" : ""
+              }`}
+            >
+              <Sparkles className="h-4 w-4" /> Edge
+            </Link>
             <Link
               href="/priority-applicant"
               onClick={() => {
