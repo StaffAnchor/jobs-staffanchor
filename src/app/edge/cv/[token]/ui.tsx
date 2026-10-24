@@ -224,3 +224,41 @@ export function Ring({ pct, size = 44 }: { pct: number; size?: number }) {
     </span>
   );
 }
+
+// ---- dates: month and year dropdowns, which work the same on every phone and browser ----
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const THIS_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 46 }, (_, i) => String(THIS_YEAR - i));
+
+/** Value is YYYY-MM, or empty until both month and year are chosen. */
+export function MonthYear({ value, onChange, disabled = false, label }: { value: string; onChange: (v: string) => void; disabled?: boolean; label: string }) {
+  const [y0, m0] = value ? value.split("-") : ["", ""];
+  const [y, setY] = useState(y0);
+  const [m, setM] = useState(m0);
+  // Follow the value when it changes from outside (for example when a CV is read), but keep a half-picked date while it is being chosen.
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) {
+    setSeen(value);
+    setY(y0);
+    setM(m0);
+  }
+  const emit = (ny: string, nm: string) => {
+    setY(ny);
+    setM(nm);
+    onChange(ny && nm ? `${ny}-${nm}` : "");
+  };
+  const cls = `${inputCls} !px-2.5 disabled:bg-slate-50 disabled:text-slate-400`;
+  return (
+    <div className="flex gap-2" role="group" aria-label={label}>
+      <select aria-label={`${label}, month`} disabled={disabled} value={m} onChange={(e) => emit(y, e.target.value)} className={cls}>
+        <option value="">Month</option>
+        {MONTHS.map((n, i) => <option key={n} value={String(i + 1).padStart(2, "0")}>{n}</option>)}
+      </select>
+      <select aria-label={`${label}, year`} disabled={disabled} value={y} onChange={(e) => emit(e.target.value, m)} className={cls}>
+        <option value="">Year</option>
+        {YEARS.map((yr) => <option key={yr} value={yr}>{yr}</option>)}
+      </select>
+    </div>
+  );
+}

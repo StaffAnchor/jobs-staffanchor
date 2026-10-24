@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CalendarDays, ChevronDown, FileText, Globe, Handshake, Lightbulb, MapPin, Megaphone, MessageCircle, Plus, PhoneIncoming, PhoneOutgoing, Repeat, Share2, Trash2, TrendingUp, UserPlus, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CalendarDays, ChevronDown, FileText, Globe, Handshake, Lightbulb, MapPin, Megaphone, MessageCircle, Plus, PhoneIncoming, PhoneOutgoing, Repeat, Share2, Trash2, TrendingUp, UserPlus, Wallet } from "lucide-react";
 import {
-  BUYERS, COMPOSITION, CURRENCIES, CUSTOMERS, CYCLES, FUNCTIONS, INDUSTRIES, LEADER_LEVELS, LEAD_DUTIES, LEVELS, MODELS, PERIODS, PROCESS_GROUPS, PROC_ROLES, RANGES_INR, ROUTES, SCOPES, STAGES, TOOLS, VOLUMES, WIN_TEMPLATES,
-  assembleWin, describeJob, isLeader, keyItems, metricFromPreset, newId, presetsFor, suggestLevel, type Job, type Metric, type Win,
+  BUYERS, COMPOSITION, CURRENCIES, CUSTOMERS, CYCLES, FUNCTIONS, INDUSTRIES, LEADER_LEVELS, LEAD_DUTIES, MODELS, PERIODS, PROCESS_GROUPS, PROC_ROLES, RANGES_INR, ROUTES, SCOPES, STAGES, TOOLS, VOLUMES, WIN_TEMPLATES,
+  assembleWin, describeJob, isLeader, keyItems, metricFromPreset, newId, presetsFor, type Job, type Metric, type Win,
 } from "@/lib/cv-brief/config";
+import Positions from "./positions";
 import { BigNumber, Field, IconButton, MultiChips, NumInput, PickChips, Reveal, Seg, Select, Tile, Toggle, inputCls } from "./ui";
 
 export type StepId = "role" | "sold" | "process" | "numbers" | "team" | "wins" | "more";
@@ -58,36 +59,25 @@ const echo = (m: Metric): string => {
 
 // ---------- Step: the basics ----------
 function RoleStep({ job, set, onChange }: { job: Job; set: <K extends keyof Job>(k: K, v: Job[K]) => void; onChange: (j: Job) => void }) {
-  const suggestion = suggestLevel(job.title);
-  const pick = (v: string) => onChange({ ...job, level: v, manages: LEADER_LEVELS.includes(v) ? "yes" : isLeader(job) && job.manages === "yes" ? "" : job.manages });
+  // Said to be a leader: a leader level in any role here, or ticked "yes". A title alone only triggers the team question, not this banner.
+  const confirmedLeader = job.positions.some((p) => LEADER_LEVELS.includes(p.level)) || job.manages === "yes";
+  const anyLevel = job.positions.some((p) => p.level);
   return (
     <div className="space-y-6">
-      {job.fromCv && <Banner>We read these from your CV. Please check them and fix anything that is off.</Banner>}
+      {job.fromCv && !job.checked && <Banner>We read these from your CV. Please check them and fix anything that is off.</Banner>}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Company"><input className={inputCls} value={job.employer} onChange={(e) => set("employer", e.target.value)} placeholder="Where you worked" /></Field>
-        <Field label="Your title"><input className={inputCls} value={job.title} onChange={(e) => set("title", e.target.value)} placeholder="For example Senior Account Executive" /></Field>
-        <Field label="Started"><input type="month" className={inputCls} value={job.start} onChange={(e) => set("start", e.target.value)} /></Field>
-        <Field label="Ended"><input type="month" className={`${inputCls} disabled:bg-slate-50 disabled:text-slate-400`} value={job.end} disabled={job.current} onChange={(e) => set("end", e.target.value)} /></Field>
+        <Field label="City"><input className={inputCls} value={job.city} onChange={(e) => set("city", e.target.value)} /></Field>
       </div>
-      <Toggle on={job.current} onChange={(v) => onChange({ ...job, current: v, end: v ? "" : job.end })}>I work here now</Toggle>
-      <Field label="What kind of sales role?"><PickChips options={FUNCTIONS} value={job.fn} onChange={(v) => set("fn", v)} /></Field>
-      <Field label="Your level" hint="This decides which questions come next, so a team lead is asked about the team and a seller is not.">
-        {!job.level && suggestion && (
-          <button type="button" onClick={() => pick(suggestion)} className="cv-in mb-3 flex w-full items-center justify-between gap-3 rounded-2xl bg-sky-50 px-4 py-3 text-left text-[13.5px] text-sky-900 transition hover:bg-sky-100">
-            <span>From your title, this looks like <b>{suggestion}</b>. Is that right?</span>
-            <span className="shrink-0 rounded-full bg-sky-900 px-3 py-1 text-xs font-semibold text-white">Yes</span>
-          </button>
-        )}
-        <PickChips options={LEVELS} value={job.level} onChange={pick} />
-      </Field>
-      {(LEADER_LEVELS.includes(job.level) || job.manages === "yes") && <Banner>Since you led a team, we will ask about its size and results in a moment.</Banner>}
-      {!LEADER_LEVELS.includes(job.level) && job.manages !== "yes" && job.level && (
+      <Field label="Your role at this company" hint="Your level decides which questions come next, so a team lead is asked about the team and a seller is not."><Positions job={job} onChange={onChange} withLevel /></Field>
+      {confirmedLeader && <Banner>Since you led a team, we will ask about its size and results in a moment.</Banner>}
+      {!confirmedLeader && anyLevel && (
         <Field label="Did you manage or lead people in this job?">
           <Seg<Job["manages"]> options={[{ value: "no", label: "No, I sold on my own" }, { value: "yes", label: "Yes, I managed people" }]} value={job.manages} onChange={(v) => set("manages", v)} />
         </Field>
       )}
+      <Field label="What kind of sales role?"><PickChips options={FUNCTIONS} value={job.fn} onChange={(v) => set("fn", v)} /></Field>
       <Field label="Industry"><PickChips options={INDUSTRIES} value={job.industry} onChange={(v) => set("industry", v)} /></Field>
-      <Field label="City"><input className={inputCls} value={job.city} onChange={(e) => set("city", e.target.value)} /></Field>
     </div>
   );
 }
@@ -100,6 +90,7 @@ function SoldStep({ job, set }: { job: Job; set: <K extends keyof Job>(k: K, v: 
         <textarea rows={3} className={inputCls} value={job.sells} onChange={(e) => set("sells", e.target.value)} placeholder="For example Cloud HR software to mid-size companies" />
       </Field>
       <Field label="Who bought from you?"><MultiChips options={CUSTOMERS} value={job.customers} onChange={(v) => set("customers", v)} /></Field>
+      <Field label="Notable customers or brands you sold to" hint="Only names you are allowed to share. Skip it if they are confidential."><input className={inputCls} value={job.clients} onChange={(e) => set("clients", e.target.value)} placeholder="For example Tata Motors, Infosys, Apollo Hospitals" /></Field>
       <Field label="Business model"><MultiChips options={MODELS} value={job.model} onChange={(v) => set("model", v)} own={false} /></Field>
       <Field label="How long did a sale usually take?"><PickChips options={CYCLES} value={job.cycle} onChange={(v) => set("cycle", v)} /></Field>
       <Field label="Direct, or through partners?"><PickChips options={ROUTES} value={job.route} onChange={(v) => set("route", v)} /></Field>
@@ -183,8 +174,9 @@ function NumbersStep({ job, onChange }: { job: Job; onChange: (j: Job) => void }
     const fallback = [
       { key: "deal", label: "Typical deal or order size", kind: "money" as const, scope: "own" as const, hint: "A usual one, not the biggest." },
       { key: "deals", label: "Deals or orders closed", kind: "count" as const, scope: "own" as const, hint: "Roughly, in the period above." },
+      { key: "activity", label: "Calls, meetings or demos a week", kind: "count" as const, scope: "own" as const, hint: "A typical week." },
     ].filter((f) => !avail.some((a) => a.key === f.key));
-    return [...avail, ...fallback].slice(0, 2);
+    return [...avail, ...fallback].slice(0, job.noTarget ? 3 : 2);
   }, [job]);
 
   // Make sure the core figures exist, so the shared currency, unit and period have somewhere to live.
@@ -237,8 +229,10 @@ function NumbersStep({ job, onChange }: { job: Job; onChange: (j: Job) => void }
 
       <div className="space-y-5 rounded-2xl border border-slate-200 p-4 md:p-5">
         <p className="text-[13px] font-bold uppercase tracking-wider text-slate-400">Your own numbers</p>
-        {OWN.map((c) => <MoneyOrNumber key={c.key} m={cur(c)} ask={c.ask} hint={c.hint} mode={mode} onChange={put} />)}
-        {pct !== null && (
+        <Toggle on={job.noTarget} onChange={(v) => onChange({ ...job, noTarget: v })}>I did not carry a sales target in this job</Toggle>
+        {job.noTarget && <p className="text-[13px] text-slate-500">No problem. Tell us about your volumes below instead, such as leads handled, calls or meetings, and deals closed.</p>}
+        {!job.noTarget && OWN.map((c) => <MoneyOrNumber key={c.key} m={cur(c)} ask={c.ask} hint={c.hint} mode={mode} onChange={put} />)}
+        {!job.noTarget && pct !== null && (
           <div className={`cv-in inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13.5px] font-bold ${pct >= 100 ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>
             {pct >= 100 ? "🎯" : "📊"} That is {pct}% of target
           </div>
@@ -442,13 +436,20 @@ function Preview({ job, full, onJump }: { job: Job; full: boolean; onJump: (s: S
 }
 
 // ---------- The wizard ----------
-export default function JobWizard({ job, index, total, onChange, onClose, initialStep }: { job: Job; index: number; total: number; onChange: (j: Job) => void; onClose: () => void; initialStep?: StepId }) {
+export type JobPill = { id: string; state: "done" | "pending" };
+export type NextJob = { id: string; index: number; name: string };
+
+export default function JobWizard({ job, index, total, pills, othersLeft, next, onChange, onClose, onOpenJob, onAllDone, initialStep }: {
+  job: Job; index: number; total: number; pills: JobPill[]; othersLeft: number; next: NextJob | null;
+  onChange: (j: Job) => void; onClose: () => void; onOpenJob: (id: string) => void; onAllDone: () => void; initialStep?: StepId;
+}) {
   const [full, setFull] = useState(index < 2);
   const leader = isLeader(job);
   const steps = useMemo<StepId[]>(() => (full ? ["role", "sold", "process", "numbers", ...(leader ? (["team"] as StepId[]) : []), "wins", "more"] : ["role", "sold", "numbers", "wins"]), [full, leader]);
   const [stepId, setStepId] = useState<StepId>(initialStep ?? "role");
   const [nudge, setNudge] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [finished, setFinished] = useState(false);
   const top = useRef<HTMLDivElement>(null);
 
   const cur: StepId = steps.includes(stepId) ? stepId : steps[0];
@@ -456,18 +457,26 @@ export default function JobWizard({ job, index, total, onChange, onClose, initia
   const items = keyItems(job, full);
   const doneOf = (s: StepId) => items.find((k) => k.id === s)?.done ?? false;
   const set = <K extends keyof Job>(k: K, v: Job[K]) => onChange({ ...job, [k]: v });
+  const name = [job.title, job.employer].filter(Boolean).join(", ") || `Job ${index + 1}`;
+  const stillMissing = items.filter((k) => !k.done);
 
+  const toTop = () => top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   const go = (s: StepId) => {
     setNudge(false);
+    setFinished(false);
     setStepId(s);
-    top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    toTop();
   };
   const last = at === steps.length - 1;
-  const next = () => (last ? onClose() : go(steps[at + 1]));
+  const next2 = () => {
+    if (!last) return go(steps[at + 1]);
+    setFinished(true);
+    toTop();
+  };
   // The three things a sales CV cannot do without get one gentle question before they can be skipped.
   const skip = () => {
     if (["process", "numbers", "team"].includes(cur) && !doneOf(cur) && !nudge) return setNudge(true);
-    next();
+    next2();
   };
   const jump = (s: StepId) => {
     if (!steps.includes(s)) setFull(true);
@@ -480,12 +489,67 @@ export default function JobWizard({ job, index, total, onChange, onClose, initia
     team: "Team size is the first thing a reader looks for in a leadership role. A rough number is fine.",
   };
 
+  // Where they are, in plain words, so there is never a doubt about which job this is or how many are left.
+  const where = (
+    <div className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-slate-200/70">
+      <div className="min-w-0">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">You are on job {index + 1} of {total}</p>
+        <p className="truncate text-[15px] font-bold text-slate-950">{name}</p>
+        <p className="text-xs text-slate-500">{othersLeft === 0 ? "This is the last job that needs details." : `${othersLeft} more ${othersLeft === 1 ? "job needs" : "jobs need"} details after this one.`}</p>
+      </div>
+      <div className="flex shrink-0 gap-1.5" aria-label="Your jobs">
+        {pills.map((p, i) => {
+          const here = p.id === job.id;
+          return (
+            <button key={p.id} type="button" onClick={() => onOpenJob(p.id)} title={`Job ${i + 1}`} aria-current={here ? "step" : undefined} className={`flex h-8 w-8 items-center justify-center rounded-full text-[12.5px] font-bold transition ${here ? "bg-slate-950 text-white" : p.state === "done" ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200" : "bg-amber-50 text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100"}`}>
+              {p.state === "done" && !here ? <Check className="h-4 w-4" strokeWidth={3} /> : i + 1}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  if (finished) {
+    const d = describeJob(job, full);
+    return (
+      <div ref={top} className="cv-in mx-auto max-w-xl space-y-5 pb-10">
+        {where}
+        <div className="rounded-3xl border border-slate-200/70 bg-white p-6 text-center shadow-[0_1px_2px_rgba(15,23,42,0.04)] md:p-8">
+          <span className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${stillMissing.length === 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}><Check className="h-7 w-7" strokeWidth={3} /></span>
+          <h2 className="mt-4 text-[24px] font-bold text-slate-950">{stillMissing.length === 0 ? `Job ${index + 1} of ${total} is done` : `Job ${index + 1} of ${total} is saved`}</h2>
+          <p className="mt-1.5 text-[15px] text-slate-600">{stillMissing.length === 0 ? "Everything a sales CV needs is in for this job." : `Still to add for this job: ${stillMissing.map((k) => k.label.toLowerCase()).join(", ")}. You can come back to it any time.`}</p>
+          <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-left">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">How it will read</p>
+            <p className="mt-2 text-[15px] font-bold text-slate-950">{d.head}</p>
+            <ul className="mt-1.5 space-y-1.5">{d.lines.filter((l) => !l.ghost).map((l, i) => <li key={i} className="text-[13.5px] leading-relaxed text-slate-700">{l.text}</li>)}</ul>
+          </div>
+          <div className="mt-6 space-y-2.5">
+            {next ? (
+              <button type="button" onClick={() => onOpenJob(next.id)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-4 text-[16px] font-semibold text-white transition hover:bg-slate-800">
+                Next: job {next.index + 1} of {total}, {next.name} <ArrowRight className="h-5 w-5" />
+              </button>
+            ) : (
+              <button type="button" onClick={onAllDone} className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-4 text-[16px] font-semibold text-white transition hover:bg-slate-800">
+                All jobs are done. Continue to your story <ArrowRight className="h-5 w-5" />
+              </button>
+            )}
+            <div className="flex justify-center gap-5 text-[13.5px] font-semibold text-slate-500">
+              <button type="button" onClick={() => go(steps[0])} className="hover:text-slate-950">Edit this job again</button>
+              <button type="button" onClick={onClose} className="hover:text-slate-950">All my jobs</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div ref={top} className="grid gap-6 pb-28 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-5">
-        <div className="flex items-center justify-between">
+        <div className="space-y-2.5">
           <button type="button" onClick={onClose} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-500 hover:text-slate-950"><ArrowLeft className="h-4 w-4" /> All my jobs</button>
-          <span className="text-xs font-semibold text-slate-400">Job {index + 1} of {total}</span>
+          {where}
         </div>
 
         <div>
@@ -496,7 +560,7 @@ export default function JobWizard({ job, index, total, onChange, onClose, initia
               </button>
             ))}
           </div>
-          <p className="mt-1 text-xs font-semibold text-slate-400">Step {at + 1} of {steps.length}</p>
+          <p className="mt-1 text-xs font-semibold text-slate-400">Step {at + 1} of {steps.length} for this job</p>
           <h1 className="mt-1 text-[26px] font-bold leading-tight text-slate-950">{TEXT[cur].title}</h1>
           <p className="mt-1.5 text-[15px] leading-relaxed text-slate-600">{TEXT[cur].sub}</p>
         </div>
@@ -524,7 +588,7 @@ export default function JobWizard({ job, index, total, onChange, onClose, initia
             <p className="flex gap-2.5 text-[14px] leading-relaxed text-amber-900"><Lightbulb className="mt-0.5 h-4 w-4 shrink-0" />{nudgeText[cur]}</p>
             <div className="flex gap-2">
               <button type="button" onClick={() => setNudge(false)} className="rounded-xl bg-slate-950 px-4 py-2 text-[13.5px] font-semibold text-white">Add it now</button>
-              <button type="button" onClick={next} className="rounded-xl px-4 py-2 text-[13.5px] font-semibold text-amber-900 hover:bg-amber-100">Skip anyway</button>
+              <button type="button" onClick={next2} className="rounded-xl px-4 py-2 text-[13.5px] font-semibold text-amber-900 hover:bg-amber-100">Skip anyway</button>
             </div>
           </div>
         )}
@@ -543,8 +607,8 @@ export default function JobWizard({ job, index, total, onChange, onClose, initia
           <button type="button" onClick={() => (at === 0 ? onClose() : go(steps[at - 1]))} className="rounded-xl px-4 py-3 text-[14px] font-semibold text-slate-600 hover:bg-slate-100">Back</button>
           <div className="flex items-center gap-2">
             {!last && !doneOf(cur) && <button type="button" onClick={skip} className="rounded-xl px-4 py-3 text-[14px] font-semibold text-slate-500 hover:bg-slate-100">Skip</button>}
-            <button type="button" onClick={next} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-7 py-3.5 text-[15px] font-semibold text-white transition hover:bg-slate-800 active:scale-[0.98]">
-              {last ? "Finish this job" : "Next"} <ArrowRight className="h-4 w-4" />
+            <button type="button" onClick={next2} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-7 py-3.5 text-[15px] font-semibold text-white transition hover:bg-slate-800 active:scale-[0.98]">
+              {last ? `Finish job ${index + 1}` : "Next"} <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </div>
