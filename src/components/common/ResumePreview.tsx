@@ -7,12 +7,22 @@ export default function ResumePreview({
   signedUrl,
   fileName,
   label,
+  defaultOpen = false,
+  hideTrigger = false,
+  onClose,
 }: {
   signedUrl: string;
   fileName: string;
   label?: string;
+  defaultOpen?: boolean;
+  hideTrigger?: boolean;
+  onClose?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(defaultOpen);
+  const setOpen = (v: boolean) => {
+    setOpenState(v);
+    if (!v) onClose?.();
+  };
   const isPdf = /\.pdf$/i.test(fileName);
   const isDocx = /\.docx$/i.test(fileName);
 
@@ -46,12 +56,14 @@ export default function ResumePreview({
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-[12px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg px-3 py-1.5 transition-colors"
-      >
-        <FileText className="w-3 h-3" /> {label ?? "Preview resume"}
-      </button>
+      {!hideTrigger && (
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-1.5 text-[12px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg px-3 py-1.5 transition-colors"
+        >
+          <FileText className="w-3 h-3" /> {label ?? "Preview resume"}
+        </button>
+      )}
 
       {open && (
         <div
