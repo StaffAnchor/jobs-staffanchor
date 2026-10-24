@@ -50,6 +50,9 @@ export function Navbar() {
     };
   }, []);
 
+  // A candidate's private Sales CV form link is a focused, standalone page: no site menu.
+  if (pathname.startsWith("/edge/cv")) return null;
+
   if (isClientPortalArea) {
     return (
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">

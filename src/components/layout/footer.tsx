@@ -14,7 +14,8 @@ export function Footer() {
   const pathname = usePathname();
   const isAuthenticatedApp = AUTHENTICATED_APP_PREFIXES.some((p) => pathname?.startsWith(p));
 
-  if (isAuthenticatedApp) return null;
+  // The candidate's private Sales CV form link is a focused page, so it has no site footer either.
+  if (isAuthenticatedApp || pathname?.startsWith("/edge/cv")) return null;
 
   return (
     <footer className="mt-auto border-t border-slate-200 bg-slate-50">
