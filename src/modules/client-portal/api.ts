@@ -157,3 +157,20 @@ export async function getRoleBoard(mandateId: string): Promise<RoleBoard> {
   if (!d?.role) throw new Error("This role could not be loaded.");
   return { role: d.role, candidates: d.candidates ?? [] };
 }
+
+// Admin preview: the same two screens a client sees, read with a short-lived token minted in the CRM by an admin.
+// Nothing here writes anything.
+export async function getPreviewOverview(token: string): Promise<ClientOverview> {
+  const { data, error } = await supabase.rpc("preview_client_overview", { p_token: token });
+  if (error) throw new Error(error.message);
+  const d = (data ?? {}) as Partial<ClientOverview>;
+  return { mandates: d.mandates ?? [], upcoming: d.upcoming ?? [] };
+}
+
+export async function getPreviewRoleBoard(token: string, mandateId: string): Promise<RoleBoard> {
+  const { data, error } = await supabase.rpc("preview_client_role_board", { p_token: token, p_mandate_id: mandateId });
+  if (error) throw new Error(error.message);
+  const d = data as RoleBoard | null;
+  if (!d?.role) throw new Error("This role could not be loaded.");
+  return { role: d.role, candidates: d.candidates ?? [] };
+}

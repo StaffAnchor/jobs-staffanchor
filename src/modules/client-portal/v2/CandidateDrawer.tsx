@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BadgeCheck, Check, CircleHelp, Minus, X } from "lucide-react";
+import { BadgeCheck, Check, CircleHelp, X } from "lucide-react";
 import ResumePreview from "@/components/common/ResumePreview";
 import type { BoardCandidate, CvRole, FeedbackValue, Role } from "./types";
 import { computeFit, type FitState } from "./fit";
-import { Chip, FitRing, LABEL, fitWord, formatSlot, initials, lakhLabel, monthLabel } from "./ui";
+import { Chip, LABEL, formatSlot, initials, lakhLabel, monthLabel } from "./ui";
 import FeedbackBar from "./FeedbackBar";
 
 const STATE_ICON: Record<FitState, { icon: React.ReactNode; cls: string }> = {
   met: { icon: <Check className="h-3.5 w-3.5" />, cls: "bg-emerald-100 text-emerald-700" },
-  partial: { icon: <Minus className="h-3.5 w-3.5" />, cls: "bg-amber-100 text-amber-700" },
-  unmet: { icon: <X className="h-3.5 w-3.5" />, cls: "bg-rose-100 text-rose-700" },
+  partial: { icon: <CircleHelp className="h-3.5 w-3.5" />, cls: "bg-slate-100 text-slate-500" },
+  unmet: { icon: <CircleHelp className="h-3.5 w-3.5" />, cls: "bg-slate-100 text-slate-500" },
   unknown: { icon: <CircleHelp className="h-3.5 w-3.5" />, cls: "bg-slate-100 text-slate-500" },
 };
 
@@ -146,7 +146,6 @@ export default function CandidateDrawer({
             )}
             {!c.resume_file_url && <p className="mt-2 text-[12px] text-slate-400">No resume on file yet.</p>}
           </div>
-          <FitRing fit={fit} size={56} />
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
             <X className="h-5 w-5" />
           </button>
@@ -155,17 +154,15 @@ export default function CandidateDrawer({
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
           <div className="flex flex-wrap items-center gap-2">
             {c.recommendation === "Strong Fit" && <Chip tone="good">Recommended by StaffAnchor</Chip>}
-            <span className="text-[12px] text-slate-500">{fitWord(fit)}</span>
           </div>
 
-          <Section n={1} title="Why this is a fit">
+          <Section n={1} title="How they match your brief">
             {reqSummary && (
-              <p className={`mb-3 rounded-lg px-3 py-2 text-[12.5px] ${reqSummary.unmet > 0 || reqSummary.partial > 0 ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"}`}>
+              <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-800">
                 <span className="font-semibold">
-                  {reqSummary.met} of {reqSummary.total} requirements met
+                  {reqSummary.met} of {reqSummary.total} requirements confirmed
                 </span>
-                {reqSummary.partial > 0 && ` · ${reqSummary.partial} partly met`}
-                {reqSummary.unmet > 0 && ` · ${reqSummary.unmet} not met`}
+                {reqSummary.total - reqSummary.met > 0 && <span className="text-emerald-700/80"> · the rest to confirm on the call</span>}
                 {c.share_review?.reviewer_name && (
                   <span className="text-slate-500">
                     {" "}
@@ -185,14 +182,14 @@ export default function CandidateDrawer({
                   <span />
                 </div>
                 {fit.rows.map((r) => (
-                  <div key={r.key} className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_28px] items-start gap-3 border-t border-[#f1ece3] px-3.5 py-2.5 ${r.state === "unmet" ? "bg-rose-50/60" : ""}`}>
+                  <div key={r.key} className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_28px] items-start gap-3 border-t border-[#f1ece3] px-3.5 py-2.5 `}>
                     <div>
                       <p className="text-[11px] text-slate-400">{r.label}</p>
                       <p className="text-[13px] text-slate-700">{r.asked}</p>
                     </div>
                     <div>
                       <p className="text-[13px] font-medium text-slate-900">{r.got}</p>
-                      {r.note && <p className="text-[11.5px] text-amber-700">{r.note}</p>}
+                      {r.note && <p className="text-[11.5px] text-slate-500">{r.note}</p>}
                     </div>
                     <span className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full ${STATE_ICON[r.state].cls}`}>{STATE_ICON[r.state].icon}</span>
                   </div>
