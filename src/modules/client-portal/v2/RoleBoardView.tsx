@@ -210,7 +210,7 @@ export default function RoleBoardView({
                   {items.length === 0 ? (
                     <p className="px-2 py-6 text-center text-[12px] text-slate-400">{col.hint}</p>
                   ) : (
-                    items.map((c) => <CandidateCard key={c.link_id} role={role} c={c} onOpen={() => setOpenId(c.link_id)} onFeedback={handleFeedback} />)
+                    items.map((c) => <CandidateCard key={c.link_id} role={role} c={c} onOpen={() => setOpenId(c.link_id)} getResumeUrl={getResumeUrl} onFeedback={handleFeedback} />)
                   )}
                 </div>
               </div>
@@ -227,7 +227,7 @@ export default function RoleBoardView({
                 <div className="mb-1.5 ml-1">
                   <Chip tone="info">{COLUMNS.find((x) => x.key === columnOf(c))?.title}</Chip>
                 </div>
-                <CandidateCard role={role} c={c} onOpen={() => setOpenId(c.link_id)} onFeedback={handleFeedback} />
+                <CandidateCard role={role} c={c} onOpen={() => setOpenId(c.link_id)} getResumeUrl={getResumeUrl} onFeedback={handleFeedback} />
               </div>
             ))
           )}

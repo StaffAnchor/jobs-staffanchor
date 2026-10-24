@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import { getPreviewRoleBoard } from "@/modules/client-portal/api";
+import { getPreviewRoleBoard, previewResumeUrlGetter } from "@/modules/client-portal/api";
 import RoleBoardView from "@/modules/client-portal/v2/RoleBoardView";
 import type { RoleBoard } from "@/modules/client-portal/v2/types";
 
@@ -24,6 +24,8 @@ export default function ClientPortalPreviewRolePage() {
     };
   }, [token, id]);
 
+  const getResumeUrl = useMemo(() => previewResumeUrlGetter(token), [token]);
+
   if (error) {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center sm:px-6">
@@ -41,13 +43,14 @@ export default function ClientPortalPreviewRolePage() {
   return (
     <RoleBoardView
       board={board}
+      getResumeUrl={getResumeUrl}
       backHref={`/client-portal/preview/${token}`}
       onFeedback={async () => {
         toast("Preview only: nothing was saved.");
       }}
       banner={
         <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-[12.5px] text-amber-800">
-          Admin preview, read only. This is what the client sees. Buttons here do not save anything, and CV downloads are only in the real portal.
+          Admin preview, read only. This is what the client sees. Buttons here do not save anything.
         </p>
       }
     />

@@ -108,6 +108,23 @@ export async function getResumeSignedUrl(resumeFileUrl: string): Promise<string 
   }
 }
 
+// Admin preview: same check as above, but authorised by the preview token instead of a client session.
+export function previewResumeUrlGetter(token: string) {
+  return async (resumeFileUrl: string): Promise<string | null> => {
+    try {
+      const res = await fetch("/api/client/resume-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: resumeFileUrl, previewToken: token }),
+      });
+      if (!res.ok) return null;
+      return ((await res.json()) as { url?: string }).url ?? null;
+    } catch {
+      return null;
+    }
+  };
+}
+
 // Self-service hiring-brief intake for a client who already has portal
 // access -- same review-gate as the public shareable link (submit_employer_
 // inquiry / the token flow): this always lands in employer_inquiries, never
