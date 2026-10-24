@@ -10,8 +10,8 @@ export const metadata: Metadata = { title: "Your sales career | StaffAnchor Edge
 // The private link StaffAnchor sends to a candidate. It shows only that candidate's own answers.
 export default async function CvPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const r = await crmCall<{ name?: string; status?: string; data?: unknown; cvName?: string | null; consent?: boolean }>("/api/internal/cv-brief/info", { token });
+  const r = await crmCall<{ name?: string; status?: string; data?: unknown; cvName?: string | null; consent?: boolean; photoUrl?: string | null }>("/api/internal/cv-brief/info", { token, view: true });
   if (!r.json.ok) notFound();
   const data: CvData = sanitize(r.json.data);
-  return <CvForm token={token} name={r.json.name ?? ""} initial={data} status={r.json.status ?? "sent"} cvName={r.json.cvName ?? null} consented={!!r.json.consent} />;
+  return <CvForm token={token} name={r.json.name ?? ""} initial={data} status={r.json.status ?? "sent"} cvName={r.json.cvName ?? null} consented={!!r.json.consent} photoUrl={r.json.photoUrl ?? null} />;
 }
