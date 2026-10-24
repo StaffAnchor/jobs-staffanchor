@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Check, CheckCircle2, ChevronDown, FileText, Loader2, Plus, Trash2, UploadCloud } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, CheckCircle2, ChevronRight, Clock, FileText, Loader2, Plus, Sparkles, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
 import {
   COMPANY_TYPES, CV_PAGES, EDUCATION, EMP_TYPES, INDUSTRIES, LANGUAGES, LEVELS, NOTICE, RELOCATE, STATUSES, TRAVEL, WORK_MODES,
-  emptyJob, formatMetric, gaps, jobFilled, jobPeriod, progress, type CvData, type Job,
+  describeJob, emptyJob, jobFilled, jobPeriod, keyItems, progress, type CvData, type Job,
 } from "@/lib/cv-brief/config";
-import JobEditor from "./job-editor";
-import { Card, Field, IconButton, MultiChips, NumInput, PickChips, Toggle, inputCls } from "./ui";
+import JobWizard, { type StepId } from "./job-wizard";
+import { CV_CSS, Card, Field, IconButton, MultiChips, NumInput, PickChips, Ring, Toggle, inputCls } from "./ui";
 
 const STEPS = ["You", "Experience", "Next move", "Review"];
 type Save = "idle" | "dirty" | "saving" | "saved" | "error";
@@ -17,7 +17,7 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
   const [data, setData] = useState<CvData>(initial);
   const [consent, setConsent] = useState(consented);
   const [step, setStep] = useState(0);
-  const [openId, setOpenId] = useState<string | null>(initial.jobs[0]?.id ?? null);
+  const [wiz, setWiz] = useState<{ jobId: string; step?: StepId } | null>(null);
   const [save, setSave] = useState<Save>("idle");
   const [cvName, setCvName] = useState<string | null>(initialCv);
   const [up, setUp] = useState<Upload>({ state: "idle" });
@@ -80,6 +80,12 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
 
   const go = (n: number) => {
     setStep(n);
+    if (n !== 1) setWiz(null);
+    top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const openJob = (jobId: string, stepId?: StepId) => {
+    setStep(1);
+    setWiz({ jobId, step: stepId });
     top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -91,7 +97,7 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
   function addJob() {
     const j = emptyJob();
     setData((d) => ({ ...d, jobs: [...d.jobs, j] }));
-    setOpenId(j.id);
+    openJob(j.id, "role");
   }
   function moveJob(i: number, by: -1 | 1) {
     setData((d) => {
@@ -105,7 +111,7 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
   function removeJob(j: Job) {
     if (jobFilled(j) && !window.confirm("Remove this job and everything you entered for it?")) return;
     setData((d) => ({ ...d, jobs: d.jobs.filter((x) => x.id !== j.id) }));
-    if (openId === j.id) setOpenId(null);
+    if (wiz?.jobId === j.id) setWiz(null);
   }
 
   async function onFile(f: File | undefined) {
@@ -128,7 +134,6 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
           basics: { ...d.basics, education: d.basics.education || s.basics.education, educationDetail: d.basics.educationDetail || s.basics.educationDetail },
           extras: { ...d.extras, certifications: d.extras.certifications || s.extras.certifications },
         }));
-        if (!data.jobs.length && s.jobs[0]) setOpenId(s.jobs[0].id);
         setUp({ state: "done", msg: j.jobs ? `We found ${j.jobs} ${j.jobs === 1 ? "job" : "jobs"}. You will check them in the next step.` : "Uploaded. You will add your jobs in the next step." });
       } else {
         setUp({ state: "done", msg: "Uploaded. We couldn't read it automatically, so you will add your jobs in the next step." });
@@ -149,7 +154,13 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
     } else setSubmitErr("We couldn't send it just now. Your answers are saved here, so please try again in a moment.");
   }
 
-  const missing = useMemo(() => gaps(data), [data]);
+  const wizJob = wiz ? data.jobs.find((j) => j.id === wiz.jobId) ?? null : null;
+  const wizIndex = wizJob ? data.jobs.indexOf(wizJob) : -1;
+  // What each job still needs, in the order the jobs are listed. The last two jobs are asked in full.
+  const todo = useMemo(() => data.jobs.map((j, i) => ({ j, i, miss: keyItems(j, i < 2).filter((k) => !k.done) })).filter((x) => x.miss.length > 0), [data.jobs]);
+  const nextUp = todo[0];
+  const jobName = (j: Job, i: number) => [j.title, j.employer].filter(Boolean).join(", ") || (i === 0 ? "Your latest job" : "Another job");
+  const wide = step === 1 && !!wizJob;
   const savedText = { idle: "", dirty: "Saving…", saving: "Saving…", saved: "All changes saved", error: "Offline. Will retry." }[save];
 
   if (done) {
@@ -168,14 +179,20 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
   return (
     <div className="min-h-screen bg-[#F4F2EE] pb-28">
       <div ref={top} />
+      <style>{CV_CSS}</style>
       <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-[#F4F2EE]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
+        <div className={`mx-auto flex items-center justify-between gap-3 px-4 py-2.5 ${wide ? "max-w-5xl" : "max-w-2xl"}`}>
           <p className="text-[13px] font-bold tracking-wide text-slate-950">StaffAnchor <span className="font-medium text-slate-500">Edge</span></p>
-          <p className={`text-xs ${save === "error" ? "text-amber-700" : "text-slate-500"}`} aria-live="polite">{savedText}</p>
+          <div className="flex items-center gap-3">
+            <p className={`text-xs ${save === "error" ? "text-amber-700" : "text-slate-500"}`} aria-live="polite">{savedText}</p>
+            <div className="flex items-center gap-2" title="How complete the details a sales CV needs are">
+              <Ring pct={pct} />
+              <span className="hidden text-[11px] font-semibold leading-tight text-slate-500 sm:block">CV<br />strength</span>
+            </div>
+          </div>
         </div>
-        <div className="mx-auto max-w-2xl px-4 pb-3">
-          <div className="h-1 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-slate-950 transition-all duration-500" style={{ width: `${Math.max(pct, 4)}%` }} /></div>
-          <nav className="mt-3 grid grid-cols-4 gap-1.5" aria-label="Steps">
+        <div className={`mx-auto px-4 pb-3 ${wide ? "max-w-5xl" : "max-w-2xl"}`}>
+          <nav className="grid grid-cols-4 gap-1.5" aria-label="Steps">
             {STEPS.map((s, i) => (
               <button key={s} type="button" onClick={() => go(i)} className={`rounded-xl px-1 py-2 text-[12.5px] font-semibold transition ${step === i ? "bg-slate-950 text-white" : "bg-white text-slate-600 hover:bg-slate-100"}`}>
                 <span className="hidden sm:inline">{i + 1}. </span>{s}
@@ -185,12 +202,17 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl space-y-4 px-4 py-5">
+      <main className={`mx-auto space-y-4 px-4 py-5 ${wide ? "max-w-5xl" : "max-w-2xl"}`}>
         {step === 0 && (
           <>
             <div className="px-1 pb-1">
               <h1 className="text-[28px] font-bold leading-tight text-slate-950">Hi {firstName}, let&apos;s build your sales story</h1>
               <p className="mt-2 text-[15px] leading-relaxed text-slate-600">This helps us write a CV that shows what you really did. It takes about 10 to 15 minutes. Nothing is compulsory, so skip anything you can&apos;t or don&apos;t want to share. Your answers save as you go, and you can come back to this link any time.</p>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-200"><Clock className="h-3.5 w-3.5" /> 10 to 15 minutes</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-200"><ShieldCheck className="h-3.5 w-3.5" /> Private to you</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 ring-1 ring-slate-200"><Sparkles className="h-3.5 w-3.5" /> It writes your CV lines as you go</span>
+              </div>
             </div>
 
             <Card title="Start with your current CV" sub="Upload it and we will fill in your jobs, so you only check and add the numbers.">
@@ -237,38 +259,41 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
           </>
         )}
 
-        {step === 1 && (
-          <>
+        {step === 1 && (wizJob ? (
+          <JobWizard key={`${wizJob.id}-${wiz?.step ?? ""}`} job={wizJob} index={wizIndex} total={data.jobs.length} onChange={setJob} onClose={() => { setWiz(null); top.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }} initialStep={wiz?.step} />
+        ) : (
+          <div className="cv-in space-y-4">
             <div className="px-1 pb-1">
               <h1 className="text-[26px] font-bold leading-tight text-slate-950">Your sales experience</h1>
-              <p className="mt-2 text-[15px] leading-relaxed text-slate-600">Start with your latest job and work backwards. Your last two jobs matter most, so give those the most detail. Older ones can be short.</p>
+              <p className="mt-2 text-[15px] leading-relaxed text-slate-600">We will take each job in a few short steps, newest first. Your last two jobs matter most, so they get the most questions. Older ones are quick.</p>
             </div>
-            {data.jobs.length === 0 && (
-              <Card>
-                <p className="text-[15px] text-slate-600">No jobs yet. Begin with your current or most recent one.</p>
-              </Card>
+            {nextUp && (
+              <button type="button" onClick={() => openJob(nextUp.j.id, nextUp.miss[0].id as StepId)} className="group flex w-full items-center justify-between gap-4 rounded-3xl bg-slate-950 p-5 text-left text-white shadow-lg transition hover:bg-slate-900 active:scale-[0.99]">
+                <span className="min-w-0">
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-white/50">Next up</span>
+                  <span className="mt-1 block truncate text-[18px] font-bold">{jobName(nextUp.j, nextUp.i)}</span>
+                  <span className="mt-1 block text-[13px] text-white/70">{nextUp.miss.length} key {nextUp.miss.length === 1 ? "detail" : "details"} to add: {nextUp.miss.map((k) => k.label.toLowerCase()).join(", ")}</span>
+                </span>
+                <ChevronRight className="h-6 w-6 shrink-0 transition group-hover:translate-x-1" />
+              </button>
             )}
+            {data.jobs.length === 0 && <Card><p className="text-[15px] text-slate-600">No jobs yet. Begin with your current or most recent one.</p></Card>}
             {data.jobs.map((j, i) => {
-              const open = openId === j.id;
-              const numbers = j.metrics.filter((m) => m.amount !== null).length;
-              const wins = j.wins.filter((w) => w.text.trim()).length;
+              const items = keyItems(j, i < 2);
+              const first = items.find((k) => !k.done);
               return (
                 <section key={j.id} className="rounded-3xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                   <div className="flex items-start gap-2 p-4 md:p-5">
-                    <button type="button" onClick={() => setOpenId(open ? null : j.id)} className="flex min-w-0 flex-1 items-start gap-3 text-left" aria-expanded={open}>
+                    <button type="button" onClick={() => openJob(j.id, (first?.id as StepId) ?? "role")} className="flex min-w-0 flex-1 items-start gap-3 text-left">
                       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[13px] font-bold text-slate-600">{i + 1}</span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[16px] font-bold text-slate-950">{j.title || j.employer ? [j.title, j.employer].filter(Boolean).join(", ") : i === 0 ? "Your latest job" : "Another job"}</span>
+                        <span className="block truncate text-[16px] font-bold text-slate-950">{jobName(j, i)}</span>
                         <span className="mt-0.5 block text-[13px] text-slate-500">{jobPeriod(j) || "Add the dates"}{j.city ? ` · ${j.city}` : ""}</span>
-                        {!open && (
-                          <span className="mt-2 flex flex-wrap gap-1.5 text-[11.5px] font-semibold">
-                            {j.fromCv && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-sky-800">From your CV, please check</span>}
-                            <span className={`rounded-full px-2 py-0.5 ${numbers ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-500"}`}>{numbers ? `${numbers} ${numbers === 1 ? "number" : "numbers"}` : "No numbers yet"}</span>
-                            <span className={`rounded-full px-2 py-0.5 ${wins ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-500"}`}>{wins ? `${wins} ${wins === 1 ? "achievement" : "achievements"}` : "No achievements yet"}</span>
-                          </span>
-                        )}
+                        <span className="mt-2.5 flex flex-wrap gap-1.5 text-[11.5px] font-semibold">
+                          {j.fromCv && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-sky-800">From your CV, please check</span>}
+                          {items.map((k) => <span key={k.id} className={`rounded-full px-2 py-0.5 ${k.done ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>{k.done ? "✓" : "+"} {k.label}</span>)}
+                        </span>
                       </span>
-                      <ChevronDown className={`mt-1 h-5 w-5 shrink-0 text-slate-400 transition ${open ? "rotate-180" : ""}`} />
                     </button>
                     <div className="flex shrink-0 items-center">
                       {data.jobs.length > 1 && (
@@ -280,19 +305,14 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
                       <IconButton onClick={() => removeJob(j)} label="Remove this job"><Trash2 className="h-4 w-4" /></IconButton>
                     </div>
                   </div>
-                  {open && (
-                    <div className="border-t border-slate-100 p-4 md:p-6">
-                      <JobEditor key={j.id} job={j} onChange={setJob} defaultFull={i < 2} />
-                    </div>
-                  )}
                 </section>
               );
             })}
             <button type="button" onClick={addJob} className="flex w-full items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-slate-300 py-5 text-[15px] font-semibold text-slate-600 transition hover:border-slate-900 hover:text-slate-950">
               <Plus className="h-5 w-5" /> {data.jobs.length ? "Add an earlier job" : "Add your latest job"}
             </button>
-          </>
-        )}
+          </div>
+        ))}
 
         {step === 2 && (
           <>
@@ -346,28 +366,34 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
                 <Sum k="You" v={[data.basics.name, data.basics.phone, data.basics.email, data.basics.city].filter(Boolean).join(" · ")} onEdit={() => go(0)} />
                 <Sum k="CV file" v={cvName ?? "Not uploaded"} onEdit={() => go(0)} />
                 <div>
-                  <div className="flex items-center justify-between"><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Jobs</dt><button onClick={() => go(1)} className="text-xs font-semibold text-slate-700 underline underline-offset-4">Edit</button></div>
+                  <div className="flex items-center justify-between"><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">How your jobs will read</dt><button onClick={() => go(1)} className="text-xs font-semibold text-slate-700 underline underline-offset-4">Edit</button></div>
                   <dd className="mt-1.5 space-y-2">
                     {data.jobs.filter(jobFilled).length === 0 && <span className="text-slate-500">None added</span>}
-                    {data.jobs.filter(jobFilled).map((j) => (
-                      <div key={j.id} className="rounded-xl bg-slate-50 px-3.5 py-2.5">
-                        <p className="font-semibold text-slate-900">{[j.title, j.employer].filter(Boolean).join(", ")}</p>
-                        <p className="text-xs text-slate-500">{jobPeriod(j)}</p>
-                        {j.metrics.filter((m) => m.amount !== null).slice(0, 3).map((m) => <p key={m.id} className="mt-0.5 text-[13px] text-slate-600">{m.label}: {formatMetric(m)}</p>)}
-                      </div>
-                    ))}
+                    {data.jobs.filter(jobFilled).map((j, i) => {
+                      const d = describeJob(j, i < 2);
+                      return (
+                        <div key={j.id} className="rounded-xl bg-slate-50 px-3.5 py-3">
+                          <p className="font-semibold text-slate-900">{d.head}</p>
+                          <p className="text-xs text-slate-500">{d.sub}</p>
+                          <ul className="mt-1.5 space-y-1">{d.lines.filter((l) => !l.ghost).map((l, x) => <li key={x} className="text-[13px] leading-relaxed text-slate-600">{l.text}</li>)}</ul>
+                        </div>
+                      );
+                    })}
                   </dd>
                 </div>
                 <Sum k="Next move" v={[data.targets.roles, data.targets.cities].filter(Boolean).join(" · ")} onEdit={() => go(2)} />
                 <Sum k="Profile consent" v={consent ? "You allowed StaffAnchor to keep your profile" : "Not ticked (optional)"} onEdit={() => go(0)} />
               </dl>
             </Card>
-            {missing.length > 0 && (
-              <Card title="Worth adding if you can" sub="Not required. These are the details that make the biggest difference to a sales CV.">
-                <ul className="space-y-2 text-[14px] text-slate-700">
-                  {missing.map((m) => <li key={m} className="flex gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />{m}</li>)}
+            {(todo.length > 0 || !data.targets.roles.trim() || !data.basics.linkedin.trim()) && (
+              <Card title={todo.length ? `${todo.reduce((a, x) => a + (x.i < 2 ? x.miss.length : 0), 0) || todo.length} key details are still missing` : "Almost there"} sub="You can send without them, but each one makes your CV stronger. Tap Add to fill one in.">
+                <ul className="space-y-2.5 text-[14px] text-slate-700">
+                  {todo.slice(0, 2).flatMap((x) => x.miss.map((k) => (
+                    <li key={`${x.j.id}-${k.id}`} className="flex items-center justify-between gap-3"><span className="flex gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />{jobName(x.j, x.i)}: {k.label.toLowerCase()}</span><button onClick={() => openJob(x.j.id, k.id as StepId)} className="shrink-0 rounded-full bg-slate-950 px-3.5 py-1.5 text-xs font-semibold text-white">Add</button></li>
+                  )))}
+                  {!data.targets.roles.trim() && <li className="flex items-center justify-between gap-3"><span className="flex gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />The role you are looking for</span><button onClick={() => go(2)} className="shrink-0 rounded-full bg-slate-950 px-3.5 py-1.5 text-xs font-semibold text-white">Add</button></li>}
+                  {!data.basics.linkedin.trim() && <li className="flex items-center justify-between gap-3"><span className="flex gap-2"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />Your LinkedIn link</span><button onClick={() => go(0)} className="shrink-0 rounded-full bg-slate-950 px-3.5 py-1.5 text-xs font-semibold text-white">Add</button></li>}
                 </ul>
-                <button onClick={() => go(1)} className="text-[13px] font-semibold text-slate-700 underline underline-offset-4">Go back and add them</button>
               </Card>
             )}
             <Card>
@@ -377,14 +403,14 @@ export default function CvForm({ token, name, initial, status, cvName: initialCv
               </label>
               {submitErr && <p className="text-sm text-red-600">{submitErr}</p>}
               <button onClick={submit} disabled={!sure || submitting} className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-4 text-[16px] font-semibold text-white transition hover:bg-slate-800 disabled:opacity-40">
-                {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />} {status === "submitted" ? "Send my updated answers" : "Send to StaffAnchor"}
+                {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />} {status === "submitted" ? "Send my updated answers" : todo.some((x) => x.i < 2) ? "Send anyway" : "Send to StaffAnchor"}
               </button>
             </Card>
           </>
         )}
       </main>
 
-      {step < 3 && (
+      {step < 3 && !wizJob && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/70 bg-white/95 px-4 py-3 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
             <button onClick={() => go(Math.max(0, step - 1))} disabled={step === 0} className="rounded-xl px-4 py-3 text-[14px] font-semibold text-slate-600 hover:bg-slate-100 disabled:invisible">Back</button>
