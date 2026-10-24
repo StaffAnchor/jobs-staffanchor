@@ -39,7 +39,7 @@ export function computeFit(role: Role, c: BoardCandidate): Fit {
       asked: roleAreas.slice(0, 3).join(", ") + (roleAreas.length > 3 ? ` +${roleAreas.length - 3}` : ""),
       got: cand.length ? cand.slice(0, 3).join(", ") : "Not stated",
       state: !cand.length ? "unknown" : overlap ? "met" : sameCategory ? "partial" : "unmet",
-      note: !overlap && sameCategory && cand.length ? "Same field, different area" : undefined,
+      note: !overlap && sameCategory && cand.length ? "Related field" : undefined,
     });
   }
 
@@ -72,7 +72,6 @@ export function computeFit(role: Role, c: BoardCandidate): Fit {
       asked: rangeLabel(bMin, bMax, lakh),
       got: exp !== null ? `${lakh(exp)} expected` : "To confirm",
       state,
-      note: state === "partial" ? "Slightly above budget" : undefined,
     });
   }
 
@@ -112,9 +111,8 @@ export function computeFit(role: Role, c: BoardCandidate): Fit {
         key: `req-${i}`,
         label: r.kind === "must" ? "Must-have" : "Nice to have",
         asked: r.requirement,
-        got: r.status === "met" ? r.note || "Confirmed by your recruiter" : r.note || (r.status === "partial" ? "Partly met" : "Not met"),
+        got: r.status === "met" ? r.note || "Confirmed by your recruiter" : r.note || "To confirm on the call",
         state: r.status === "met" ? "met" : r.status === "partial" ? "partial" : "unmet",
-        note: r.status === "partial" ? "Partly met" : r.status === "not_met" ? "Not met" : undefined,
       })
     );
   } else {

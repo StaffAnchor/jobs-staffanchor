@@ -2,8 +2,8 @@
 
 import { MapPin } from "lucide-react";
 import type { BoardCandidate, FeedbackValue, Role } from "./types";
-import { computeFit, closedReason, columnOf } from "./fit";
-import { Chip, FitRing, initials, lakhLabel } from "./ui";
+import { closedReason, columnOf } from "./fit";
+import { Chip, initials, lakhLabel } from "./ui";
 import { passReasonLabel } from "./PassReasonDialog";
 import FeedbackBar from "./FeedbackBar";
 
@@ -14,7 +14,6 @@ function firstSentence(s: string | null) {
 }
 
 export default function CandidateCard({
-  role,
   c,
   onOpen,
   onFeedback,
@@ -24,7 +23,6 @@ export default function CandidateCard({
   onOpen: () => void;
   onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string, extra?: { reason: string; note: string }) => Promise<void>;
 }) {
-  const fit = computeFit(role, c);
   const col = columnOf(c);
   const ctc = lakhLabel(c.expected_fixed_ctc);
   const notice = c.notice_period;
@@ -42,7 +40,6 @@ export default function CandidateCard({
               {c.current_employer ? ` · ${c.current_employer}` : ""}
             </p>
           </div>
-          <FitRing fit={fit} size={46} />
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
