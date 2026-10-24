@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const ids = (cands ?? []).map((c) => c.id as string);
   if (ids.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const { data: links } = await ctx.admin
+  const { data: links } = await admin
     .from("candidate_mandate_links")
     .select("id, mandates!inner(client_id)")
     .in("candidate_id", ids)
