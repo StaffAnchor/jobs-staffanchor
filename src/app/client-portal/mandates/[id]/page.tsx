@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/lib/supabaseClient";
-import { getResumeSignedUrl, getRoleBoard, submitMyFeedback, submitMyPass } from "@/modules/client-portal/api";
+import { getMyOnePager, getResumeSignedUrl, getRoleBoard, submitMyFeedback, submitMyPass } from "@/modules/client-portal/api";
 import RoleBoardView from "@/modules/client-portal/v2/RoleBoardView";
 import type { RoleBoard } from "@/modules/client-portal/v2/types";
 
@@ -56,6 +56,7 @@ export default function ClientMandateDetailPage() {
       board={board}
       backHref="/client-portal"
       getResumeUrl={getResumeSignedUrl}
+      getOnePager={getMyOnePager}
       onFeedback={async (linkId, value, at, extra) => {
         if (value === "not_interested" && extra?.reason) await submitMyPass(linkId, extra.reason, extra.note);
         else await submitMyFeedback(linkId, value, at);

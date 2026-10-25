@@ -7,6 +7,7 @@ import type { BoardCandidate, CvRole, FeedbackValue, Role } from "./types";
 import { computeFit, type FitState } from "./fit";
 import { Chip, LABEL, formatSlot, initials, lakhLabel, monthLabel } from "./ui";
 import FeedbackBar from "./FeedbackBar";
+import type { OnePager } from "@/modules/client-portal/api";
 
 const STATE_ICON: Record<FitState, { icon: React.ReactNode; cls: string }> = {
   met: { icon: <Check className="h-3.5 w-3.5" />, cls: "bg-emerald-100 text-emerald-700" },
@@ -66,13 +67,23 @@ export default function CandidateDrawer({
   onClose,
   onFeedback,
   getResumeUrl,
+  getOnePager,
 }: {
   role: Role;
   c: BoardCandidate;
   onClose: () => void;
   onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string, extra?: { reason: string; note: string }) => Promise<void>;
   getResumeUrl?: (path: string) => Promise<string | null>;
+  getOnePager?: (candidateId: string) => Promise<OnePager | null>;
 }) {
+  const [onePager, setOnePager] = useState<OnePager | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (getOnePager) getOnePager(c.candidate_id).then((o) => !cancelled && setOnePager(o));
+    return () => {
+      cancelled = true;
+    };
+  }, [c.candidate_id, getOnePager]);
   const fit = computeFit(role, c);
   const [showFull, setShowFull] = useState(false);
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
@@ -155,6 +166,48 @@ export default function CandidateDrawer({
           <div className="flex flex-wrap items-center gap-2">
             {c.recommendation === "Strong Fit" && <Chip tone="good">Recommended by StaffAnchor</Chip>}
           </div>
+
+          {onePager && (
+            <Section title="Summary from your StaffAnchor recruiter">
+              <p className="text-[15px] font-semibold text-slate-900">{onePager.brief.headline}</p>
+              <p className="mt-1.5 text-[13.5px] leading-6 text-slate-700">{onePager.brief.summary}</p>
+              {onePager.brief.signals.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {onePager.brief.signals.map((x) => (
+                    <Chip key={x}>{x}</Chip>
+                  ))}
+                </div>
+              )}
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {onePager.brief.selling.length > 0 && (
+                  <div>
+                    <p className={LABEL}>What they have sold</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-[13px] text-slate-700">{onePager.brief.selling.map((x) => <li key={x}>{x}</li>)}</ul>
+                  </div>
+                )}
+                {onePager.brief.strengths.length > 0 && (
+                  <div>
+                    <p className={LABEL}>Strengths</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-[13px] text-slate-700">{onePager.brief.strengths.map((x) => <li key={x}>{x}</li>)}</ul>
+                  </div>
+                )}
+              </div>
+              {onePager.brief.recruiter_take && (
+                <p className="mt-4 rounded-lg bg-[#faf6ee] px-3 py-2 text-[13px] text-slate-700">
+                  <span className="font-semibold text-slate-900">Our view:</span> {onePager.brief.recruiter_take}
+                </p>
+              )}
+              {onePager.brief.probe.length > 0 && (
+                <div className="mt-4">
+                  <p className={LABEL}>To confirm on the call</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-[13px] text-slate-700">{onePager.brief.probe.map((x) => <li key={x}>{x}</li>)}</ul>
+                </div>
+              )}
+              <p className="mt-3 text-[12px] text-slate-500">
+                {[onePager.brief.logistics.city && `Based in ${onePager.brief.logistics.city}`, onePager.brief.logistics.notice && `Notice ${onePager.brief.logistics.notice}`, onePager.brief.logistics.relocation && `Relocation: ${onePager.brief.logistics.relocation}`].filter(Boolean).join(" · ")}
+              </p>
+            </Section>
+          )}
 
           <Section n={1} title="How they match your brief">
             {reqSummary && (

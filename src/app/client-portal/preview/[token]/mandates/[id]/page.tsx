@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import { getPreviewRoleBoard, previewResumeUrlGetter } from "@/modules/client-portal/api";
+import { getPreviewRoleBoard, previewOnePagerGetter, previewResumeUrlGetter } from "@/modules/client-portal/api";
 import RoleBoardView from "@/modules/client-portal/v2/RoleBoardView";
 import type { RoleBoard } from "@/modules/client-portal/v2/types";
 
@@ -25,6 +25,7 @@ export default function ClientPortalPreviewRolePage() {
   }, [token, id]);
 
   const getResumeUrl = useMemo(() => previewResumeUrlGetter(token), [token]);
+  const getOnePager = useMemo(() => previewOnePagerGetter(token), [token]);
 
   if (error) {
     return (
@@ -44,6 +45,7 @@ export default function ClientPortalPreviewRolePage() {
     <RoleBoardView
       board={board}
       getResumeUrl={getResumeUrl}
+      getOnePager={getOnePager}
       backHref={`/client-portal/preview/${token}`}
       onFeedback={async () => {
         toast("Preview only: nothing was saved.");

@@ -9,6 +9,7 @@ import { columnOf, computeFit, type Column } from "./fit";
 import { Chip, LABEL, lakhLabel } from "./ui";
 import CandidateCard from "./CandidateCard";
 import CandidateDrawer from "./CandidateDrawer";
+import type { OnePager } from "@/modules/client-portal/api";
 import { shortlistCsv } from "./exportSheet";
 
 const COLUMNS: { key: Column; title: string; hint: string; dot: string }[] = [
@@ -28,12 +29,14 @@ export default function RoleBoardView({
   board,
   onFeedback,
   getResumeUrl,
+  getOnePager,
   backHref,
   banner,
 }: {
   board: RoleBoard;
   onFeedback: (linkId: string, value: FeedbackValue, interviewAt?: string, extra?: { reason: string; note: string }) => Promise<void>;
   getResumeUrl?: (path: string) => Promise<string | null>;
+  getOnePager?: (candidateId: string) => Promise<OnePager | null>;
   backHref: string;
   banner?: React.ReactNode;
 }) {
@@ -234,7 +237,7 @@ export default function RoleBoardView({
         </div>
       )}
 
-      {opened && <CandidateDrawer role={role} c={opened} onClose={() => setOpenId(null)} onFeedback={handleFeedback} getResumeUrl={getResumeUrl} />}
+      {opened && <CandidateDrawer role={role} c={opened} onClose={() => setOpenId(null)} onFeedback={handleFeedback} getResumeUrl={getResumeUrl} getOnePager={getOnePager} />}
     </div>
   );
 }

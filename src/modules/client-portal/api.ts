@@ -125,6 +125,35 @@ export function previewResumeUrlGetter(token: string) {
   };
 }
 
+// The one-page summary StaffAnchor wrote and a recruiter approved for a candidate on this client's shortlist. Null until approved.
+export type OnePager = {
+  brief: {
+    headline: string;
+    summary: string;
+    selling: string[];
+    strengths: string[];
+    probe: string[];
+    logistics: { notice: string | null; pay: string | null; relocation: string | null; city: string | null };
+    recruiter_take: string | null;
+    signals: string[];
+  };
+  approved_at: string;
+};
+
+export async function getMyOnePager(candidateId: string): Promise<OnePager | null> {
+  const { data, error } = await supabase.rpc("get_my_client_onepager", { p_candidate: candidateId });
+  if (error || !data) return null;
+  return data as OnePager;
+}
+
+export function previewOnePagerGetter(token: string) {
+  return async (candidateId: string): Promise<OnePager | null> => {
+    const { data, error } = await supabase.rpc("preview_client_onepager", { p_token: token, p_candidate: candidateId });
+    if (error || !data) return null;
+    return data as OnePager;
+  };
+}
+
 // Self-service hiring-brief intake for a client who already has portal
 // access -- same review-gate as the public shareable link (submit_employer_
 // inquiry / the token flow): this always lands in employer_inquiries, never
