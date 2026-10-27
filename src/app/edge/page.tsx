@@ -12,6 +12,14 @@ export const metadata: Metadata = {
   description:
     "1:1 video sessions with Gagan Sharma, founder of StaffAnchor, for sales and leadership professionals: interview prep with a full mock interview, a job search strategy with a resume rebuild, and resume writing.",
   alternates: { canonical: "https://jobs.staffanchor.com/edge" },
+  // The share card (app/edge/opengraph-image.png) needs its own title here, or the link preview shows the site-wide one.
+  openGraph: {
+    title: "StaffAnchor Edge | Your next sales role deserves an edge",
+    description: "1:1 sessions for sales and leadership professionals: interview prep with a mock interview, job strategy with a resume rebuild, and resume writing.",
+    url: "https://jobs.staffanchor.com/edge",
+    siteName: "StaffAnchor Edge",
+    type: "website",
+  },
 };
 
 const BOOK = "/edge/book";
