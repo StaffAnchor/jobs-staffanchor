@@ -42,7 +42,7 @@ export default function RoleBoardView({
 }) {
   const { role } = board;
   const [cands, setCands] = useState<BoardCandidate[]>(board.candidates);
-  const [view, setView] = useState<"board" | "list">("board");
+  const [view, setView] = useState<"board" | "list">("list");
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
