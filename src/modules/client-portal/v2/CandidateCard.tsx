@@ -29,6 +29,7 @@ export default function CandidateCard({
 }) {
   const col = columnOf(c);
   const ctc = lakhLabel(c.expected_fixed_ctc);
+  const currentCtc = lakhLabel(c.current_fixed_ctc ?? null);
   const notice = c.notice_period;
   const summary = firstSentence(c.ai_summary);
   const [cvBusy, setCvBusy] = useState(false);
@@ -65,6 +66,7 @@ export default function CandidateCard({
           {c.recommendation === "Strong Fit" && <Chip tone="good">Recommended</Chip>}
           {col === "closed" && <Chip tone={closedReason(c) === "hired" ? "good" : "neutral"}>{closedReason(c) === "hired" ? "Hired" : closedReason(c) === "withdrawn" ? "Withdrawn" : "Passed"}</Chip>}
           {c.total_experience_years !== null && c.total_experience_years !== "" && <Chip>{Number(c.total_experience_years)} yrs</Chip>}
+          {currentCtc && <Chip>{currentCtc} current</Chip>}
           {ctc && <Chip>{ctc} expected</Chip>}
           {notice && <Chip>{notice}</Chip>}
         </div>

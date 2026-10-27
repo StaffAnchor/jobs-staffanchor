@@ -87,6 +87,7 @@ export type BoardCandidate = {
   current_employer: string | null;
   current_location: string | null;
   total_experience_years: number | string | null;
+  current_fixed_ctc?: number | string | null;
   expected_fixed_ctc: number | string | null;
   notice_period: string | null;
   verified_notice: string | null;

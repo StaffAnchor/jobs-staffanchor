@@ -364,6 +364,7 @@ export default function CandidateDrawer({
                   ) : null
                 }
               />
+              <Fact label="Current fixed CTC" value={lakhLabel(c.current_fixed_ctc ?? null)} />
               <Fact label="Expected fixed CTC" value={lakhLabel(c.expected_fixed_ctc)} />
               <Fact label="Work mode" value={c.work_mode} />
             </div>
