@@ -8,9 +8,9 @@ import { CRM } from "@/lib/pro-sessions";
 
 // The one StaffAnchor Edge page. staffanchor.com/edge sends visitors here.
 export const metadata: Metadata = {
-  title: "StaffAnchor Edge | Mock Interview, Job Search Strategy and Resume Rebuild",
+  title: "StaffAnchor Edge | Interview Prep + Mock Interview, Job Search Strategy and Resume Rebuild",
   description:
-    "1:1 video sessions with Gagan Sharma, founder of StaffAnchor, for sales and leadership professionals: a full mock interview, a job search strategy with a resume rebuild, and resume writing.",
+    "1:1 video sessions with Gagan Sharma, founder of StaffAnchor, for sales and leadership professionals: interview prep with a full mock interview, a job search strategy with a resume rebuild, and resume writing.",
   alternates: { canonical: "https://jobs.staffanchor.com/edge" },
 };
 
@@ -44,13 +44,14 @@ const SESSIONS = [
   {
     id: "mock-interview",
     icon: Mic,
-    title: "Mock interview",
+    title: "Interview Prep + Mock Interview",
     sub: "Sales and Leadership Role",
     tagline: "A real interview, then the feedback nobody gives you.",
     meta: "60 mins · Video meeting",
     price: "₹1,899",
     points: [
-      "A full interview loop for the role you're targeting: discovery on your numbers, a scenario on team or pipeline management, and the tough questions on gaps and attrition.",
+      "Interview prep first: we shape your story, your numbers and your answers to the likely questions for the role.",
+      "Then a full interview loop for the role you're targeting: discovery on your numbers, a scenario on team or pipeline management, and the tough questions on gaps and attrition.",
       "A plain debrief on exactly where you'd have been screened out, and how to fix it.",
       "Bring a specific role or JD if you have one.",
     ],
@@ -75,7 +76,7 @@ const SESSIONS = [
 ];
 
 const GUIDE = [
-  { when: "I have an interview coming up", then: "Mock interview", href: "#mock-interview" },
+  { when: "I have an interview coming up", then: "Interview Prep + Mock Interview", href: "#mock-interview" },
   { when: "I just want a great resume, written for me", then: "Resume Writing", href: "#resume-writing" },
   { when: "I'm not getting shortlisted or called", then: "Job Strategy + Resume Rebuild", href: "#job-search-strategy" },
 ];
@@ -96,7 +97,7 @@ const STEPS = [
 const FAQ = [
   { q: "Do I need to create an account?", a: "No. A name, email and mobile number is all we need to book." },
   { q: "How do I join the session?", a: "Right after you pay, you get a Google Calendar invite with the Meet link, and a confirmation email from StaffAnchor with what to prepare." },
-  { q: "What should I prepare?", a: "For the mock interview, bring the role or job description you're targeting. For the strategy session, send your resume at least 24 hours before." },
+  { q: "What should I prepare?", a: "For the interview prep and mock interview, bring the role or job description you're targeting. For the strategy session, send your resume at least 24 hours before." },
   { q: "Can I reschedule?", a: "Yes. Reply to your confirmation email and we'll move it." },
   { q: "Do prices include GST? Can I get an invoice?", a: "Yes, prices include GST. A tax invoice is generated for every payment. Reply to your confirmation email and we'll send it to you." },
   { q: "Are the sessions only for sales professionals?", a: "They're built for sales and revenue professionals, from BDRs to leaders. If you're in another field you can still book, but the interview scenarios and examples are sales-focused." },
@@ -263,11 +264,11 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
       <section className="bg-[#12131A] px-4 py-20 text-white sm:px-6">
         <div className="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-2">
           <Reveal>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200">Inside the mock interview</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200">Inside the interview prep + mock interview</span>
             <h2 className={`${DISPLAY} mt-4 text-3xl font-light leading-tight tracking-tight sm:text-5xl`}>Not a chat. A <span className={`${SERIF} font-medium italic text-indigo-300`}>real</span> interview loop.</h2>
             <p className="mt-5 max-w-md text-lg leading-8 text-slate-300">You get the questions a hiring manager would actually ask for the role you want, then the honest verdict most candidates never hear.</p>
             <a href={`${BOOK}/mock-interview?src=${src}`} className="group mt-8 inline-flex items-center rounded-xl bg-white px-6 py-3.5 text-[15px] font-semibold text-[#12131A] transition hover:bg-indigo-100">
-              Book the mock interview <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              Book interview prep + mock interview <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
           </Reveal>
           <Reveal delay={100}>
@@ -388,7 +389,7 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
               Book the combo <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
             <a href={`${BOOK}/mock-interview?src=${src}`} className="inline-flex items-center rounded-xl border border-white/30 px-7 py-4 text-[15px] font-semibold text-white transition hover:bg-white/10">
-              Book a mock interview
+              Book interview prep + mock interview
             </a>
           </div>
         </Reveal>
