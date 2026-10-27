@@ -41,7 +41,9 @@ export default function FeedbackBar({
 
   const base = "inline-flex items-center gap-1.5 rounded-lg font-medium transition-colors disabled:opacity-60";
   const size = compact ? "px-2.5 py-1.5 text-[12px]" : "px-3.5 py-2 text-[13px]";
-  const off = "border border-[#e3ddd1] bg-white text-slate-700 hover:bg-[#f4efe6]";
+  const offGreen = "border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100";
+  const offIndigo = "border border-indigo-200 bg-indigo-50 text-indigo-800 hover:bg-indigo-100";
+  const offRose = "border border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100";
 
   const confirmed = formatSlot(candidate.confirmed_interview_at);
   const requested = formatSlot(candidate.requested_interview_at);
@@ -53,7 +55,7 @@ export default function FeedbackBar({
           type="button"
           disabled={busy}
           onClick={() => send("interested")}
-          className={`${base} ${size} ${current === "interested" ? "bg-emerald-600 text-white" : off}`}
+          className={`${base} ${size} ${current === "interested" ? "bg-emerald-600 text-white" : offGreen}`}
         >
           {current === "interested" ? <Check className="h-3.5 w-3.5" /> : <ThumbsUp className="h-3.5 w-3.5" />} Interested
         </button>
@@ -61,7 +63,7 @@ export default function FeedbackBar({
           type="button"
           disabled={busy}
           onClick={() => (compact && onOpenProfile ? onOpenProfile() : setScheduling((s) => !s))}
-          className={`${base} ${size} ${current === "interview_requested" ? "bg-indigo-600 text-white" : off}`}
+          className={`${base} ${size} ${current === "interview_requested" ? "bg-indigo-600 text-white" : offIndigo}`}
         >
           <Video className="h-3.5 w-3.5" /> {compact ? "Interview" : "Schedule interview"}
         </button>
@@ -69,7 +71,7 @@ export default function FeedbackBar({
           type="button"
           disabled={busy}
           onClick={() => setPassing(true)}
-          className={`${base} ${size} ${current === "not_interested" ? "bg-slate-700 text-white" : off}`}
+          className={`${base} ${size} ${current === "not_interested" ? "bg-slate-700 text-white" : offRose}`}
         >
           <ThumbsDown className="h-3.5 w-3.5" /> Pass
         </button>
