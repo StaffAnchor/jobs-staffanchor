@@ -25,6 +25,7 @@ export default function FeedbackBar({
   const current = candidate.client_feedback;
 
   const [passing, setPassing] = useState(false);
+  const [passReason, setPassReason] = useState("");
 
   async function send(value: FeedbackValue, at?: string, extra?: { reason: string; note: string }) {
     setBusy(true);
@@ -32,6 +33,7 @@ export default function FeedbackBar({
       await onFeedback(candidate.link_id, value, at, extra);
       setScheduling(false);
       setPassing(false);
+      setPassReason("");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save. Please try again.");
     } finally {
@@ -70,12 +72,28 @@ export default function FeedbackBar({
         <button
           type="button"
           disabled={busy}
-          onClick={() => setPassing(true)}
+          onClick={() => {
+            setPassReason("");
+            setPassing(true);
+          }}
           className={`${base} ${size} ${current === "not_interested" ? "bg-slate-700 text-white" : offRose}`}
         >
           <ThumbsDown className="h-3.5 w-3.5" /> Pass
         </button>
       </div>
+
+      {current !== "not_interested" && (
+        <button
+          type="button"
+          onClick={() => {
+            setPassReason("already_interviewed");
+            setPassing(true);
+          }}
+          className="mt-2 text-[12px] text-slate-500 underline decoration-dotted underline-offset-2 hover:text-slate-800"
+        >
+          Already interviewed or in our process?
+        </button>
+      )}
 
       {scheduling && !compact && (
         <div className="mt-3 flex flex-wrap items-end gap-2 rounded-xl border border-[#e3ddd1] bg-[#faf8f4] p-3">
@@ -104,7 +122,7 @@ export default function FeedbackBar({
         </div>
       )}
 
-      {passing && <PassReasonDialog candidateName={candidate.full_name} busy={busy} onCancel={() => setPassing(false)} onConfirm={(reason, note) => send("not_interested", undefined, { reason, note })} />}
+      {passing && <PassReasonDialog candidateName={candidate.full_name} initialReason={passReason} busy={busy} onCancel={() => setPassing(false)} onConfirm={(reason, note) => send("not_interested", undefined, { reason, note })} />}
 
       {(confirmed || requested) && (
         <p className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-500">

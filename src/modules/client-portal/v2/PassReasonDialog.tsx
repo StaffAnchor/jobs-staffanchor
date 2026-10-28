@@ -14,6 +14,7 @@ export const PASS_REASONS: { value: string; label: string }[] = [
   { value: "client_culture_fit", label: "Concerns on communication or culture fit" },
   { value: "lost_to_other_candidate", label: "We chose another candidate" },
   { value: "role_paused_or_closed", label: "The role is on hold or has changed" },
+  { value: "already_interviewed", label: "Already interviewed or in our process" },
   { value: "other_client", label: "Other" },
 ];
 
@@ -22,16 +23,18 @@ export const passReasonLabel = (value: string | null | undefined) => PASS_REASON
 // One quick choice, so every future shortlist for this client gets sharper.
 export default function PassReasonDialog({
   candidateName,
+  initialReason = "",
   busy,
   onConfirm,
   onCancel,
 }: {
   candidateName: string;
+  initialReason?: string;
   busy: boolean;
   onConfirm: (reason: string, note: string) => void;
   onCancel: () => void;
 }) {
-  const [reason, setReason] = useState("");
+  const [reason, setReason] = useState(initialReason);
   const [note, setNote] = useState("");
   const needsNote = reason === "other_client";
   const canSubmit = !!reason && (!needsNote || note.trim().length > 0);
@@ -65,7 +68,7 @@ export default function PassReasonDialog({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
-            placeholder={needsNote ? "Tell us in a few words" : "Anything else we should know? (optional)"}
+            placeholder={needsNote ? "Tell us in a few words" : reason === "already_interviewed" ? "When did you interview them, and how did they come to you? (optional)" : "Anything else we should know? (optional)"}
             className="mt-3 w-full rounded-xl border border-[#e3ddd1] px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-indigo-200"
           />
         )}
