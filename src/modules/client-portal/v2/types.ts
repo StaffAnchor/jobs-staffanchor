@@ -108,6 +108,8 @@ export type BoardCandidate = {
   client_feedback: string | null;
   client_pass_reason?: string | null;
   client_pass_note?: string | null;
+  // A note from the StaffAnchor recruiter about this candidate, written when sharing.
+  client_note?: string | null;
   requested_interview_at: string | null;
   confirmed_interview_at: string | null;
   selling: {

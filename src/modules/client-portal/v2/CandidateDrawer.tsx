@@ -167,6 +167,13 @@ export default function CandidateDrawer({
             {c.recommendation === "Strong Fit" && <Chip tone="good">Recommended by StaffAnchor</Chip>}
           </div>
 
+          {c.client_note && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-amber-800">Note from StaffAnchor</p>
+              <p className="mt-1 whitespace-pre-line text-[14px] leading-6 text-amber-950">{c.client_note}</p>
+            </div>
+          )}
+
           {onePager && (
             <Section title="Summary from your StaffAnchor recruiter">
               <p className="text-[15px] font-semibold text-slate-900">{onePager.brief.headline}</p>

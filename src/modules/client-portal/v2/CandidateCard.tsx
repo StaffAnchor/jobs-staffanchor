@@ -77,6 +77,11 @@ export default function CandidateCard({
           </p>
         )}
         {col === "closed" && c.client_pass_reason && <p className="mt-2 text-[12px] leading-5 text-slate-500">Passed: {passReasonLabel(c.client_pass_reason)}</p>}
+        {c.client_note && (
+          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[12.5px] leading-5 text-amber-900">
+            <span className="font-semibold">Note from StaffAnchor:</span> {c.client_note}
+          </p>
+        )}
         {summary && <p className="mt-2 line-clamp-2 text-[12.5px] leading-5 text-slate-600">{summary}</p>}
       </button>
 
