@@ -7,7 +7,6 @@ import CandidateIntakeForm, { type IntakeExistingRow } from "@/modules/apply/Can
 import EmailGate from "@/modules/apply/EmailGate";
 import { supabase } from "@/lib/supabaseClient";
 import { Spinner } from "@/components/ui/spinner";
-import PriorityFloatingNudge from "@/components/priority/priority-floating-nudge";
 
 export default function RegisterPage() {
   return (
@@ -27,9 +26,9 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const ref = searchParams.get("ref");
-  // Where to send the candidate right after registration -- e.g. Priority
-  // Applicant linking here (`/register?returnTo=/priority-applicant`) so
-  // "build a profile" is a fast on-ramp back to checkout.
+  // Where to send the candidate right after registration -- e.g. a page that sends a visitor
+  // here (`/register?returnTo=/jobs`) so
+  // "build a profile" is a fast on-ramp back.
   const returnTo = searchParams.get("returnTo");
   // Arrives pre-filled from the sign-in page when that email had no profile.
   const emailParam = searchParams.get("email")?.trim() ?? "";
@@ -75,8 +74,6 @@ function RegisterForm() {
     );
   }
 
-  const showPriorityNudge = !returnTo?.startsWith("/priority-applicant");
-
   // A `ref` link is a recruiter handing a specific candidate a direct
   // completion link for their existing record. It opens the same short intake
   // as every other entry point, pre-filled; the long profile stays in My Account.
@@ -93,7 +90,6 @@ function RegisterForm() {
             />
           </div>
         </div>
-        {showPriorityNudge && <PriorityFloatingNudge />}
       </>
     );
   }
@@ -104,7 +100,6 @@ function RegisterForm() {
     return (
       <div className="px-4 py-12 sm:px-6">
         <EmailGate initialEmail={emailParam} onNewCandidate={setGateEmail} />
-        {showPriorityNudge && <PriorityFloatingNudge />}
       </div>
     );
   }
@@ -120,7 +115,6 @@ function RegisterForm() {
           <CandidateIntakeForm email={email} returnTo={returnTo ?? undefined} />
         </div>
       </div>
-      {showPriorityNudge && <PriorityFloatingNudge />}
     </>
   );
 }

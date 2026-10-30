@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Briefcase, CalendarClock, Check, ChevronDown, MapPin, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { supabase } from "@/lib/supabaseClient";
-import { logPriorityClick } from "@/lib/priority-click";
+import { usePaidCallCheckout } from "@/components/paid-call/use-paid-call-checkout";
+import { PAID_CALL_RUPEES } from "@/lib/paid-call";
 import {
   APPLICATION_STEPS,
   eventLabel,
@@ -33,25 +33,23 @@ const CARD_CLASSES =
 
 // candidateId is threaded down from candidate-portal/page.tsx (already
 // resolved there via get_or_create_my_candidate_profile) so this list can
-// spend a priority credit directly against a row's link_id without a
-// second round trip just to find out who's logged in.
+// book the ₹99 recruiter call against a row without a second round trip
+// just to find out who's logged in.
 export default function MyPipeline({ candidateId }: { candidateId: string }) {
   const [rows, setRows] = useState<ApplicationRow[] | null>(null);
   const [events, setEvents] = useState<ApplicationEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [balance, setBalance] = useState<number>(0);
-  const [spendingId, setSpendingId] = useState<string | null>(null);
+  const checkout = usePaidCallCheckout();
+  const [payingId, setPayingId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([loadMyApplications(), loadMyApplicationEvents(), supabase.rpc("get_my_priority_balance")])
-      .then(([apps, evts, { data: bal }]) => {
+    Promise.all([loadMyApplications(), loadMyApplicationEvents()])
+      .then(([apps, evts]) => {
         if (cancelled) return;
         setRows(apps);
         setEvents(evts);
-        const balRow = Array.isArray(bal) ? bal[0] : bal;
-        setBalance(balRow?.priority_credits ?? 0);
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load.");
@@ -71,25 +69,11 @@ export default function MyPipeline({ candidateId }: { candidateId: string }) {
     return map;
   }, [events]);
 
-  async function makePriority(linkId: string, mandateId: string) {
-    if (balance < 1) return;
-    logPriorityClick("my_pipeline_spend_credit", { mandateId, candidateId });
-    setSpendingId(linkId);
-    try {
-      const res = await fetch("/api/priority/apply-credit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidateId, linkId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Couldn't apply priority.");
-      setRows((prev) => (prev ? prev.map((r) => (r.link_id === linkId ? { ...r, is_priority: true } : r)) : prev));
-      setBalance(data.remainingBalance ?? balance - 1);
-    } catch {
-      // Non-fatal -- row just stays non-priority, candidate can retry.
-    } finally {
-      setSpendingId(null);
-    }
+  async function bookCall(linkId: string, mandateId: string) {
+    setPayingId(linkId);
+    const ok = await checkout.pay({ candidateId, mandateId });
+    setPayingId(null);
+    if (ok) setRows((prev) => (prev ? prev.map((r) => (r.link_id === linkId ? { ...r, call_paid_at: new Date().toISOString() } : r)) : prev));
   }
 
   if (error) {
@@ -141,14 +125,6 @@ export default function MyPipeline({ candidateId }: { candidateId: string }) {
           <span className="font-semibold text-slate-800">{activeCount} active</span> · {rows.length} in total. Every
           step, in plain words.
         </p>
-        <Link
-          href="/priority-applicant"
-          onClick={() => logPriorityClick("my_pipeline_cta", { candidateId })}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-indigo-500/25 transition hover:shadow-md hover:shadow-indigo-500/35"
-        >
-          <Zap className="h-3.5 w-3.5 animate-pulse" />
-          {balance > 0 ? `${balance} priority credit${balance === 1 ? "" : "s"}` : "Get Priority credits"}
-        </Link>
       </div>
 
       {rows.map((r) => {
@@ -166,9 +142,9 @@ export default function MyPipeline({ candidateId }: { candidateId: string }) {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-[15px] font-semibold text-slate-900">{r.role_title}</p>
-                    {r.is_priority && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                        <Zap className="h-2.5 w-2.5" /> Priority
+                    {r.call_paid_at && (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-teal-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                        <Zap className="h-2.5 w-2.5" /> Recruiter call booked
                       </span>
                     )}
                   </div>
@@ -250,27 +226,16 @@ export default function MyPipeline({ candidateId }: { candidateId: string }) {
                   {open ? "Hide activity" : "View activity"}
                   <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
                 </button>
-                {!r.is_priority &&
-                  !closed &&
-                  (balance > 0 ? (
-                    <button
-                      onClick={() => makePriority(r.link_id, r.mandate_id)}
-                      disabled={spendingId === r.link_id}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
-                    >
-                      <Zap className="h-3 w-3" />
-                      {spendingId === r.link_id ? "Applying…" : "Use 1 credit to make Priority"}
-                    </button>
-                  ) : (
-                    <Link
-                      href={`/priority-applicant?mandateId=${r.mandate_id}`}
-                      onClick={() => logPriorityClick("my_pipeline_cta", { mandateId: r.mandate_id, candidateId })}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
-                    >
-                      <Zap className="h-3 w-3" />
-                      Make Priority
-                    </Link>
-                  ))}
+                {!r.call_paid_at && !closed && (
+                  <button
+                    onClick={() => bookCall(r.link_id, r.mandate_id)}
+                    disabled={payingId === r.link_id}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 px-2.5 py-1 text-[11px] font-semibold text-teal-700 hover:bg-teal-50 disabled:opacity-50"
+                  >
+                    <Zap className="h-3 w-3" />
+                    {payingId === r.link_id ? "Opening payment…" : `Get a recruiter call · ₹${PAID_CALL_RUPEES}`}
+                  </button>
+                )}
               </div>
 
               {open && (

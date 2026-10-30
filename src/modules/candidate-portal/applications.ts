@@ -15,7 +15,8 @@ export type ApplicationRow = {
   applied_at: string;
   stage_updated_at: string;
   confirmed_interview_at: string | null;
-  is_priority: boolean;
+  call_paid_at: string | null;
+  call_due_at: string | null;
 };
 
 export type ApplicationEvent = {

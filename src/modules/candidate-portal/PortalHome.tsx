@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileCheck2, Gift, MessageCircleQuestion, Sparkles, Zap, type LucideIcon } from "lucide-react";
+import { FileCheck2, Gift, MessageCircleQuestion, Sparkles, type LucideIcon } from "lucide-react";
 import { computeCoachSteps, computeProfileScore, type ScoreCandidateRow } from "./profile-score";
 import MarketIntelligenceStrip from "./MarketIntelligenceStrip";
 import SharePassportCard from "./SharePassportCard";
@@ -12,7 +12,6 @@ import SavedAndAlerts from "./SavedAndAlerts";
 import HomeGreeting from "./HomeGreeting";
 import ProfileCoach from "./ProfileCoach";
 import ApplicationsSnapshot from "./ApplicationsSnapshot";
-import { logPriorityClick } from "@/lib/priority-click";
 
 // The portal's landing screen, built around one question: what should I do
 // next? Top: a personal greeting plus the few things that need attention
@@ -104,15 +103,6 @@ export default function PortalHome({
             text="Refer someone and earn a reward when they are placed."
             badge={activeReferralCount ?? undefined}
             onClick={() => onNavigate("refer")}
-          />
-          <Tile
-            icon={Zap}
-            tone="bg-indigo-600 text-white"
-            title="Priority Applicant"
-            text="Get an application flagged for a first review, from ₹79."
-            href="/priority-applicant"
-            onClick={() => logPriorityClick("portal_home")}
-            highlight
           />
         </div>
       </section>

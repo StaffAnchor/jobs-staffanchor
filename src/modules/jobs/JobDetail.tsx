@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Briefcase, Check, CheckCircle2, FileText, IndianRupee, ListChecks, MapPin, UserCheck, Wallet, Zap, ShieldCheck, PhoneCall, Clock } from "lucide-react";
-import { logPriorityClick } from "@/lib/priority-click";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getOpenJob, listOpenJobs, logQuickApplyClick, categoryLabel, budgetLabel, experienceLabel, timeAgo, type JobListing } from "@/modules/jobs/api";
@@ -13,7 +12,6 @@ import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import EmailGate from "@/modules/apply/EmailGate";
 import JobMatchBanner from "@/modules/jobs/JobMatchBanner";
-import PriorityFloatingNudge from "@/components/priority/priority-floating-nudge";
 import { supabase } from "@/lib/supabaseClient";
 import { recordJobView } from "@/lib/recentlyViewed";
 
@@ -387,25 +385,6 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
             })}
           </div>
 
-          <Link
-            href={`/priority-applicant?mandateId=${mandateId}`}
-            onClick={() => logPriorityClick("job_teaser", { mandateId })}
-            className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-fuchsia-600 p-5 shadow-md shadow-indigo-500/30 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/40"
-          >
-            <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/15 blur-xl" />
-            <div className="relative flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20">
-                <Zap className="h-5 w-5 text-white" fill="currentColor" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-white">Want to be seen first?</p>
-                <p className="text-[11.5px] text-white/85">Get flagged for the recruiter&apos;s first review pass</p>
-              </div>
-              <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-[11.5px] font-bold text-indigo-700 shadow-sm transition-transform group-hover:scale-105">
-                From ₹79
-              </span>
-            </div>
-          </Link>
         </aside>
       </div>
 
@@ -482,7 +461,6 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
       </div>
     )}
 
-    <PriorityFloatingNudge mandateId={mandateId} />
     </>
   );
 }

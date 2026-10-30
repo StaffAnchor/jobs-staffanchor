@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import QuickInterest from "@/modules/jobs/QuickInterest";
+import { COPY } from "@/lib/paid-call";
 import {
   listOpenJobs,
   categoryLabel,
@@ -138,7 +139,7 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<JobListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [interestFor, setInterestFor] = useState<JobListing | null>(null);
+  const [interestFor, setInterestFor] = useState<{ job: JobListing; paid: boolean } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [view, setView] = useState<"live" | "pipeline">("live");
 
@@ -757,39 +758,46 @@ export default function JobsPage() {
                   </div>
                   <div className="mt-4 lg:hidden">
                     <div className="grid grid-cols-2 gap-2.5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          window.open(`${jobPath(job)}#apply-form`, "_blank", "noopener,noreferrer");
-                        }}
-                        className="flex h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 text-[14px] font-extrabold text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98]"
-                      >
-                        {m?.applied ? "View application" : "Apply"} <ArrowRight className="h-4 w-4" />
-                      </button>
                       {!m?.applied ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setInterestFor({ job, paid: false });
+                            }}
+                            className="flex h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 text-[14px] font-extrabold text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98]"
+                          >
+                            {COPY.listFree}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setInterestFor({ job, paid: true });
+                            }}
+                            className="flex h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 text-[14px] font-extrabold text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98]"
+                          >
+                            {COPY.listPaid}
+                          </button>
+                        </>
+                      ) : (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            setInterestFor(job);
+                            window.open(`${jobPath(job)}#apply-form`, "_blank", "noopener,noreferrer");
                           }}
-                          className="flex h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 text-[14px] font-extrabold text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98]"
+                          className="col-span-2 flex h-12 items-center justify-center gap-1.5 rounded-xl bg-blue-50 text-[14px] font-extrabold text-blue-700"
                         >
-                          <Zap className="h-4 w-4" /> Express interest
+                          Already applied · view application <ArrowRight className="h-4 w-4" />
                         </button>
-                      ) : (
-                        <span className="flex h-12 items-center justify-center rounded-xl bg-blue-50 text-[13px] font-bold text-blue-700">Already applied</span>
                       )}
                     </div>
-                    {!m?.applied && (
-                      <p className="mt-2 text-center text-[11.5px] leading-4 text-slate-500">
-                        <span className="font-semibold text-emerald-700">Apply</span> is the preferred way to reach a recruiter ·{" "}
-                        <span className="font-semibold text-blue-700">Express interest</span> takes 30 seconds
-                      </p>
-                    )}
+                    {!m?.applied && <p className="mt-2 text-center text-[11.5px] leading-4 text-slate-500">{COPY.listLine}</p>}
                   </div>
                 </Link>
                 </div>
@@ -876,41 +884,55 @@ export default function JobsPage() {
                 <p className="text-[13.5px] leading-6 text-slate-600">{summaryOf(selected)}</p>
 
                 <div className="space-y-3">
-                  {!matches.get(selected.id)?.applied && (
-                    <button
-                      type="button"
-                      onClick={() => setInterestFor(selected)}
-                      className="group/quick flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3.5 text-left text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
+                  {matches.get(selected.id)?.applied ? (
+                    <Link
+                      href={`${jobPath(selected)}#apply-form`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group/apply flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5"
                     >
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                        <Zap className="h-5 w-5" />
+                        <FileText className="h-5 w-5" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[15px] font-extrabold leading-tight">Express interest</span>
-                        <span className="block text-[12.5px] font-medium text-blue-100">30 seconds, no CV needed</span>
+                        <span className="block text-[15px] font-extrabold leading-tight">View application</span>
+                        <span className="block text-[12.5px] font-medium text-emerald-50">See where it stands</span>
                       </span>
-                      <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/quick:translate-x-0.5" />
-                    </button>
+                      <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/apply:translate-x-0.5" />
+                    </Link>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setInterestFor({ job: selected, paid: false })}
+                        className="group/free flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-left text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-600/35"
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                          <FileText className="h-5 w-5" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[15px] font-extrabold leading-tight">{COPY.freeTitle}</span>
+                          <span className="block text-[12.5px] font-medium text-emerald-50">{COPY.freeLine}</span>
+                        </span>
+                        <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/free:translate-x-0.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInterestFor({ job: selected, paid: true })}
+                        className="group/paid flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3.5 text-left text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                          <Zap className="h-5 w-5" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[15px] font-extrabold leading-tight">{COPY.paidTitle}</span>
+                          <span className="block text-[12.5px] font-medium text-blue-100">{COPY.paidLine}</span>
+                        </span>
+                        <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/paid:translate-x-0.5" />
+                      </button>
+                      <p className="text-center text-[11.5px] text-slate-500">{COPY.refundLine}</p>
+                    </>
                   )}
-                  <Link
-                    href={`${jobPath(selected)}#apply-form`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group/apply relative flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-600/35"
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                      <FileText className="h-5 w-5" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[15px] font-extrabold leading-tight">
-                        {matches.get(selected.id)?.applied ? "View application" : "Full application"}
-                      </span>
-                      <span className="block text-[12.5px] font-medium text-emerald-50">
-                        {matches.get(selected.id)?.applied ? "See where it stands" : "The preferred way to get a recruiter's attention"}
-                      </span>
-                    </span>
-                    <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/apply:translate-x-0.5" />
-                  </Link>
                 </div>
                 <div className="flex gap-3">
                   <a
@@ -943,7 +965,7 @@ export default function JobsPage() {
         </div>
       </div>
       {interestFor && (
-        <QuickInterest pipeline={isPipeline(interestFor)} jobId={interestFor.id} roleTitle={interestFor.role_title ?? "Open role"} client={interestFor.client_display ?? null} onClose={() => setInterestFor(null)} />
+        <QuickInterest paid={interestFor.paid} pipeline={isPipeline(interestFor.job)} jobId={interestFor.job.id} roleTitle={interestFor.job.role_title ?? "Open role"} client={interestFor.job.client_display ?? null} onClose={() => setInterestFor(null)} />
       )}
     </div>
   );

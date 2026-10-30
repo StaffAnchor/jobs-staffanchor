@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, Menu, Sparkles, X, Zap } from "lucide-react";
-import { logPriorityClick } from "@/lib/priority-click";
+import { ArrowUpRight, Menu, Sparkles, X } from "lucide-react";
 import { useAuthStore } from "@/modules/auth/store";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
@@ -156,7 +155,7 @@ export function Navbar() {
             <Button variant={pathname.startsWith("/jobs") ? "default" : "ghost"}>Current Openings</Button>
           </Link>
           {/* Highlighted like the Edge tab on staffanchor.com: blue to indigo, so it reads as the same product and
-              stays apart from the Priority Applicant pill beside it. */}
+              leads the header. */}
           <Link
             href="/edge"
             className={`group relative mx-0.5 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 px-4.5 py-2.5 text-[15px] font-bold text-white shadow-md shadow-indigo-500/30 transition-transform duration-200 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/40 ${
@@ -165,15 +164,6 @@ export function Navbar() {
           >
             <Sparkles className="h-4 w-4 animate-pulse" />
             Edge
-          </Link>
-          {/* The paid Priority Applicant upsell, kept quieter than Edge: an outlined pill, so Edge leads. */}
-          <Link
-            href="/priority-applicant"
-            onClick={() => logPriorityClick("nav_pill")}
-            className="group relative mx-0.5 flex items-center gap-1.5 overflow-hidden rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-[13px] font-semibold text-indigo-700 transition duration-200 hover:border-indigo-300 hover:bg-indigo-50"
-          >
-            <Zap className="h-3.5 w-3.5" />
-            Priority Applicant
           </Link>
           {candidateSignedIn && (
             <>
@@ -260,16 +250,6 @@ export function Navbar() {
               }`}
             >
               <Sparkles className="h-4 w-4" /> Edge
-            </Link>
-            <Link
-              href="/priority-applicant"
-              onClick={() => {
-                logPriorityClick("nav_pill");
-                closeMenu();
-              }}
-              className="mt-1 flex h-11 items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 text-sm font-semibold text-indigo-700"
-            >
-              <Zap className="h-4 w-4" /> Priority Applicant
             </Link>
           </div>
 

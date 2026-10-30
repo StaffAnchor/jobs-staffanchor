@@ -8,7 +8,7 @@ const KEY = "sa_edge_banner_until";
 const HIDE_DAYS = 7;
 
 // Pages where the banner would be noise: Edge itself, the paid-upsell and resume pages, and the client and admin areas.
-const SKIP = ["/edge", "/resume", "/resume-writing", "/priority-applicant", "/client-login", "/client-portal", "/dashboard"];
+const SKIP = ["/edge", "/resume", "/resume-writing", "/client-login", "/client-portal", "/dashboard"];
 
 // A slim, dismissible strip that points jobseekers to StaffAnchor Edge. Closing it hides it for a week. Browser storage
 // can be blocked, so every read and write is guarded and the banner simply shows if storage is unavailable.

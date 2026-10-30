@@ -24,7 +24,7 @@ import { posthog } from "@/lib/posthog";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion, type ApplicationAnswerPayload } from "./applicationQuestions";
 import { logQuickApplyFormOpened } from "@/modules/jobs/api";
-import PriorityApplicantCard from "@/components/priority/priority-applicant-card";
+import PaidCallCard from "@/components/paid-call/paid-call-card";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import {
   computeCareerGaps,
@@ -4266,7 +4266,7 @@ export default function ApplyForm({
 
         {submitted && !isEditMode && mandateId && submittedCandidateId && (
           <div className="mx-auto mb-6 max-w-3xl">
-            <PriorityApplicantCard candidateId={submittedCandidateId} mandateId={mandateId} />
+            <PaidCallCard candidateId={submittedCandidateId} mandateId={mandateId} />
           </div>
         )}
 
