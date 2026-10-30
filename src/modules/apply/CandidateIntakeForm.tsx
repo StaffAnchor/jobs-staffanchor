@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/forms/form-field";
 import SignInPanel from "@/modules/auth/SignInPanel";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
+import PaidCallCard from "@/components/paid-call/paid-call-card";
 import {
   fetchApplicationQuestions,
   buildAnswerPayload,
@@ -275,6 +276,7 @@ export default function CandidateIntakeForm({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [skippedVerify, setSkippedVerify] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
   const [accountOnly, setAccountOnly] = useState(false);
@@ -583,6 +585,7 @@ export default function CandidateIntakeForm({
         signedIn,
         ...(mandateId ? { mandateId } : {}),
       });
+      setSubmittedId((submitJson?.candidateId as string | undefined) ?? completionRef ?? null);
       toast.success(mandateId ? "Your application is in. We'll be in touch." : "You're registered.");
       if (signedIn && onDone) {
         onDone();
@@ -642,6 +645,11 @@ export default function CandidateIntakeForm({
               : "A StaffAnchor recruiter will review your profile and reach out when a role fits."}
           </p>
         </div>
+        {mandateId && submittedId && (
+          <div className="mt-5">
+            <PaidCallCard candidateId={submittedId} mandateId={mandateId} />
+          </div>
+        )}
         <div className="mt-5 text-center">
           <p className="mb-2 text-xs text-slate-500">Prefer a faster reply?</p>
           <WhatsAppChatButton
