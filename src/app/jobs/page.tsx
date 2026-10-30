@@ -766,7 +766,7 @@ export default function JobsPage() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setInterestFor({ job, paid: false });
+                              window.open(`${jobPath(job)}#apply-form`, "_blank", "noopener,noreferrer");
                             }}
                             className="flex h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 text-[14px] font-extrabold text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98]"
                           >
@@ -903,9 +903,10 @@ export default function JobsPage() {
                     </Link>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => setInterestFor({ job: selected, paid: false })}
+                      <Link
+                        href={`${jobPath(selected)}#apply-form`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="group/free flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-left text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-600/35"
                       >
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
@@ -916,7 +917,7 @@ export default function JobsPage() {
                           <span className="block text-[12.5px] font-medium text-emerald-50">{COPY.freeLine}</span>
                         </span>
                         <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/free:translate-x-0.5" />
-                      </button>
+                      </Link>
                       <button
                         type="button"
                         onClick={() => setInterestFor({ job: selected, paid: true })}

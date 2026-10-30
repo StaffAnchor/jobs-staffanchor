@@ -30,6 +30,8 @@ function RegisterForm() {
   // here (`/register?returnTo=/jobs`) so
   // "build a profile" is a fast on-ramp back.
   const returnTo = searchParams.get("returnTo");
+  // Set after a paid recruiter call: the profile form then also applies to this role.
+  const mandateParam = searchParams.get("mandateId");
   // Arrives pre-filled from the sign-in page when that email had no profile.
   const emailParam = searchParams.get("email")?.trim() ?? "";
 
@@ -86,6 +88,7 @@ function RegisterForm() {
               email={existingProfile.email}
               existing={existingProfile as unknown as IntakeExistingRow}
               completionRef={existingProfile.id}
+              mandateId={mandateParam ?? undefined}
               returnTo={returnTo ?? undefined}
             />
           </div>

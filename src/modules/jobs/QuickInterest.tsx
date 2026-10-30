@@ -84,13 +84,20 @@ export default function QuickInterest({
       setCandidateId(cid);
       setDone(true);
       // The free application is already saved; paying is the extra step, and closing checkout keeps it free.
-      if (paid && cid) setPaidDone(await checkout.pay({ candidateId: cid, mandateId: jobId }));
+      if (paid && cid) {
+        const ok = await checkout.pay({ candidateId: cid, mandateId: jobId });
+        setPaidDone(ok);
+        // Paid: now the profile form, with the CV, so the recruiter is ready for the call.
+        if (ok) window.location.assign(profileUrl(cid));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
   }
+
+  const profileUrl = (cid: string) => `/register?ref=${cid}&mandateId=${jobId}&returnTo=${encodeURIComponent(`/jobs/${jobId}`)}`;
 
   const field =
     "h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15";
@@ -103,7 +110,7 @@ export default function QuickInterest({
           <button onClick={onClose} aria-label="Close" className="absolute right-4 top-4 rounded-full p-1.5 text-blue-100 hover:bg-white/10">
             <X className="h-5 w-5" />
           </button>
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-200">{paid ? `Apply + recruiter call · ₹${PAID_CALL_RUPEES}` : "Apply free · 30 seconds"}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-200">{paid ? `Recruiter call · ₹${PAID_CALL_RUPEES} · pay, then complete your profile` : "Apply free · 30 seconds"}</p>
           <h2 className="mt-1.5 pr-8 text-xl font-extrabold leading-tight">{roleTitle}</h2>
           {client && <p className="mt-0.5 text-sm text-blue-100/90">{client}</p>}
         </div>
@@ -111,13 +118,15 @@ export default function QuickInterest({
         {done ? (
           <div className="space-y-4 p-6 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
-            <p className="text-lg font-extrabold text-slate-900">{paidDone ? "Booked." : "You're in!"}</p>
+            <p className="text-lg font-extrabold text-slate-900">{paidDone ? "Booked. One more step." : "Details saved."}</p>
             <p className="text-sm leading-6 text-slate-600">
               {paidDone
-                ? COPY.donePaid
+                ? `${COPY.donePaid} Add your CV and details now so the recruiter is ready for the call.`
                 : pipeline
                   ? "This is a pipeline role: we are building a shortlist for companies hiring in this space. A StaffAnchor recruiter will contact you when a matching role opens. Adding a few more details now puts you ahead in that shortlist."
-                  : COPY.doneFree}
+                  : paid
+                    ? "Your details are saved, but the payment wasn't completed, so no call is booked yet."
+                    : COPY.doneFree}
             </p>
             {paid && !paidDone && candidateId && (
               <div className="space-y-1.5">
@@ -134,7 +143,7 @@ export default function QuickInterest({
               </div>
             )}
             <Link
-              href={`/jobs/${jobId}#apply-form`}
+              href={candidateId ? profileUrl(candidateId) : `/jobs/${jobId}#apply-form`}
               className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-600/30"
             >
               Complete my profile <ArrowRight className="h-4 w-4" />
@@ -191,7 +200,7 @@ export default function QuickInterest({
             {paid && <p className="text-center text-[11.5px] leading-5 text-slate-500">{COPY.refundLine}</p>}
             {paid && <WhyPrice />}
             <p className="text-center text-[11.5px] leading-5 text-slate-400">
-              No CV needed now. By continuing, you agree StaffAnchor may contact you about this role.
+              We need these three to attach your payment. Next you pay, then add your CV. By continuing, you agree StaffAnchor may contact you about this role.
             </p>
           </form>
         )}
