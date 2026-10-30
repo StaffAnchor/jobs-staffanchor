@@ -237,21 +237,13 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
               </p>
             )}
           </div>
-          <div className="shrink-0">
-            {signedIn && appliedAlready ? (
+          {signedIn && appliedAlready && (
+            <div className="shrink-0">
               <span className="inline-flex h-12 items-center gap-2 rounded-2xl bg-emerald-500 px-6 text-sm font-bold text-white shadow-lg">
                 <CheckCircle2 className="h-4 w-4" /> Applied
               </span>
-            ) : (
-              <a
-                href="#apply-form"
-                onClick={() => logQuickApplyClick(mandateId)}
-                className="inline-flex h-12 items-center gap-2 rounded-2xl bg-white px-7 text-sm font-bold text-blue-900 shadow-lg shadow-black/20 transition hover:bg-blue-50"
-              >
-                <Zap className="h-4 w-4" /> Apply now
-              </a>
-            )}
-          </div>
+            </div>
+          )}
         </div>
         <div className="mt-7 flex flex-wrap gap-2.5">
           {jobCities.length > 0 && (
@@ -495,7 +487,7 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
       <QuickInterest paid jobId={mandateId} roleTitle={job.role_title ?? "Open role"} client={job.client_display ?? null} onClose={() => setPaidOpen(false)} />
     )}
 
-    {/* Always-visible WhatsApp button; lifted above the phone "Apply now" bar. */}
+    {/* Always-visible WhatsApp button; lifted above the phone apply bar. */}
     <FloatingWhatsApp
       source="job_page_floating"
       bottomClass={!(signedIn && appliedAlready) ? "bottom-24 md:bottom-6" : "bottom-6"}
@@ -504,14 +496,23 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
 
     {/* Phone: the apply action stays within thumb reach while reading. */}
     {!(signedIn && appliedAlready) && (
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur md:hidden">
-        <a
-          href="#apply-form"
-          onClick={() => logQuickApplyClick(mandateId)}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/25"
-        >
-          <Zap className="h-4 w-4" /> Apply now
-        </a>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-3 pb-4 pt-3 backdrop-blur md:hidden">
+        <div className="grid grid-cols-2 gap-2.5">
+          <a
+            href="#apply-form"
+            onClick={() => logQuickApplyClick(mandateId)}
+            className="flex h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/25"
+          >
+            {COPY.listFree}
+          </a>
+          <button
+            type="button"
+            onClick={() => setPaidOpen(true)}
+            className="flex h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-extrabold text-white shadow-lg shadow-blue-600/30"
+          >
+            {COPY.listPaid}
+          </button>
+        </div>
       </div>
     )}
 
