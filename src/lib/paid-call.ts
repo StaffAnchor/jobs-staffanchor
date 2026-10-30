@@ -11,7 +11,7 @@ export const COPY = {
   paidLine: `A recruiter calls you within ${PAID_CALL_WORKING_DAYS} working days, match or not.`,
   refundLine: `No call within ${PAID_CALL_WORKING_DAYS} working days? Full refund. A profile discussion, not a job guarantee.`,
   whyLabel: `Why ₹${PAID_CALL_RUPEES}?`,
-  whyLine: `₹${PAID_CALL_RUPEES} (GST included) pays for a recruiter's time on a one-to-one profile call, and keeps these calls for people who are serious about the role.`,
+  whyLine: `₹${PAID_CALL_RUPEES} (GST included) pays for a recruiter's time on a one-to-one profile call, and keeps these calls for people who are serious about this role or future ones.`,
   listFree: "Apply free",
   listPaid: `Apply + call ₹${PAID_CALL_RUPEES}`,
   listLine: "Free: we call if you match · Paid: a guaranteed call",
