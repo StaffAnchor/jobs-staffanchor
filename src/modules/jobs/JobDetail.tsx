@@ -329,30 +329,30 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
                 <a
                   href="#apply-form"
                   onClick={() => logQuickApplyClick(mandateId)}
-                  className="group/free flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-left text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-600/35"
+                  className="group/free flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-3.5 text-left text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-600/35"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
                     <FileText className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15px] font-extrabold leading-tight">{COPY.freeTitle}</span>
                     <span className="block text-[12.5px] font-medium text-emerald-50">{COPY.freeLine}</span>
                   </span>
-                  <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/free:translate-x-0.5" />
+                  <ArrowRight className="h-4 w-4 shrink-0 transition group-hover/free:translate-x-0.5" />
                 </a>
                 <button
                   type="button"
                   onClick={() => setPaidOpen(true)}
-                  className="group/paid flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3.5 text-left text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
+                  className="group/paid flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 py-3.5 text-left text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
                     <Zap className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2"><span className="text-[15px] font-extrabold leading-tight">{COPY.paidCardTitle}</span><span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[12.5px] font-extrabold">{COPY.paidPrice}</span></span>
+                    <span className="flex items-center gap-2 whitespace-nowrap"><span className="text-[14.5px] font-extrabold leading-tight">{COPY.paidCardTitle}</span><span className="shrink-0 rounded-full bg-white/25 px-1.5 py-0.5 text-[12px] font-extrabold">{COPY.paidPrice}</span></span>
                     <span className="block text-[12.5px] font-medium text-blue-100">{COPY.paidLine}</span>
                   </span>
-                  <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/paid:translate-x-0.5" />
+                  <ArrowRight className="h-4 w-4 shrink-0 transition group-hover/paid:translate-x-0.5" />
                 </button>
                 <p className="text-center text-[11.5px] leading-4 text-slate-500">{COPY.refundLine}</p>
                 <WhyPrice />

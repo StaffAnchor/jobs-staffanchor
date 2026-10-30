@@ -808,15 +808,15 @@ export default function JobsPage() {
 
           {/* ───────── Preview (desktop) ───────── */}
           {selected && (
-            <aside className="sticky top-24 hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_30px_70px_-40px_rgba(15,23,42,0.4)] lg:block">
-              <div className="bg-gradient-to-br from-[#0A1630] to-[#14306b] p-6 text-white">
+            <aside className="sticky top-24 hidden max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white shadow-[0_30px_70px_-40px_rgba(15,23,42,0.4)] [scrollbar-width:thin] lg:block">
+              <div className="bg-gradient-to-br from-[#0A1630] to-[#14306b] p-5 text-white">
                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-200">
                   {categoryLabel(selected.category)}
                   {subDomainsOf(selected).length > 0 && ` · ${subDomainsOf(selected).slice(0, 2).join(", ")}`}
                 </p>
                 <h2 className="mt-2 text-2xl font-extrabold leading-tight tracking-tight">{selected.role_title ?? "Open role"}</h2>
                 {selected.client_display && <p className="mt-1 text-sm text-blue-100/90">{selected.client_display}</p>}
-                <div className="mt-5 flex items-end justify-between gap-3 border-t border-white/10 pt-4">
+                <div className="mt-4 flex items-end justify-between gap-3 border-t border-white/10 pt-3">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-200/70">Fixed pay</p>
                     <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-tight text-emerald-300">
@@ -828,8 +828,8 @@ export default function JobsPage() {
                   </p>
                 </div>
               </div>
-              <div className="space-y-5 p-6">
-                <dl className="grid grid-cols-2 gap-3 text-[13px]">
+              <div className="space-y-4 p-5">
+                <dl className="grid grid-cols-2 gap-2.5 text-[13px]">
                   <div className="rounded-2xl bg-slate-50 p-3.5">
                     <dt className="text-xs text-slate-400">Location</dt>
                     <dd className="mt-0.5 font-semibold text-slate-800">{jobCitiesOf(selected).slice(0, 2).join(", ") || "—"}</dd>
@@ -846,12 +846,12 @@ export default function JobsPage() {
                       <dd className="mt-0.5 font-semibold text-slate-800">{f.value}</dd>
                     </div>
                   ))}
-                  <div className="col-span-2 rounded-2xl bg-slate-50 p-3.5">
-                    <dt className="text-xs text-slate-400">Compensation</dt>
-                    <dd className="mt-0.5 font-semibold text-slate-800">
-                      {selected.budget_min || selected.budget_max ? budgetLabel(selected.budget_min, selected.budget_max) : "Shared on the first call"}
-                    </dd>
-                  </div>
+                  {!(selected.budget_min || selected.budget_max) && (
+                    <div className="col-span-2 rounded-2xl bg-slate-50 p-3.5">
+                      <dt className="text-xs text-slate-400">Compensation</dt>
+                      <dd className="mt-0.5 font-semibold text-slate-800">Shared on the first call</dd>
+                    </div>
+                  )}
                 </dl>
 
                 {(() => {
@@ -882,7 +882,7 @@ export default function JobsPage() {
                     recruiter will contact you when a matching role opens.
                   </p>
                 )}
-                <p className="text-[13.5px] leading-6 text-slate-600">{summaryOf(selected)}</p>
+                <p className="line-clamp-3 text-[13.5px] leading-6 text-slate-600">{summaryOf(selected)}</p>
 
                 <div className="space-y-3">
                   {matches.get(selected.id)?.applied ? (
@@ -927,7 +927,7 @@ export default function JobsPage() {
                           <Zap className="h-5 w-5" />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="flex items-center gap-2"><span className="text-[15px] font-extrabold leading-tight">{COPY.paidCardTitle}</span><span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[12.5px] font-extrabold">{COPY.paidPrice}</span></span>
+                          <span className="flex items-center gap-2 whitespace-nowrap"><span className="text-[14.5px] font-extrabold leading-tight">{COPY.paidCardTitle}</span><span className="shrink-0 rounded-full bg-white/25 px-1.5 py-0.5 text-[12px] font-extrabold">{COPY.paidPrice}</span></span>
                           <span className="block text-[12.5px] font-medium text-blue-100">{COPY.paidLine}</span>
                         </span>
                         <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/paid:translate-x-0.5" />
