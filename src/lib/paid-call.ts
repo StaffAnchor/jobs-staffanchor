@@ -8,6 +8,8 @@ export const COPY = {
   freeTitle: "Apply free",
   freeLine: "We'll call you if your profile matches this role.",
   paidTitle: `Apply + recruiter call · ₹${PAID_CALL_RUPEES}`,
+  paidCardTitle: "Apply + recruiter call",
+  paidPrice: `₹${PAID_CALL_RUPEES}`,
   paidLine: `A recruiter calls you within ${PAID_CALL_WORKING_DAYS} working days, match or not.`,
   refundLine: `No call within ${PAID_CALL_WORKING_DAYS} working days? Full refund. A profile discussion, not a job guarantee.`,
   whyLabel: `Why ₹${PAID_CALL_RUPEES}?`,

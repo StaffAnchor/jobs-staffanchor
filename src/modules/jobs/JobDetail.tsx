@@ -319,31 +319,13 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
 
         <aside className="space-y-5 lg:sticky lg:top-24">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">At a glance</p>
-            <dl className="space-y-3.5 text-sm">
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-500">Experience</dt>
-                <dd className="text-right font-semibold text-slate-900">{exp ?? "—"}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-500">Compensation</dt>
-                <dd className="text-right font-semibold text-slate-900">{budgetLabel(job.budget_min, job.budget_max)}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-500">Location</dt>
-                <dd className="text-right font-semibold text-slate-900">{jobCities.length ? jobCities.join(", ") : "—"}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-500">Function</dt>
-                <dd className="text-right font-semibold text-slate-900">{categoryLabel(job.category)}</dd>
-              </div>
-            </dl>
             {signedIn && appliedAlready ? (
-              <span className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 text-sm font-bold text-white">
+              <span className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 text-sm font-bold text-white">
                 <CheckCircle2 className="h-4 w-4" /> Applied
               </span>
             ) : (
-              <div className="mt-6 space-y-3">
+              <div className="space-y-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">How would you like to apply?</p>
                 <a
                   href="#apply-form"
                   onClick={() => logQuickApplyClick(mandateId)}
@@ -367,9 +349,10 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
                     <Zap className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-extrabold leading-tight">{COPY.paidTitle}</span>
+                    <span className="block text-[15px] font-extrabold leading-tight">{COPY.paidCardTitle}</span>
                     <span className="block text-[12.5px] font-medium text-blue-100">{COPY.paidLine}</span>
                   </span>
+                  <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-1 text-[13px] font-extrabold">{COPY.paidPrice}</span>
                   <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/paid:translate-x-0.5" />
                 </button>
                 <p className="text-center text-[11.5px] leading-4 text-slate-500">{COPY.refundLine}</p>
