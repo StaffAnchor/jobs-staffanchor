@@ -351,24 +351,37 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
                 <CheckCircle2 className="h-4 w-4" /> Applied
               </span>
             ) : (
-              <a
-                href="#apply-form"
-                onClick={() => logQuickApplyClick(mandateId)}
-                className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
-              >
-                <Zap className="h-4 w-4" /> Apply now
-              </a>
-            )}
-            {!(signedIn && appliedAlready) && (
-              <div className="mt-2.5">
+              <div className="mt-6 space-y-3">
+                <a
+                  href="#apply-form"
+                  onClick={() => logQuickApplyClick(mandateId)}
+                  className="group/free flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-left text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-600/35"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                    <FileText className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-extrabold leading-tight">{COPY.freeTitle}</span>
+                    <span className="block text-[12.5px] font-medium text-emerald-50">{COPY.freeLine}</span>
+                  </span>
+                  <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/free:translate-x-0.5" />
+                </a>
                 <button
                   type="button"
                   onClick={() => setPaidOpen(true)}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-teal-600 bg-teal-50/60 text-sm font-bold text-teal-700 transition hover:bg-teal-100"
+                  className="group/paid flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3.5 text-left text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
                 >
-                  <PhoneCall className="h-4 w-4" /> Apply + recruiter call · ₹{PAID_CALL_RUPEES}
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                    <Zap className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-extrabold leading-tight">{COPY.paidTitle}</span>
+                    <span className="block text-[12.5px] font-medium text-blue-100">{COPY.paidLine}</span>
+                  </span>
+                  <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/paid:translate-x-0.5" />
                 </button>
-                <p className="mt-1.5 text-center text-[11.5px] leading-4 text-slate-500">{COPY.paidLine}</p>
+                <p className="text-center text-[11.5px] leading-4 text-slate-500">{COPY.refundLine}</p>
+                <WhyPrice />
               </div>
             )}
             <WhatsAppChatButton
