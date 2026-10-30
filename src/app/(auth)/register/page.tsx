@@ -7,6 +7,8 @@ import CandidateIntakeForm, { type IntakeExistingRow } from "@/modules/apply/Can
 import EmailGate from "@/modules/apply/EmailGate";
 import { supabase } from "@/lib/supabaseClient";
 import { Spinner } from "@/components/ui/spinner";
+import { getOpenJob } from "@/modules/jobs/api";
+import Link from "next/link";
 
 export default function RegisterPage() {
   return (
@@ -36,6 +38,11 @@ function RegisterForm() {
   const emailParam = searchParams.get("email")?.trim() ?? "";
 
   const [loading, setLoading] = useState(true);
+  const [roleTitle, setRoleTitle] = useState<string | null>(null);
+  useEffect(() => {
+    if (!mandateParam) return;
+    getOpenJob(mandateParam).then((j) => setRoleTitle(j?.role_title ?? null)).catch(() => {});
+  }, [mandateParam]);
   const [existingProfile, setExistingProfile] = useState<ExistingProfile | undefined>(undefined);
   const [gateEmail, setGateEmail] = useState<string | null>(null);
 
@@ -83,8 +90,19 @@ function RegisterForm() {
     return (
       <>
         <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+          {mandateParam && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-teal-200 bg-teal-50/70 px-4 py-3">
+              <p className="text-sm text-teal-900">
+                <span className="font-bold">Your recruiter call is booked.</span> Add your CV and details for {roleTitle ? <span className="font-semibold">{roleTitle}</span> : "this role"} so the recruiter is ready.
+              </p>
+              <Link href={`/jobs/${mandateParam}`} target="_blank" className="text-sm font-semibold text-teal-700 underline">
+                View role details
+              </Link>
+            </div>
+          )}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
             <CandidateIntakeForm
+              mandateTitle={roleTitle ?? undefined}
               email={existingProfile.email}
               existing={existingProfile as unknown as IntakeExistingRow}
               completionRef={existingProfile.id}

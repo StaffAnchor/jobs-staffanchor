@@ -14,6 +14,9 @@ import EmailGate from "@/modules/apply/EmailGate";
 import JobMatchBanner from "@/modules/jobs/JobMatchBanner";
 import { supabase } from "@/lib/supabaseClient";
 import { recordJobView } from "@/lib/recentlyViewed";
+import QuickInterest from "@/modules/jobs/QuickInterest";
+import WhyPrice from "@/components/paid-call/why-price";
+import { COPY, PAID_CALL_RUPEES } from "@/lib/paid-call";
 
 const MONOGRAM_GRADIENT: Record<string, string> = {
   b2b_sales: "from-blue-500 to-indigo-600",
@@ -90,6 +93,7 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
   // for the email a second time.
   const [gateEmail, setGateEmail] = useState<string | null>(null);
   const [similarJobs, setSimilarJobs] = useState<JobListing[]>([]);
+  const [paidOpen, setPaidOpen] = useState(false);
 
   useEffect(() => {
     getOpenJob(mandateId)
@@ -355,6 +359,18 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
                 <Zap className="h-4 w-4" /> Apply now
               </a>
             )}
+            {!(signedIn && appliedAlready) && (
+              <div className="mt-2.5">
+                <button
+                  type="button"
+                  onClick={() => setPaidOpen(true)}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-teal-600 bg-teal-50/60 text-sm font-bold text-teal-700 transition hover:bg-teal-100"
+                >
+                  <PhoneCall className="h-4 w-4" /> Apply + recruiter call · ₹{PAID_CALL_RUPEES}
+                </button>
+                <p className="mt-1.5 text-center text-[11.5px] leading-4 text-slate-500">{COPY.paidLine}</p>
+              </div>
+            )}
             <WhatsAppChatButton
               source="job_page"
               variant="outline"
@@ -427,6 +443,27 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
         too wide on huge screens. */}
     <div className="mx-auto max-w-[1400px] px-4 pb-24 sm:px-6 md:pb-10 lg:px-8">
       <div id="apply-form" className="scroll-mt-24 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+        {signedIn !== null && !(signedIn && appliedAlready) && (
+          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-600 text-white">
+                <PhoneCall className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-[15px] font-extrabold text-slate-900">Don&apos;t want to wait? Get a guaranteed call.</p>
+                <p className="mt-0.5 text-[13px] leading-5 text-slate-600">{COPY.paidLine} {COPY.refundLine}</p>
+                <WhyPrice className="mt-1 text-left [&_summary]:text-left [&_p]:text-left" />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPaidOpen(true)}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-500"
+            >
+              Book recruiter call · ₹{PAID_CALL_RUPEES}
+            </button>
+          </div>
+        )}
         {signedIn === null ? (
           <div className="flex justify-center py-16">
             <Spinner />
@@ -440,6 +477,10 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
         )}
       </div>
     </div>
+
+    {paidOpen && (
+      <QuickInterest paid jobId={mandateId} roleTitle={job.role_title ?? "Open role"} client={job.client_display ?? null} onClose={() => setPaidOpen(false)} />
+    )}
 
     {/* Always-visible WhatsApp button; lifted above the phone "Apply now" bar. */}
     <FloatingWhatsApp
