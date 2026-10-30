@@ -28,6 +28,7 @@ import {
 import { Select } from "@/components/ui/select";
 import QuickInterest from "@/modules/jobs/QuickInterest";
 import { COPY } from "@/lib/paid-call";
+import WhyPrice from "@/components/paid-call/why-price";
 import {
   listOpenJobs,
   categoryLabel,
@@ -931,6 +932,7 @@ export default function JobsPage() {
                         <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/paid:translate-x-0.5" />
                       </button>
                       <p className="text-center text-[11.5px] text-slate-500">{COPY.refundLine}</p>
+                      <WhyPrice />
                     </>
                   )}
                 </div>

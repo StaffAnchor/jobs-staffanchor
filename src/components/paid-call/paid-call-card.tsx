@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { CheckCircle2, Loader2, PhoneCall } from "lucide-react";
 import { usePaidCallCheckout } from "./use-paid-call-checkout";
-import { COPY, PAID_CALL_RUPEES } from "@/lib/paid-call";
+import { COPY } from "@/lib/paid-call";
+import WhyPrice from "./why-price";
 
-// Shown right after an application is in: add a guaranteed recruiter call for ₹99. The free application stays as it is
+// Shown right after an application is in: add a guaranteed recruiter call for ₹199. The free application stays as it is
 // whether or not they pay.
 export default function PaidCallCard({ candidateId, mandateId }: { candidateId: string; mandateId: string }) {
   const { pay, status, error } = usePaidCallCheckout();
@@ -27,8 +28,8 @@ export default function PaidCallCard({ candidateId, mandateId }: { candidateId: 
           <PhoneCall className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-slate-900">Get a recruiter call · ₹{PAID_CALL_RUPEES}</p>
-          <p className="mt-0.5 text-[13px] leading-5 text-slate-600">{COPY.paidLine}</p>
+          <p className="text-sm font-bold text-slate-900">{COPY.cardTitle}</p>
+          <p className="mt-0.5 text-[13px] leading-5 text-slate-600">{COPY.paidTitle.replace("Apply + recruiter call · ", "")}. {COPY.paidLine}</p>
           <p className="mt-1 text-[12px] text-slate-500">{COPY.refundLine}</p>
           <button
             type="button"
@@ -38,9 +39,10 @@ export default function PaidCallCard({ candidateId, mandateId }: { candidateId: 
             }}
             className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-teal-500 disabled:opacity-60"
           >
-            {status === "loading" && <Loader2 className="h-4 w-4 animate-spin" />} Pay ₹{PAID_CALL_RUPEES} and book the call
+            {status === "loading" && <Loader2 className="h-4 w-4 animate-spin" />} {COPY.cardButton}
           </button>
           {error && <p className="mt-2 text-[12.5px] font-medium text-red-600">{error}</p>}
+          <WhyPrice className="mt-2 text-left" />
         </div>
       </div>
     </div>

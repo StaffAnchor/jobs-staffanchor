@@ -4,7 +4,7 @@ import { PAID_CALL_PAISE } from "@/lib/paid-call";
 
 export const runtime = "nodejs";
 
-// Starts the ₹99 recruiter-call payment for an application that already exists. Nothing is granted here: the call is
+// Starts the ₹199 recruiter-call payment for an application that already exists. Nothing is granted here: the call is
 // only marked paid after /api/paid-call/verify checks the payment signature.
 export async function POST(req: NextRequest) {
   const keyId = process.env.RAZORPAY_KEY_ID;

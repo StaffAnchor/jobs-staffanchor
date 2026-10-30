@@ -233,7 +233,7 @@ export default function MyPipeline({ candidateId }: { candidateId: string }) {
                     className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 px-2.5 py-1 text-[11px] font-semibold text-teal-700 hover:bg-teal-50 disabled:opacity-50"
                   >
                     <Zap className="h-3 w-3" />
-                    {payingId === r.link_id ? "Opening payment…" : `Get a recruiter call · ₹${PAID_CALL_RUPEES}`}
+                    {payingId === r.link_id ? "Opening payment…" : `Book a recruiter call · ₹${PAID_CALL_RUPEES}`}
                   </button>
                 )}
               </div>

@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-// Refunds ₹99 when a recruiter call was promised and nobody even tried to ring within the deadline. A logged call
+// Refunds ₹199 when a recruiter call was promised and nobody even tried to ring within the deadline. A logged call
 // attempt of any outcome (reached, no answer, call later) counts as keeping the promise.
 // Refunds only go out when PAID_CALL_AUTO_REFUND=1; otherwise this just reports what would be refunded.
 export async function GET(req: NextRequest) {

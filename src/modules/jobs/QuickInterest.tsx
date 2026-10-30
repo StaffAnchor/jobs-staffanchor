@@ -8,6 +8,7 @@ import { indianMobileFromInput } from "@/lib/phone";
 import { posthog } from "@/lib/posthog";
 import { usePaidCallCheckout } from "@/components/paid-call/use-paid-call-checkout";
 import { COPY, PAID_CALL_RUPEES } from "@/lib/paid-call";
+import WhyPrice from "@/components/paid-call/why-price";
 
 // A 30-second way to raise a hand for a role without leaving the list. It goes
 // through the same /api/candidate-submit route as the full form (account link,
@@ -110,7 +111,7 @@ export default function QuickInterest({
         {done ? (
           <div className="space-y-4 p-6 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
-            <p className="text-lg font-extrabold text-slate-900">{paidDone ? "Recruiter call booked." : "Application received."}</p>
+            <p className="text-lg font-extrabold text-slate-900">{paidDone ? "Booked." : "You're in!"}</p>
             <p className="text-sm leading-6 text-slate-600">
               {paidDone
                 ? COPY.donePaid
@@ -126,7 +127,7 @@ export default function QuickInterest({
                   onClick={async () => setPaidDone(await checkout.pay({ candidateId, mandateId: jobId }))}
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-teal-600 text-sm font-bold text-white shadow-lg shadow-teal-600/25 disabled:opacity-60"
                 >
-                  {checkout.status === "loading" && <Loader2 className="h-4 w-4 animate-spin" />} Pay ₹{PAID_CALL_RUPEES} for the recruiter call
+                  {checkout.status === "loading" && <Loader2 className="h-4 w-4 animate-spin" />} Pay ₹{PAID_CALL_RUPEES} to book the call
                 </button>
                 {checkout.error && <p className="text-[12.5px] font-medium text-red-600">{checkout.error}</p>}
                 <p className="text-[11.5px] text-slate-500">{COPY.refundLine}</p>
@@ -187,6 +188,8 @@ export default function QuickInterest({
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{paid ? `Continue to pay ₹${PAID_CALL_RUPEES}` : "Apply free"} <ArrowRight className="h-4 w-4" /></>}
             </button>
+            {paid && <p className="text-center text-[11.5px] leading-5 text-slate-500">{COPY.refundLine}</p>}
+            {paid && <WhyPrice />}
             <p className="text-center text-[11.5px] leading-5 text-slate-400">
               No CV needed now. By continuing, you agree StaffAnchor may contact you about this role.
             </p>
