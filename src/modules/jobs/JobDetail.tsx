@@ -349,10 +349,9 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
                     <Zap className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-extrabold leading-tight">{COPY.paidCardTitle}</span>
+                    <span className="flex items-center gap-2"><span className="text-[15px] font-extrabold leading-tight">{COPY.paidCardTitle}</span><span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[12.5px] font-extrabold">{COPY.paidPrice}</span></span>
                     <span className="block text-[12.5px] font-medium text-blue-100">{COPY.paidLine}</span>
                   </span>
-                  <span className="shrink-0 rounded-full bg-white/20 px-2.5 py-1 text-[13px] font-extrabold">{COPY.paidPrice}</span>
                   <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/paid:translate-x-0.5" />
                 </button>
                 <p className="text-center text-[11.5px] leading-4 text-slate-500">{COPY.refundLine}</p>
