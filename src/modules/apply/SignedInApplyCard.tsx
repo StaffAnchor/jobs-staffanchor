@@ -12,7 +12,7 @@ import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
-import { logQuickApplyFormOpened } from "@/modules/jobs/api";
+import { logApplicationSubmitted, logQuickApplyFormOpened } from "@/modules/jobs/api";
 import { authHeaders } from "@/lib/auth-headers";
 import ReturningReviewCard, { type ReviewRow } from "./ReturningReviewCard";
 import CandidateIntakeForm, { intakeMissingFields, type IntakeExistingRow } from "./CandidateIntakeForm";
@@ -138,6 +138,7 @@ export default function SignedInApplyCard({
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error ?? "Something went wrong. Please try again.");
       setShowQuestions(false);
+      logApplicationSubmitted(mandateId);
       setApplied(true);
       toast.success("You're all set -- your profile has been submitted for this role.");
     } catch (e) {

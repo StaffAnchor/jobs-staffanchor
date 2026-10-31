@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as {
       mandateId?: string;
-      eventType?: "click" | "form_opened" | "paid_call_click";
+      eventType?: "click" | "form_opened" | "paid_call_click" | "submitted";
       spot?: string;
       utmSource?: string;
       utmMedium?: string;
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "mandateId is required." }, { status: 400 });
     }
     const eventType =
-      body.eventType === "form_opened" || body.eventType === "paid_call_click" ? body.eventType : "click";
+      body.eventType === "form_opened" || body.eventType === "paid_call_click" || body.eventType === "submitted" ? body.eventType : "click";
     // Where the ₹199 offer was tapped (list, preview, detail, bar, confirm); anything else is dropped.
     const spot = eventType === "paid_call_click" && ["list", "preview", "detail", "bar", "confirm"].includes(body.spot ?? "") ? body.spot : null;
 

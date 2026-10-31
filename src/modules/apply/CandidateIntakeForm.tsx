@@ -16,6 +16,7 @@ import { FormField } from "@/components/forms/form-field";
 import SignInPanel from "@/modules/auth/SignInPanel";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
+import { logApplicationSubmitted } from "@/modules/jobs/api";
 import {
   fetchApplicationQuestions,
   buildAnswerPayload,
@@ -586,6 +587,7 @@ export default function CandidateIntakeForm({
         ...(mandateId ? { mandateId } : {}),
       });
       setSubmittedId((submitJson?.candidateId as string | undefined) ?? completionRef ?? null);
+      if (mandateId) logApplicationSubmitted(mandateId);
       toast.success(mandateId ? "Your application is in. We'll be in touch." : "You're registered.");
       if (signedIn && onDone) {
         onDone();

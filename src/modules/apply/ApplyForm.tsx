@@ -23,7 +23,7 @@ import { authHeaders } from "@/lib/auth-headers";
 import { posthog } from "@/lib/posthog";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion, type ApplicationAnswerPayload } from "./applicationQuestions";
-import { logQuickApplyFormOpened } from "@/modules/jobs/api";
+import { logApplicationSubmitted, logQuickApplyFormOpened } from "@/modules/jobs/api";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import {
@@ -2228,6 +2228,7 @@ export default function ApplyForm({
         const separator = returnTo.includes("?") ? "&" : "?";
         router.push(`${returnTo}${separator}candidateId=${encodeURIComponent(submitJson.candidateId)}`);
       } else {
+        if (mandateId) logApplicationSubmitted(mandateId);
         setSubmitted(true);
         setSubmittedCandidateId(submitJson?.candidateId ?? null);
         toast.success("Your profile is on record. Thank you.");
