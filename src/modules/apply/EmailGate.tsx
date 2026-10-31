@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import SignInPanel from "@/modules/auth/SignInPanel";
+import { logGateShown } from "@/modules/jobs/api";
 
 // Email-first entry for the job Apply flow and Register: ask for the email
 // FIRST and branch instantly -- an existing candidate goes straight to
@@ -27,6 +28,9 @@ export default function EmailGate({
   onNewCandidate: (email: string) => void;
 }) {
   const router = useRouter();
+  useEffect(() => {
+    if (mandateId) logGateShown(mandateId);
+  }, [mandateId]);
   const [email, setEmail] = useState(initialEmail);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);

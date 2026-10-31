@@ -16,7 +16,7 @@ import { FormField } from "@/components/forms/form-field";
 import SignInPanel from "@/modules/auth/SignInPanel";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
-import { logApplicationSubmitted } from "@/modules/jobs/api";
+import { logApplicationSubmitted, logQuickApplyFormOpened } from "@/modules/jobs/api";
 import {
   fetchApplicationQuestions,
   buildAnswerPayload,
@@ -293,6 +293,12 @@ export default function CandidateIntakeForm({
   useEffect(() => {
     if (mandateId) fetchApplicationQuestions(mandateId).then(setScreeningQuestions);
   }, [mandateId]);
+
+  // Funnel: a visitor who got past the email box and sees this profile form has "seen the form" (signed-in candidates are
+  // counted by SignedInApplyCard, which renders this form again after its own log).
+  useEffect(() => {
+    if (mandateId && !signedIn) void logQuickApplyFormOpened(mandateId);
+  }, [mandateId, signedIn]);
 
   // Same admin-editable notice-period list the long profile form uses.
   useEffect(() => {

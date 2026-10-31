@@ -102,7 +102,7 @@ export async function listOpenJobs(): Promise<JobListing[]> {
 // happens to also be signed in as a candidate on this device -- we skip
 // logging if the current session's own `profiles` row (readable only via
 // the "read own profile" RLS policy) resolves to a recruiter/admin role.
-async function logQuickApplyEvent(mandateId: string, eventType: "click" | "form_opened" | "paid_call_click" | "submitted", spot?: string) {
+async function logQuickApplyEvent(mandateId: string, eventType: "click" | "form_opened" | "paid_call_click" | "submitted" | "gate_shown", spot?: string) {
   try {
     const {
       data: { user },
@@ -161,4 +161,9 @@ export function logPaidCallClick(mandateId: string, spot: "list" | "preview" | "
 // Fired once when a candidate's application for a role is actually submitted on the website (not a system match).
 export function logApplicationSubmitted(mandateId: string) {
   void logQuickApplyEvent(mandateId, "submitted");
+}
+
+// The email box shown to visitors who are not signed in, before the profile form.
+export function logGateShown(mandateId: string) {
+  void logQuickApplyEvent(mandateId, "gate_shown");
 }
