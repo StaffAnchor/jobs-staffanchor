@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as {
       mandateId?: string;
-      eventType?: "click" | "form_opened";
+      eventType?: "click" | "form_opened" | "paid_call_click";
+      spot?: string;
       utmSource?: string;
       utmMedium?: string;
       utmCampaign?: string;
@@ -36,7 +37,10 @@ export async function POST(req: NextRequest) {
     if (!mandateId) {
       return NextResponse.json({ error: "mandateId is required." }, { status: 400 });
     }
-    const eventType = body.eventType === "form_opened" ? "form_opened" : "click";
+    const eventType =
+      body.eventType === "form_opened" || body.eventType === "paid_call_click" ? body.eventType : "click";
+    // Where the ₹199 offer was tapped (list, preview, detail, bar, confirm); anything else is dropped.
+    const spot = eventType === "paid_call_click" && ["list", "preview", "detail", "bar", "confirm"].includes(body.spot ?? "") ? body.spot : null;
 
     const userAgent = req.headers.get("user-agent") ?? null;
     // The Referer header here is always this site's own page (the beacon is sent from it), so the real origin comes from
@@ -55,6 +59,7 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase.from("quick_apply_clicks").insert({
       mandate_id: mandateId,
       event_type: eventType,
+      spot,
       referrer,
       utm_source: body.utmSource || remembered?.s || null,
       utm_medium: body.utmMedium || remembered?.m || null,

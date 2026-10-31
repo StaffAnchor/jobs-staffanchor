@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, Briefcase, Check, CheckCircle2, FileText, IndianRupee, ListChecks, MapPin, UserCheck, Wallet, Zap, ShieldCheck, PhoneCall, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { getOpenJob, listOpenJobs, logQuickApplyClick, categoryLabel, budgetLabel, experienceLabel, timeAgo, type JobListing } from "@/modules/jobs/api";
+import { getOpenJob, listOpenJobs, logQuickApplyClick, logPaidCallClick, categoryLabel, budgetLabel, experienceLabel, timeAgo, type JobListing } from "@/modules/jobs/api";
 import CandidateIntakeForm from "@/modules/apply/CandidateIntakeForm";
 import SignedInApplyCard from "@/modules/apply/SignedInApplyCard";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
@@ -342,7 +342,7 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
                 </a>
                 <button
                   type="button"
-                  onClick={() => setPaidOpen(true)}
+                  onClick={() => { logPaidCallClick(mandateId, "detail"); setPaidOpen(true); }}
                   className="group/paid flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 py-3.5 text-left text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
@@ -444,7 +444,7 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
             </div>
             <button
               type="button"
-              onClick={() => setPaidOpen(true)}
+              onClick={() => { logPaidCallClick(mandateId, "detail"); setPaidOpen(true); }}
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-500"
             >
               Book recruiter call · ₹{PAID_CALL_RUPEES}
@@ -489,7 +489,7 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
           </a>
           <button
             type="button"
-            onClick={() => setPaidOpen(true)}
+            onClick={() => { logPaidCallClick(mandateId, "bar"); setPaidOpen(true); }}
             className="flex h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-extrabold text-white shadow-lg shadow-blue-600/30"
           >
             {COPY.listPaid}

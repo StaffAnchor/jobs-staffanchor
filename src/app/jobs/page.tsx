@@ -38,6 +38,7 @@ import {
   jobPath,
   timeAgo,
   type JobListing,
+  logPaidCallClick,
 } from "@/modules/jobs/api";
 import { getRecentlyViewedJobs, type RecentlyViewedJob } from "@/lib/recentlyViewed";
 import { supabase } from "@/lib/supabaseClient";
@@ -777,6 +778,7 @@ export default function JobsPage() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
+                              logPaidCallClick(job.id, "list");
                               setInterestFor({ job, paid: true });
                             }}
                             className="flex h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 text-[14px] font-extrabold text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98]"
@@ -920,7 +922,7 @@ export default function JobsPage() {
                       </Link>
                       <button
                         type="button"
-                        onClick={() => setInterestFor({ job: selected, paid: true })}
+                        onClick={() => { logPaidCallClick(selected.id, "preview"); setInterestFor({ job: selected, paid: true }); }}
                         className="group/paid flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3.5 text-left text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
                       >
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">

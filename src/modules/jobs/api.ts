@@ -102,7 +102,7 @@ export async function listOpenJobs(): Promise<JobListing[]> {
 // happens to also be signed in as a candidate on this device -- we skip
 // logging if the current session's own `profiles` row (readable only via
 // the "read own profile" RLS policy) resolves to a recruiter/admin role.
-async function logQuickApplyEvent(mandateId: string, eventType: "click" | "form_opened") {
+async function logQuickApplyEvent(mandateId: string, eventType: "click" | "form_opened" | "paid_call_click", spot?: string) {
   try {
     const {
       data: { user },
@@ -119,6 +119,7 @@ async function logQuickApplyEvent(mandateId: string, eventType: "click" | "form_
       body: JSON.stringify({
         mandateId,
         eventType,
+        spot,
         // /l/<code> is the short link used on LinkedIn posts, so it carries its own source.
         utmSource: params?.get("utm_source") ?? (fromLinkedInLink ? "linkedin" : undefined),
         utmMedium: params?.get("utm_medium") ?? (fromLinkedInLink ? "social" : undefined),
@@ -151,3 +152,8 @@ export async function getOpenJob(mandateId: string): Promise<JobListing | null> 
   return rows[0] ?? null;
 }
 
+
+// Silent count of taps on the "Apply + recruiter call" offer; candidates never see it, the CRM's paid-calls report does.
+export function logPaidCallClick(mandateId: string, spot: "list" | "preview" | "detail" | "bar" | "confirm") {
+  void logQuickApplyEvent(mandateId, "paid_call_click", spot);
+}

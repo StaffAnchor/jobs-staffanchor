@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, PhoneCall, ShieldCheck } from "lucide-react";
+import { logPaidCallClick } from "@/modules/jobs/api";
 import { usePaidCallCheckout } from "./use-paid-call-checkout";
 import { COPY, PAID_CALL_RUPEES } from "@/lib/paid-call";
 import WhyPrice from "./why-price";
@@ -51,6 +52,7 @@ export default function PaidCallCard({ candidateId, mandateId }: { candidateId: 
             type="button"
             disabled={status === "loading"}
             onClick={async () => {
+              logPaidCallClick(mandateId, "confirm");
               if (await pay({ candidateId, mandateId })) setDone(true);
             }}
             className="mt-3.5 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-teal-700 shadow-sm transition hover:bg-teal-50 disabled:opacity-60"
