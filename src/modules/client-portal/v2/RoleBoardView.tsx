@@ -5,7 +5,9 @@ import Link from "next/link";
 import { ArrowLeft, Download, LayoutGrid, List, MapPin, Rows3, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { BoardCandidate, FeedbackValue, RoleBoard } from "./types";
-import { closedReason, columnOf, computeFit, type Column } from "./fit";
+import { columnOf, computeFit, type Column } from "./fit";
+import { TABS, TAB_LOOK, STATUS_LABEL, isNew, tabOf, type Tab } from "./tabs";
+import TabBanner from "./Insights";
 import { Chip, LABEL, lakhLabel } from "./ui";
 import CandidateCard from "./CandidateCard";
 import ProfileCard from "./ProfileCard";
@@ -19,32 +21,6 @@ const COLUMNS: { key: Column; title: string; hint: string; dot: string }[] = [
   { key: "interview", title: "Interview", hint: "Being scheduled or scheduled", dot: "bg-indigo-500" },
   { key: "closed", title: "Closed", hint: "Hired or passed", dot: "bg-slate-400" },
 ];
-
-// The tabs a client sorts the list by. "Interested" is the client's own decision (and not the recruiter's shortlist), so the word
-// matches the button they press on a card.
-type Tab = "review" | "interested" | "interview" | "passed" | "hired" | "all";
-const TABS: { key: Tab; label: string; empty: string }[] = [
-  { key: "review", label: "To review", empty: "You are all caught up. New candidates appear here as soon as your recruiter shares them." },
-  { key: "interested", label: "Interested", empty: "No one here yet. Press Interested on a candidate you would like to know more about." },
-  { key: "interview", label: "Interviews", empty: "No interviews yet. Press Interview on a candidate and your recruiter will schedule it." },
-  { key: "passed", label: "Passed", empty: "You have not passed on anyone." },
-  { key: "hired", label: "Hired", empty: "No one hired yet." },
-  { key: "all", label: "All", empty: "No candidates yet." },
-];
-const tabOf = (c: BoardCandidate): Exclude<Tab, "all"> => {
-  const col = columnOf(c);
-  if (col === "closed") return closedReason(c) === "hired" ? "hired" : "passed";
-  return col;
-};
-const STATUS_LABEL = (c: BoardCandidate) => {
-  const col = columnOf(c);
-  if (col === "closed") {
-    const r = closedReason(c);
-    return r === "hired" ? "Hired" : r === "withdrawn" ? "Withdrawn" : "Passed";
-  }
-  return COLUMNS.find((x) => x.key === col)?.title;
-};
-const isNew = (c: BoardCandidate) => columnOf(c) === "review" && !!c.shortlisted_at && Date.now() - new Date(c.shortlisted_at).getTime() < 3 * 86_400_000;
 
 const budget = (min: unknown, max: unknown) => {
   const a = lakhLabel(min as number | string | null);
@@ -207,8 +183,9 @@ export default function RoleBoardView({
                   role="tab"
                   aria-selected={on}
                   onClick={() => setTab(t.key)}
-                  className={`-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-[13.5px] font-medium transition ${on ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+                  className={`-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-[3px] px-4 py-2.5 text-[13.5px] font-semibold transition ${on ? `${TAB_LOOK[t.key].line} ${TAB_LOOK[t.key].ink}` : "border-transparent font-medium text-slate-500 hover:text-slate-800"}`}
                 >
+                  <span className={`h-2 w-2 rounded-full ${TAB_LOOK[t.key].dot} ${on ? "" : "opacity-40"}`} />
                   {t.label}
                   <span className={`rounded-full px-2 py-0.5 font-mono text-[11px] ${on ? (t.key === "review" && tabCounts.review > 0 ? "bg-[#e8896a] text-white" : "bg-slate-900 text-white") : t.key === "review" && tabCounts.review > 0 ? "bg-[#fbe7df] text-[#c2553a]" : "bg-[#f1ece2] text-slate-500"}`}>{tabCounts[t.key]}</span>
                 </button>
@@ -217,6 +194,8 @@ export default function RoleBoardView({
           </div>
         </div>
       )}
+
+      {cands.length > 0 && view !== "board" && <TabBanner tab={activeTab.key} role={role} cands={cands} onOpen={setOpenId} />}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full sm:w-72">

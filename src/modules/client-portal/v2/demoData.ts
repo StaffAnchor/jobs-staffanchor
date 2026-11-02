@@ -190,8 +190,36 @@ const candidates: BoardCandidate[] = [
     ai_summary: "Six years selling cloud software to mid-market buyers.",
     stage: "rejected",
     client_feedback: "not_interested",
+    client_pass_reason: "client_notice_period",
     selling: { sells_now: ["SaaS (horizontal)"], deal_size: "₹10L – ₹25L", quota: "90-100%" },
   },
+  // A few more passes, so the breakdown of reasons has something to show in the sample.
+  ...[
+    { n: 7, name: "Vikram Nair", title: "Account Executive", co: "Brightpath", city: "Chennai", exp: 4, ctc: 34, reason: "client_salary" },
+    { n: 8, name: "Ishita Rao", title: "Senior Sales Manager", co: "Orbit Pay", city: "Bengaluru", exp: 9, ctc: 31, reason: "client_salary" },
+    { n: 9, name: "Dev Malhotra", title: "Sales Executive", co: "Quickserve", city: "Gurugram", exp: 3, ctc: 17, reason: "client_skills_gap" },
+    { n: 10, name: "Pooja Iyer", title: "Account Manager", co: "Nimbus", city: "Pune", exp: 5, ctc: 26, reason: "client_notice_period" },
+  ].map((p) => ({
+    ...base,
+    link_id: `d${p.n}`,
+    candidate_id: `c${p.n}`,
+    cv_roles: [{ title: p.title, company: p.co, start: "2021-01", is_current: true }],
+    cv_education: [{ degree: "BBA", institution: "Symbiosis", year: "2018" }],
+    full_name: p.name,
+    current_job_title: p.title,
+    current_employer: p.co,
+    current_location: p.city,
+    total_experience_years: p.exp,
+    expected_fixed_ctc: p.ctc,
+    notice_period: "60 days",
+    sub_domain: "SaaS (horizontal)",
+    industries: ["SaaS / Cloud Software"],
+    ai_summary: `${p.exp} years in B2B software sales.`,
+    stage: "rejected",
+    client_feedback: "not_interested",
+    client_pass_reason: p.reason,
+    selling: { sells_now: ["SaaS (horizontal)"], deal_size: "₹5L – ₹15L", quota: "80-100%" },
+  })),
 ];
 
 export const demoBoard: RoleBoard = {
@@ -221,7 +249,7 @@ export const demoBoard: RoleBoard = {
 
 export const demoOverview: ClientOverview = {
   mandates: [
-    { id: "demo", role_title: "Enterprise Account Executive · B2B SaaS", category: "b2b_sales", sub_domain: "SaaS (horizontal)", city: "Bengaluru", status: "open", experience_min: 4, experience_max: 8, budget_min: 20, budget_max: 30, headcount: 1, created_at: "2026-09-20T09:00:00Z", shortlisted: 6, to_review: 3, interested: 1, interviewing: 1, hired: 0 },
+    { id: "demo", role_title: "Enterprise Account Executive · B2B SaaS", category: "b2b_sales", sub_domain: "SaaS (horizontal)", city: "Bengaluru", status: "open", experience_min: 4, experience_max: 8, budget_min: 20, budget_max: 30, headcount: 1, created_at: "2026-09-20T09:00:00Z", shortlisted: 10, to_review: 3, interested: 1, interviewing: 1, hired: 0 },
     { id: "demo-2", role_title: "Inside Sales Lead · Mid-Market", category: "b2b_sales", sub_domain: "SaaS (horizontal)", city: "Mumbai", status: "open", experience_min: 3, experience_max: 6, budget_min: 14, budget_max: 20, headcount: 2, created_at: "2026-09-28T09:00:00Z", shortlisted: 4, to_review: 4, interested: 0, interviewing: 0, hired: 0 },
     { id: "demo-3", role_title: "Regional Sales Head · North", category: "b2b_sales", sub_domain: "Data & analytics platforms", city: "Delhi", status: "filled", experience_min: 10, experience_max: 15, budget_min: 45, budget_max: 60, headcount: 1, created_at: "2026-07-02T09:00:00Z", shortlisted: 5, to_review: 0, interested: 0, interviewing: 0, hired: 1 },
   ],
