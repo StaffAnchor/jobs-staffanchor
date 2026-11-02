@@ -189,6 +189,14 @@ function PayVsBudget({ role, cands }: { role: Role; cands: BoardCandidate[] }) {
           </circle>
         ))}
       </svg>
+      <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11.5px] text-slate-500">
+        {(["review", "interested", "interview", "passed", "hired"] as const).filter((k) => pts.some((p) => tabOf(p.c) === k)).map((k) => (
+          <li key={k} className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full" style={{ background: DOT[k] }} />
+            {TABS.find((t) => t.key === k)?.label}
+          </li>
+        ))}
+      </ul>
       <p className="mt-1 text-[12px] text-slate-500">
         {bMax !== null ? (above === 0 ? "Everyone expects pay within your budget." : `${plural(above, "candidate")} expect${above === 1 ? "s" : ""} more than ${lakhLabel(bMax)}.`) : "Each dot is a candidate's expected pay."}
       </p>
