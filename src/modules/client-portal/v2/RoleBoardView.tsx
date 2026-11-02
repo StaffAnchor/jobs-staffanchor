@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Download, LayoutGrid, List, MapPin, Rows3, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { BoardCandidate, FeedbackValue, RoleBoard } from "./types";
-import { columnOf, computeFit, type Column } from "./fit";
+import { closedReason, columnOf, computeFit, type Column } from "./fit";
 import { Chip, LABEL, lakhLabel } from "./ui";
 import CandidateCard from "./CandidateCard";
 import ProfileCard from "./ProfileCard";
@@ -19,6 +19,32 @@ const COLUMNS: { key: Column; title: string; hint: string; dot: string }[] = [
   { key: "interview", title: "Interview", hint: "Being scheduled or scheduled", dot: "bg-indigo-500" },
   { key: "closed", title: "Closed", hint: "Hired or passed", dot: "bg-slate-400" },
 ];
+
+// The tabs a client sorts the list by. "Interested" is the client's own decision (and not the recruiter's shortlist), so the word
+// matches the button they press on a card.
+type Tab = "review" | "interested" | "interview" | "passed" | "hired" | "all";
+const TABS: { key: Tab; label: string; empty: string }[] = [
+  { key: "review", label: "To review", empty: "You are all caught up. New candidates appear here as soon as your recruiter shares them." },
+  { key: "interested", label: "Interested", empty: "No one here yet. Press Interested on a candidate you would like to know more about." },
+  { key: "interview", label: "Interviews", empty: "No interviews yet. Press Interview on a candidate and your recruiter will schedule it." },
+  { key: "passed", label: "Passed", empty: "You have not passed on anyone." },
+  { key: "hired", label: "Hired", empty: "No one hired yet." },
+  { key: "all", label: "All", empty: "No candidates yet." },
+];
+const tabOf = (c: BoardCandidate): Exclude<Tab, "all"> => {
+  const col = columnOf(c);
+  if (col === "closed") return closedReason(c) === "hired" ? "hired" : "passed";
+  return col;
+};
+const STATUS_LABEL = (c: BoardCandidate) => {
+  const col = columnOf(c);
+  if (col === "closed") {
+    const r = closedReason(c);
+    return r === "hired" ? "Hired" : r === "withdrawn" ? "Withdrawn" : "Passed";
+  }
+  return COLUMNS.find((x) => x.key === col)?.title;
+};
+const isNew = (c: BoardCandidate) => columnOf(c) === "review" && !!c.shortlisted_at && Date.now() - new Date(c.shortlisted_at).getTime() < 3 * 86_400_000;
 
 const budget = (min: unknown, max: unknown) => {
   const a = lakhLabel(min as number | string | null);
@@ -61,6 +87,8 @@ export default function RoleBoardView({
   };
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  // Opens on what needs the client: the people waiting for a decision, or everyone when nothing is waiting.
+  const [tab, setTab] = useState<Tab>(() => (board.candidates.some((c) => columnOf(c) === "review") ? "review" : "all"));
 
   async function handleFeedback(linkId: string, value: FeedbackValue, at?: string, extra?: { reason: string; note: string }) {
     const prev = cands;
@@ -90,15 +118,19 @@ export default function RoleBoardView({
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = cands.filter(
-      (c) => !q || c.full_name.toLowerCase().includes(q) || (c.current_job_title ?? "").toLowerCase().includes(q) || (c.current_employer ?? "").toLowerCase().includes(q)
+      (c) => (!q || c.full_name.toLowerCase().includes(q) || (c.current_job_title ?? "").toLowerCase().includes(q) || (c.current_employer ?? "").toLowerCase().includes(q)) && (view === "board" || tab === "all" || tabOf(c) === tab)
     );
     return list
       .map((c) => ({ c, fit: computeFit(role, c) }))
       .sort((a, b) => (b.fit.pct ?? -1) - (a.fit.pct ?? -1))
       .map((x) => x.c);
-  }, [cands, query, role]);
+  }, [cands, query, role, tab, view]);
 
   const byCol = (col: Column) => visible.filter((c) => columnOf(c) === col);
+  const tabCounts: Record<Tab, number> = { review: 0, interested: 0, interview: 0, passed: 0, hired: 0, all: cands.length };
+  for (const c of cands) tabCounts[tabOf(c)]++;
+  const tabs = TABS.filter((t) => t.key !== "hired" || tabCounts.hired > 0);
+  const activeTab = tabs.find((t) => t.key === tab) ?? tabs[tabs.length - 1];
   const counts = {
     review: cands.filter((c) => columnOf(c) === "review").length,
     interested: cands.filter((c) => columnOf(c) === "interested").length,
@@ -142,18 +174,18 @@ export default function RoleBoardView({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <div className="rounded-2xl border border-[#ece7de] bg-white px-4 py-2.5">
+          <button type="button" onClick={() => setTab("review")} className={`rounded-2xl border bg-white px-4 py-2.5 text-left transition hover:border-slate-300 ${tab === "review" && view !== "board" ? "border-slate-900 ring-1 ring-slate-900" : "border-[#ece7de]"}`}>
             <p className={LABEL}>To review</p>
             <p className="font-mono text-[22px] font-semibold text-[#d9694a]">{counts.review}</p>
-          </div>
-          <div className="rounded-2xl border border-[#ece7de] bg-white px-4 py-2.5">
+          </button>
+          <button type="button" onClick={() => setTab("interested")} className={`rounded-2xl border bg-white px-4 py-2.5 text-left transition hover:border-slate-300 ${tab === "interested" && view !== "board" ? "border-slate-900 ring-1 ring-slate-900" : "border-[#ece7de]"}`}>
             <p className={LABEL}>Interested</p>
             <p className="font-mono text-[22px] font-semibold text-slate-900">{counts.interested}</p>
-          </div>
-          <div className="rounded-2xl border border-[#ece7de] bg-white px-4 py-2.5">
+          </button>
+          <button type="button" onClick={() => setTab("interview")} className={`rounded-2xl border bg-white px-4 py-2.5 text-left transition hover:border-slate-300 ${tab === "interview" && view !== "board" ? "border-slate-900 ring-1 ring-slate-900" : "border-[#ece7de]"}`}>
             <p className={LABEL}>Interviews</p>
             <p className="font-mono text-[22px] font-semibold text-slate-900">{counts.interview}</p>
-          </div>
+          </button>
           {median !== null && (
             <div className="rounded-2xl border border-[#ece7de] bg-white px-4 py-2.5">
               <p className={LABEL}>Median expected</p>
@@ -163,7 +195,30 @@ export default function RoleBoardView({
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      {cands.length > 0 && view !== "board" && (
+        <div className="mt-6 -mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Candidates by status">
+          <div className="inline-flex min-w-full gap-1 border-b border-[#e3ddd1] sm:min-w-0">
+            {tabs.map((t) => {
+              const on = activeTab.key === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setTab(t.key)}
+                  className={`-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-[13.5px] font-medium transition ${on ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+                >
+                  {t.label}
+                  <span className={`rounded-full px-2 py-0.5 font-mono text-[11px] ${on ? (t.key === "review" && tabCounts.review > 0 ? "bg-[#e8896a] text-white" : "bg-slate-900 text-white") : t.key === "review" && tabCounts.review > 0 ? "bg-[#fbe7df] text-[#c2553a]" : "bg-[#f1ece2] text-slate-500"}`}>{tabCounts[t.key]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -215,12 +270,13 @@ export default function RoleBoardView({
       ) : view === "cards" ? (
         <div className="mx-auto mt-5 max-w-5xl space-y-4">
           {visible.length === 0 ? (
-            <p className="py-10 text-center text-[13px] text-slate-500">No one matches that search.</p>
+            <p className="rounded-2xl border border-dashed border-[#d9d2c4] bg-white/60 px-6 py-12 text-center text-[13.5px] text-slate-500">{query.trim() ? "No one matches that search." : activeTab.empty}</p>
           ) : (
             visible.map((c) => (
               <div key={c.link_id}>
-                <div className="mb-1.5 ml-1">
-                  <Chip tone="info">{COLUMNS.find((x) => x.key === columnOf(c))?.title}</Chip>
+                <div className="mb-1.5 ml-1 flex items-center gap-1.5">
+                  <Chip tone="info">{STATUS_LABEL(c)}</Chip>
+                  {isNew(c) && <span className="rounded-full bg-[#e8896a] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-white">New</span>}
                 </div>
                 <ProfileCard role={role} c={c} onOpen={() => setOpenId(c.link_id)} getResumeUrl={getResumeUrl} onFeedback={handleFeedback} />
               </div>
@@ -254,12 +310,13 @@ export default function RoleBoardView({
       ) : (
         <div className="mx-auto mt-5 max-w-3xl space-y-3">
           {visible.length === 0 ? (
-            <p className="py-10 text-center text-[13px] text-slate-500">No one matches that search.</p>
+            <p className="rounded-2xl border border-dashed border-[#d9d2c4] bg-white/60 px-6 py-12 text-center text-[13.5px] text-slate-500">{query.trim() ? "No one matches that search." : activeTab.empty}</p>
           ) : (
             visible.map((c) => (
               <div key={c.link_id}>
-                <div className="mb-1.5 ml-1">
-                  <Chip tone="info">{COLUMNS.find((x) => x.key === columnOf(c))?.title}</Chip>
+                <div className="mb-1.5 ml-1 flex items-center gap-1.5">
+                  <Chip tone="info">{STATUS_LABEL(c)}</Chip>
+                  {isNew(c) && <span className="rounded-full bg-[#e8896a] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-white">New</span>}
                 </div>
                 <CandidateCard role={role} c={c} onOpen={() => setOpenId(c.link_id)} getResumeUrl={getResumeUrl} onFeedback={handleFeedback} />
               </div>
