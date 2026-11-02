@@ -76,6 +76,8 @@ export default function ProfileCard({
   const notice = c.verified_notice || c.notice_period;
   const relocation = c.verified_relocation || c.open_to_relocation;
   const slot = c.confirmed_interview_at ?? c.requested_interview_at;
+  const reviewRows = c.share_review?.requirements ?? [];
+  const reviewMet = reviewRows.filter((r) => r.status === "met").length;
   const [cvUrl, setCvUrl] = useState<string | null>(null);
   const [cvBusy, setCvBusy] = useState<"preview" | "download" | null>(null);
   const [cvError, setCvError] = useState(false);
@@ -190,8 +192,29 @@ export default function ProfileCard({
         </div>
       </div>
 
-      {/* Against what you asked for */}
-      {fit.rows.length > 0 && (
+      {/* Against what you asked for: the recruiter's own review when they wrote one, otherwise the automatic comparison */}
+      {reviewRows.length > 0 ? (
+        <div className="mt-4 rounded-xl border border-[#ece7de] bg-[#faf7f1] px-3 py-2.5">
+          <p className="text-[12.5px] font-semibold text-slate-800">
+            {reviewMet} of {reviewRows.length} requirements met
+            {c.share_review?.reviewer_name ? <span className="font-normal text-slate-500"> &middot; reviewed by {c.share_review.reviewer_name}</span> : null}
+          </p>
+          <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[12.5px]">
+            {reviewRows.slice(0, 6).map((r, i) => {
+              const st = STATE_ICON[r.status === "met" ? "met" : r.status === "partial" ? "partial" : "unmet"];
+              return (
+                <li key={i} className={`inline-flex items-center gap-1 ${st.cls}`} title={r.note || undefined}>
+                  {st.icon}
+                  <span className="text-slate-700">
+                    {r.requirement}
+                    {r.kind === "good" ? " (nice to have)" : ""}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : fit.rows.length > 0 && (
         <div className="mt-4 flex items-start gap-3 rounded-xl border border-[#ece7de] bg-[#faf7f1] px-3 py-2.5">
           <FitRing fit={fit} size={44} />
           <div className="min-w-0 flex-1">
