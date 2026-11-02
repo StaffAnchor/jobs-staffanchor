@@ -10,7 +10,7 @@ export const TABS: { key: Tab; label: string; empty: string }[] = [
   { key: "interview", label: "Interviews", empty: "No interviews yet. Press Interview on a candidate and your recruiter will schedule it." },
   { key: "passed", label: "Passed", empty: "You have not passed on anyone." },
   { key: "hired", label: "Hired", empty: "No one hired yet." },
-  { key: "all", label: "All", empty: "No candidates yet." },
+  { key: "all", label: "Overview", empty: "No candidates yet." },
 ];
 export const tabOf = (c: BoardCandidate): Exclude<Tab, "all"> => {
   const col = columnOf(c);
