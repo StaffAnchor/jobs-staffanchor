@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Download, LayoutGrid, List, MapPin, Search } from "lucide-react";
+import { ArrowLeft, Download, LayoutGrid, List, MapPin, Rows3, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { BoardCandidate, FeedbackValue, RoleBoard } from "./types";
 import { columnOf, computeFit, type Column } from "./fit";
 import { Chip, LABEL, lakhLabel } from "./ui";
 import CandidateCard from "./CandidateCard";
+import ProfileCard from "./ProfileCard";
 import CandidateDrawer from "./CandidateDrawer";
 import type { OnePager } from "@/modules/client-portal/api";
 import { shortlistCsv } from "./exportSheet";
@@ -42,7 +43,22 @@ export default function RoleBoardView({
 }) {
   const { role } = board;
   const [cands, setCands] = useState<BoardCandidate[]>(board.candidates);
-  const [view, setView] = useState<"board" | "list">("list");
+  type View = "cards" | "board" | "list";
+  const [view, setViewState] = useState<View>("cards");
+  // Remember the last view in this browser (storage can be blocked, so every access is guarded); read after mount so the first paint matches the server.
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("client-portal-view");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (saved === "cards" || saved === "board" || saved === "list") setViewState(saved);
+    } catch {}
+  }, []);
+  const setView = (v: View) => {
+    setViewState(v);
+    try {
+      window.localStorage.setItem("client-portal-view", v);
+    } catch {}
+  };
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -176,15 +192,15 @@ export default function RoleBoardView({
           <Download className="h-3.5 w-3.5" /> Download spreadsheet
         </button>
         <div className="inline-flex rounded-xl border border-[#e3ddd1] bg-white p-0.5">
-          {(["board", "list"] as const).map((v) => (
+          {(["cards", "board", "list"] as const).map((v) => (
             <button
               key={v}
               type="button"
               onClick={() => setView(v)}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-medium ${view === v ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-[#f4efe6]"}`}
             >
-              {v === "board" ? <LayoutGrid className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
-              {v === "board" ? "Board" : "List"}
+              {v === "cards" ? <Rows3 className="h-3.5 w-3.5" /> : v === "board" ? <LayoutGrid className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
+              {v === "cards" ? "Cards" : v === "board" ? "Board" : "List"}
             </button>
           ))}
         </div>
@@ -195,6 +211,21 @@ export default function RoleBoardView({
         <div className="mt-8 rounded-2xl border border-dashed border-[#d9d2c4] bg-white/60 px-6 py-16 text-center">
           <p className="text-[15px] font-medium text-slate-800">No candidates shortlisted yet</p>
           <p className="mt-1 text-[13px] text-slate-500">Your recruiter adds people here as soon as they have spoken to them. You will see why each one fits before you decide.</p>
+        </div>
+      ) : view === "cards" ? (
+        <div className="mx-auto mt-5 max-w-5xl space-y-4">
+          {visible.length === 0 ? (
+            <p className="py-10 text-center text-[13px] text-slate-500">No one matches that search.</p>
+          ) : (
+            visible.map((c) => (
+              <div key={c.link_id}>
+                <div className="mb-1.5 ml-1">
+                  <Chip tone="info">{COLUMNS.find((x) => x.key === columnOf(c))?.title}</Chip>
+                </div>
+                <ProfileCard role={role} c={c} onOpen={() => setOpenId(c.link_id)} getResumeUrl={getResumeUrl} onFeedback={handleFeedback} />
+              </div>
+            ))
+          )}
         </div>
       ) : view === "board" ? (
         <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
