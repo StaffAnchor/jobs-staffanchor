@@ -8,7 +8,7 @@ import { TAB_LOOK, TABS, tabOf, type Tab } from "./tabs";
 import { LABEL, formatSlot, lakhLabel } from "./ui";
 
 // What the client sees under the tabs. Every number and sentence is read from the shortlist itself (decisions, pass reasons, fit,
-// pay against the budget, dates): nothing is estimated or made up. The "All" tab gives the overall picture; each other tab opens
+// pay against the budget, dates): nothing is estimated or made up. The "Insights" tab gives the overall picture; each other tab opens
 // with a banner of its own so the open tab is obvious and says what it holds.
 
 const PALETTE = ["#e8896a", "#4f46e5", "#059669", "#d97706", "#0ea5e9", "#a855f7", "#64748b", "#e11d48", "#14b8a6", "#84cc16", "#f59e0b", "#94a3b8"];
