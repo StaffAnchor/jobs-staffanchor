@@ -7,7 +7,7 @@ import { closedReason, columnOf, computeFit, type FitState } from "./fit";
 import ResumePreview from "@/components/common/ResumePreview";
 import { Chip, FitRing, formatSlot, initials, lakhLabel, monthLabel } from "./ui";
 import { passReasonLabel } from "./PassReasonDialog";
-import FeedbackBar from "./FeedbackBar";
+import FeedbackBar, { ReconsiderBar } from "./FeedbackBar";
 
 type Job = { company: string; title: string; period: string };
 type Degree = { degree: string | null; institution: string | null; year: string | null };
@@ -265,6 +265,7 @@ export default function ProfileCard({
             <FeedbackBar candidate={c} onFeedback={onFeedback} compact onOpenProfile={onOpen} />
           </div>
         )}
+        {col === "closed" && closedReason(c) === "passed" && <ReconsiderBar candidate={c} onFeedback={onFeedback} />}
       </div>
       {cvUrl && c.resume_file_url && <ResumePreview signedUrl={cvUrl} fileName={c.resume_file_url.replace(/^resumes\//, "")} hideTrigger defaultOpen onClose={() => setCvUrl(null)} />}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, Check, ThumbsDown, ThumbsUp, Video } from "lucide-react";
+import { CalendarClock, Check, ThumbsDown, ThumbsUp, Undo2, Video } from "lucide-react";
 import { toast } from "sonner";
 import type { BoardCandidate, FeedbackValue } from "./types";
 import { formatSlot } from "./ui";
@@ -139,5 +139,35 @@ export default function FeedbackBar({
         </p>
       )}
     </div>
+  );
+}
+
+// A pass the client made can be taken back. If the recruiter has already closed the candidate (stage rejected, withdrawn or
+// placed) the client cannot reopen it from here, so the card points them to their recruiter instead.
+export function ReconsiderBar({ candidate, onFeedback }: { candidate: BoardCandidate; onFeedback: (linkId: string, value: FeedbackValue) => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  if (candidate.client_feedback !== "not_interested") return null;
+  const closedByRecruiter = ["rejected", "pulled_back", "placed"].includes(candidate.stage);
+  if (closedByRecruiter) {
+    return <p className="text-[12px] text-slate-500">Changed your mind? Message your recruiter and they can reopen this candidate.</p>;
+  }
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await onFeedback(candidate.link_id, "interested");
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Could not save. Please try again.");
+        } finally {
+          setBusy(false);
+        }
+      }}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12.5px] font-medium text-emerald-800 transition-colors hover:bg-emerald-100 disabled:opacity-60"
+    >
+      <Undo2 className="h-3.5 w-3.5" /> {busy ? "Moving…" : "Changed your mind? Move back to Interested"}
+    </button>
   );
 }

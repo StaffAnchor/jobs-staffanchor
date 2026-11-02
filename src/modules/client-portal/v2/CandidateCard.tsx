@@ -7,7 +7,7 @@ import { closedReason, columnOf } from "./fit";
 import ResumePreview from "@/components/common/ResumePreview";
 import { Chip, initials, lakhLabel } from "./ui";
 import { passReasonLabel } from "./PassReasonDialog";
-import FeedbackBar from "./FeedbackBar";
+import FeedbackBar, { ReconsiderBar } from "./FeedbackBar";
 
 function firstSentence(s: string | null) {
   if (!s) return null;
@@ -103,6 +103,11 @@ export default function CandidateCard({
       {col !== "closed" && (
         <div className="mt-3 border-t border-[#f1ece3] pt-3">
           <FeedbackBar candidate={c} onFeedback={onFeedback} compact onOpenProfile={onOpen} />
+        </div>
+      )}
+      {col === "closed" && closedReason(c) === "passed" && (
+        <div className="mt-3 border-t border-[#f1ece3] pt-3">
+          <ReconsiderBar candidate={c} onFeedback={onFeedback} />
         </div>
       )}
     </div>
