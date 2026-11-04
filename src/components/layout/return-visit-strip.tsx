@@ -53,10 +53,9 @@ export default function ReturnVisitStrip({ pathname, signedIn }: { pathname: str
           <span className="min-w-0 truncate">
             <span className="font-semibold">Back again?</span>
             <span className="hidden sm:inline"> Build a free profile in about a minute and we&apos;ll match you to roles and message you when one fits.</span>
-            <span className="sm:hidden"> Build a free profile in a minute.</span>
           </span>
           <span className="ml-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold transition group-hover:bg-white/30">
-            Create profile <ArrowRight className="h-3 w-3" />
+            Create free profile <ArrowRight className="h-3 w-3" />
           </span>
         </Link>
         <button type="button" onClick={close} aria-label="Hide this for two weeks" className="-my-1 -mr-1.5 shrink-0 rounded p-2.5 text-white/80 hover:bg-white/15 hover:text-white">
