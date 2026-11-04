@@ -760,7 +760,8 @@ export default function JobsPage() {
                     </div>
                   </div>
                   <div className="mt-4 lg:hidden">
-                    <div className="grid grid-cols-2 gap-2.5">
+                    {/* The paid label is longer, so it gets the wider column. */}
+                    <div className="grid grid-cols-[5fr_7fr] gap-2.5">
                       {!m?.applied ? (
                         <>
                           <button
@@ -773,8 +774,8 @@ export default function JobsPage() {
                             className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 py-1.5 text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98]"
                           >
                             <span className="flex flex-col items-center leading-[1.15]">
-              <span className="text-[14px] font-extrabold">{COPY.listFree}</span>
-              <span className="mt-0.5 text-[10.5px] font-medium opacity-90">{COPY.listFreeSub}</span>
+              <span className="text-[13px] font-extrabold">{COPY.listFree}</span>
+              <span className="mt-0.5 text-[10px] font-medium opacity-90">{COPY.listFreeSub}</span>
             </span>
                           </button>
                           <button
@@ -788,8 +789,8 @@ export default function JobsPage() {
                             className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-1.5 text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98]"
                           >
                             <span className="flex flex-col items-center leading-[1.15]">
-              <span className="text-[14px] font-extrabold">{COPY.listPaid}</span>
-              <span className="mt-0.5 text-[10.5px] font-medium opacity-90">{COPY.listPaidSub}</span>
+              <span className="whitespace-nowrap text-[13px] font-extrabold">{COPY.listPaid}</span>
+              <span className="mt-0.5 whitespace-nowrap text-[10px] font-medium opacity-90">{COPY.listPaidSub}</span>
             </span>
                           </button>
                         </>
