@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { comboFor } from "@/lib/resume-plans";
 import { trackStep } from "@/lib/edge-step";
+import OtherServices from "@/components/edge/other-services";
 import { ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Clock, Video } from "lucide-react";
 
 type Service = { slug: string; title: string; tagline: string | null; description: string; duration_min: number; price_inr: number; popular: boolean; price_by_experience?: boolean };
@@ -277,6 +278,7 @@ export default function BookingClient({ service }: { service: Service }) {
           )}
         </section>
       </div>
+      <OtherServices current={service.slug} className="mx-auto mt-8 max-w-5xl" />
     </div>
   );
 }

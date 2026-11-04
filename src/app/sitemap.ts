@@ -16,8 +16,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/jobs`, changeFrequency: "hourly", priority: 0.9 },
     // StaffAnchor Edge: the paid services for jobseekers, and the free tools that lead to them.
     { url: `${SITE}/edge`, changeFrequency: "weekly", priority: 0.9 },
-    { url: `${SITE}/edge/book/mock-interview`, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${SITE}/edge/book/job-search-strategy`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE}/resume-writing`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${SITE}/mock-interview`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE}/ats-score`, changeFrequency: "monthly", priority: 0.6 },
