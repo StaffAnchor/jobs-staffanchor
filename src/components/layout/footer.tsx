@@ -12,8 +12,8 @@ import EdgePromo from "@/components/edge/edge-promo";
 const AUTHENTICATED_APP_PREFIXES = ["/candidate-portal", "/client-portal", "/dashboard"];
 
 // Pages where the Edge line in the footer would be noise: Edge and resume pages themselves, sign-in and sign-up, onboarding,
-// and job pages, which carry their own promotion.
-const NO_PROMO = [/^\/edge/, /^\/resume/, /^\/(login|register|candidate-login|client-login|forgot-password|reset-password|verify-email|onboarding)/, /^\/jobs\/[^/]+/, /^\/j\//, /^\/l\//, /^\/refer/, /^\/passport/];
+// and the pages that carry their own promotion (job pages, the jobs list, city pages, the free tools).
+const NO_PROMO = [/^\/edge/, /^\/resume/, /^\/(login|register|candidate-login|client-login|forgot-password|reset-password|verify-email|onboarding)/, /^\/jobs\/[^/]+/, /^\/jobs$/, /^\/jobs-in\//, /^\/ats-score/, /^\/mock-interview/, /^\/j\//, /^\/l\//, /^\/refer/, /^\/passport/];
 
 export function Footer() {
   const pathname = usePathname();
