@@ -46,8 +46,10 @@ export default async function Home() {
             maskImage: "radial-gradient(70% 70% at 50% 30%, black, transparent)",
           }}
         />
-        <div className="relative container-page grid gap-14 pt-14 md:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:pt-24">
-          <div>
+        {/* On a phone the order is headline, Edge card, then search and sign-up, so the card is seen early. From lg up the
+            card sits on the right across both rows. */}
+        <div className="relative container-page grid gap-x-14 gap-y-10 pt-14 md:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-y-9 lg:pt-24">
+          <div className="lg:col-start-1 lg:row-start-1">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-blue-100 backdrop-blur">
               <Sparkles className="h-3.5 w-3.5 text-amber-300" />
               Sales careers, handled by specialists
@@ -59,8 +61,14 @@ export default async function Home() {
             <p className="mt-6 max-w-xl text-base leading-7 text-blue-100/80 md:text-lg">
               Create a profile in about a minute, see roles ranked by how well they fit you, and follow every step of your application.
             </p>
+          </div>
 
-            <div className="mt-9 max-w-xl">
+          <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            <EdgeHero />
+          </div>
+
+          <div className="lg:col-start-1 lg:row-start-2">
+            <div className="max-w-xl">
               <HeroSearch />
             </div>
 
@@ -84,8 +92,6 @@ export default async function Home() {
               ))}
             </ul>
           </div>
-
-          <EdgeHero />
         </div>
       </section>
 
