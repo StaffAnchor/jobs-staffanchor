@@ -108,6 +108,10 @@ export type BoardCandidate = {
   client_feedback: string | null;
   client_pass_reason?: string | null;
   client_pass_note?: string | null;
+  // Why and from where a candidate was turned down, so "passed on the CV" can be told from "not selected after an interview".
+  rejected_from_stage?: string | null;
+  stage_source?: string | null;
+  rejection_category?: string | null;
   // A note from the StaffAnchor recruiter about this candidate, written when sharing.
   client_note?: string | null;
   requested_interview_at: string | null;

@@ -59,7 +59,7 @@ export default function FeedbackBar({
           onClick={() => send("interested")}
           className={`${base} ${size} ${current === "interested" ? "bg-emerald-600 text-white" : offGreen}`}
         >
-          {current === "interested" ? <Check className="h-3.5 w-3.5" /> : <ThumbsUp className="h-3.5 w-3.5" />} Interested
+          {current === "interested" ? <Check className="h-3.5 w-3.5" /> : <ThumbsUp className="h-3.5 w-3.5" />} {current === "interested" ? "Shortlisted" : "Shortlist"}
         </button>
         <button
           type="button"
@@ -167,7 +167,7 @@ export function ReconsiderBar({ candidate, onFeedback }: { candidate: BoardCandi
       }}
       className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12.5px] font-medium text-emerald-800 transition-colors hover:bg-emerald-100 disabled:opacity-60"
     >
-      <Undo2 className="h-3.5 w-3.5" /> {busy ? "Moving…" : "Changed your mind? Move back to Interested"}
+      <Undo2 className="h-3.5 w-3.5" /> {busy ? "Moving…" : "Changed your mind? Move back to Shortlisted"}
     </button>
   );
 }

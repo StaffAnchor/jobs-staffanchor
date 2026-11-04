@@ -5,6 +5,7 @@ import type { BoardCandidate, Role } from "./types";
 import { computeFit } from "./fit";
 import { PASS_REASONS, passReasonLabel } from "./PassReasonDialog";
 import { TAB_LOOK, TABS, tabOf, type Tab } from "./tabs";
+import { statusOf } from "./status";
 import { LABEL, formatSlot, lakhLabel } from "./ui";
 
 // What the client sees under the tabs. Every number and sentence is read from the shortlist itself (decisions, pass reasons, fit,
@@ -40,9 +41,9 @@ function Funnel({ cands }: { cands: BoardCandidate[] }) {
   const steps = [
     { label: "Shared with you", n: cands.length, color: "#cbd5e1" },
     { label: "You decided on", n: decided, color: "#94a3b8" },
-    { label: "Interested", n: interested, color: "#059669" },
-    { label: "Interview", n: interview, color: "#4f46e5" },
-    { label: "Hired", n: hired, color: "#d97706" },
+    { label: "Shortlisted", n: interested, color: "#059669" },
+    { label: "Interviewing", n: interview, color: "#4f46e5" },
+    { label: "Selected", n: hired, color: "#d97706" },
   ];
   const max = Math.max(1, cands.length);
   return (
@@ -251,7 +252,7 @@ export default function TabBanner({ tab, role, cands, onOpen }: { tab: Tab; role
     top = head(
       <Clock className="h-[18px] w-[18px]" />,
       waiting.length === 0 ? "You are all caught up" : `${plural(waiting.length, "candidate")} waiting for you`,
-      waiting.length === 0 ? "Every candidate has your decision. New ones appear here as soon as your recruiter shares them." : `Take a minute on each: Interested, Interview or Pass. ${oldest >= 2 ? `The longest has been waiting ${oldest} days.` : "All were shared in the last couple of days."}`,
+      waiting.length === 0 ? "Every candidate has your decision. New ones appear here as soon as your recruiter shares them." : `Take a minute on each: Shortlist, Interview or Pass. ${oldest >= 2 ? `The longest has been waiting ${oldest} days.` : "All were shared in the last couple of days."}`,
       best && best.fit.pct !== null && waiting.length > 1 ? (
         <button type="button" onClick={() => onOpen(best.c.link_id)} className="rounded-xl border border-[#e8c9bd] bg-white px-3 py-2 text-left hover:bg-[#fff8f5]">
           <span className={`${LABEL} !text-[10px]`}>Strongest match waiting</span>
@@ -261,7 +262,7 @@ export default function TabBanner({ tab, role, cands, onOpen }: { tab: Tab; role
     );
   } else if (tab === "interested") {
     const list = of("interested");
-    top = head(<UserCheck className="h-[18px] w-[18px]" />, list.length === 0 ? "No one marked Interested yet" : `${plural(list.length, "candidate")} you want to know more about`, "Ready for the next step? Press Interview on a card and your recruiter schedules it with the candidate.");
+    top = head(<UserCheck className="h-[18px] w-[18px]" />, list.length === 0 ? "No one shortlisted yet" : `${plural(list.length, "candidate")} you shortlisted`, "Ready for the next step? Press Interview on a card and your recruiter schedules it with the candidate.");
     body = list.length > 0 && (
       <div className="mt-3 flex flex-wrap gap-2">
         {list.map((c) => (
@@ -290,12 +291,14 @@ export default function TabBanner({ tab, role, cands, onOpen }: { tab: Tab; role
       </ul>
     );
   } else if (tab === "passed") {
-    const list = of("passed");
+    const everyone = of("passed");
+    const list = everyone.filter((c) => statusOf(c) === "passed_cv");
+    const afterInterview = everyone.filter((c) => statusOf(c) === "not_selected").length;
     const reasons = passReasons(list);
     const topReason = reasons.find((r) => r.value !== "none");
     const interestedFit = avgFit(role, [...of("interested"), ...of("interview"), ...of("hired")]);
     const passedFit = avgFit(role, list);
-    top = head(<ThumbsDown className="h-[18px] w-[18px]" />, list.length === 0 ? "You have not passed on anyone" : `${plural(list.length, "candidate")} passed`, "Why you passed, in your own words. It sharpens every shortlist we send you next.");
+    top = head(<ThumbsDown className="h-[18px] w-[18px]" />, everyone.length === 0 ? "No one has left the process" : `${plural(everyone.length, "candidate")} not moving forward`, `${list.length} passed on the CV${afterInterview ? `, ${afterInterview} not selected after an interview` : ""}. Why you passed, in your own words, sharpens every shortlist we send you next.`);
     body = (
       <div className="mt-4 space-y-3">
         {list.length > 0 && (
@@ -313,7 +316,7 @@ export default function TabBanner({ tab, role, cands, onOpen }: { tab: Tab; role
     );
   } else if (tab === "hired") {
     const list = of("hired");
-    top = head(<CheckCircle2 className="h-[18px] w-[18px]" />, `${plural(list.length, "hire")}`, "Congratulations. Your recruiter will stay in touch through joining.");
+    top = head(<CheckCircle2 className="h-[18px] w-[18px]" />, `${plural(list.length, "selected candidate")}`, "Congratulations. Your recruiter will stay in touch through joining.");
   } else {
     const interestedAll = of("interested").length + of("interview").length + of("hired").length;
     const decided = cands.length - of("review").length;
@@ -333,8 +336,8 @@ export default function TabBanner({ tab, role, cands, onOpen }: { tab: Tab; role
         <Panel title="Where candidates stand" sub="From shared to hired">
           <Funnel cands={cands} />
         </Panel>
-        <Panel title="Why you passed" sub={of("passed").length ? "Reasons you gave" : "No passes yet"}>
-          <ReasonBreakdown passed={of("passed")} />
+        <Panel title="Why you passed on CVs" sub={cands.some((c) => statusOf(c) === "passed_cv") ? "Reasons you gave" : "No passes yet"}>
+          <ReasonBreakdown passed={cands.filter((c) => statusOf(c) === "passed_cv")} />
         </Panel>
         <Panel title="How well they match your brief" sub="Everything you asked for, scored on the candidate's profile and your recruiter's review">
           <FitSpread role={role} cands={cands} />

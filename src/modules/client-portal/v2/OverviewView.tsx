@@ -112,7 +112,7 @@ export default function OverviewView({
           { l: "Open roles", v: open.length, c: "text-slate-900" },
           { l: "Waiting for you", v: toReview, c: toReview > 0 ? "text-[#d9694a]" : "text-slate-900" },
           { l: "In interview", v: interviewing, c: "text-slate-900" },
-          { l: "Hired", v: data.mandates.reduce((s, m) => s + m.hired, 0), c: "text-slate-900" },
+          { l: "Selected", v: data.mandates.reduce((s, m) => s + m.hired, 0), c: "text-slate-900" },
         ].map((t) => (
           <div key={t.l} className="rounded-2xl border border-[#ece7de] bg-white px-4 py-3">
             <p className={LABEL}>{t.l}</p>

@@ -1,6 +1,7 @@
 import type { BoardCandidate, ClientOverview, RoleBoard } from "./types";
 
 // Entirely fictional sample data for the portal preview page.
+const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
 const base = {
   verified_notice: null,
   verified_relocation: null,
@@ -13,7 +14,7 @@ const base = {
   resume_file_url: null,
   stage: "submitted",
   stage_updated_at: null,
-  shortlisted_at: "2026-10-01T09:30:00Z",
+  shortlisted_at: daysAgo(2),
   client_feedback: null,
   requested_interview_at: null,
   confirmed_interview_at: null,
@@ -220,6 +221,32 @@ const candidates: BoardCandidate[] = [
     client_pass_reason: p.reason,
     selling: { sells_now: ["SaaS (horizontal)"], deal_size: "₹5L – ₹15L", quota: "80-100%" },
   })),
+  // One of each of the other ways a candidate can end up, so every chip is visible in the sample.
+  ...[
+    { n: 11, name: "Nisha Verma", title: "Enterprise Account Executive", co: "Cloudwave", city: "Bengaluru", exp: 7, ctc: 29, stage: "offer", extra: { client_feedback: "interview_requested", confirmed_interview_at: daysAgo(6), stage_updated_at: daysAgo(1) } },
+    { n: 12, name: "Arjun Pillai", title: "Senior Account Manager", co: "Finlytics", city: "Bengaluru", exp: 8, ctc: 27, stage: "placed", extra: { client_feedback: "interview_requested", confirmed_interview_at: daysAgo(14), stage_updated_at: daysAgo(3) } },
+    { n: 13, name: "Tanvi Joshi", title: "Sales Manager", co: "Zenith Apps", city: "Pune", exp: 6, ctc: 25, stage: "rejected", extra: { client_feedback: "interview_requested", confirmed_interview_at: daysAgo(9), rejected_from_stage: "client_interview", stage_source: "recruiter", rejection_category: "client_culture_fit" } },
+    { n: 14, name: "Rahul Sethi", title: "Account Executive", co: "Pipeline.io", city: "Gurugram", exp: 5, ctc: 23, stage: "pulled_back", extra: { client_feedback: "interested" } },
+  ].map((p) => ({
+    ...base,
+    link_id: `d${p.n}`,
+    candidate_id: `c${p.n}`,
+    cv_roles: [{ title: p.title, company: p.co, start: "2020-06", is_current: true }],
+    cv_education: [{ degree: "MBA", institution: "SPJIMR", year: "2017" }],
+    full_name: p.name,
+    current_job_title: p.title,
+    current_employer: p.co,
+    current_location: p.city,
+    total_experience_years: p.exp,
+    expected_fixed_ctc: p.ctc,
+    notice_period: "60 days",
+    sub_domain: "SaaS (horizontal)",
+    industries: ["SaaS / Cloud Software"],
+    ai_summary: `${p.exp} years selling B2B software.`,
+    selling: { sells_now: ["SaaS (horizontal)"], deal_size: "₹10L – ₹30L", quota: "100-120%" },
+    stage: p.stage,
+    ...p.extra,
+  })) as BoardCandidate[],
 ];
 
 export const demoBoard: RoleBoard = {

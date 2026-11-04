@@ -6,9 +6,10 @@ import { ArrowLeft, Download, LayoutGrid, List, MapPin, Rows3, Search } from "lu
 import { toast } from "sonner";
 import type { BoardCandidate, FeedbackValue, RoleBoard } from "./types";
 import { columnOf, computeFit, type Column } from "./fit";
-import { TABS, TAB_LOOK, STATUS_LABEL, isNew, tabOf, type Tab } from "./tabs";
+import { TABS, TAB_LOOK, tabOf, type Tab } from "./tabs";
+import { statusOf, STATUS_NAME, type Status } from "./status";
 import TabBanner from "./Insights";
-import { Chip, LABEL, lakhLabel } from "./ui";
+import { LABEL, lakhLabel } from "./ui";
 import CandidateCard from "./CandidateCard";
 import ProfileCard from "./ProfileCard";
 import CandidateDrawer from "./CandidateDrawer";
@@ -62,6 +63,8 @@ export default function RoleBoardView({
     } catch {}
   };
   const [query, setQuery] = useState("");
+  // Inside "Not moving forward": everyone, or only one kind.
+  const [closedFilter, setClosedFilter] = useState<"all" | Extract<Status, "passed_cv" | "not_selected" | "withdrawn">>("all");
   const [openId, setOpenId] = useState<string | null>(null);
   // Opens on what needs the client: the people waiting for a decision, or everyone when nothing is waiting.
   const [tab, setTab] = useState<Tab>(() => (board.candidates.some((c) => columnOf(c) === "review") ? "review" : "all"));
@@ -84,7 +87,7 @@ export default function RoleBoardView({
     );
     try {
       await onFeedback(linkId, value, at, extra);
-      toast.success(value === "interview_requested" ? "Interview request sent to your recruiter." : value === "interested" ? "Marked as interested." : "Marked as passed.");
+      toast.success(value === "interview_requested" ? "Interview request sent to your recruiter." : value === "interested" ? "Shortlisted." : "Passed on CV. You can reconsider later.");
     } catch (e) {
       setCands(prev);
       throw e;
@@ -94,13 +97,13 @@ export default function RoleBoardView({
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = cands.filter(
-      (c) => (!q || c.full_name.toLowerCase().includes(q) || (c.current_job_title ?? "").toLowerCase().includes(q) || (c.current_employer ?? "").toLowerCase().includes(q)) && (view === "board" || tab === "all" || tabOf(c) === tab)
+      (c) => (!q || c.full_name.toLowerCase().includes(q) || (c.current_job_title ?? "").toLowerCase().includes(q) || (c.current_employer ?? "").toLowerCase().includes(q)) && (view === "board" || tab === "all" || tabOf(c) === tab) && (view === "board" || tab !== "passed" || closedFilter === "all" || statusOf(c) === closedFilter)
     );
     return list
       .map((c) => ({ c, fit: computeFit(role, c) }))
       .sort((a, b) => (b.fit.pct ?? -1) - (a.fit.pct ?? -1))
       .map((x) => x.c);
-  }, [cands, query, role, tab, view]);
+  }, [cands, query, role, tab, view, closedFilter]);
 
   const byCol = (col: Column) => visible.filter((c) => columnOf(c) === col);
   const tabCounts: Record<Tab, number> = { review: 0, interested: 0, interview: 0, passed: 0, hired: 0, all: cands.length };
@@ -151,15 +154,15 @@ export default function RoleBoardView({
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setTab("review")} className={`rounded-2xl border bg-white px-4 py-2.5 text-left transition hover:border-slate-300 ${tab === "review" && view !== "board" ? "border-slate-900 ring-1 ring-slate-900" : "border-[#ece7de]"}`}>
-            <p className={LABEL}>To review</p>
+            <p className={LABEL}>New for you</p>
             <p className="font-mono text-[22px] font-semibold text-[#d9694a]">{counts.review}</p>
           </button>
           <button type="button" onClick={() => setTab("interested")} className={`rounded-2xl border bg-white px-4 py-2.5 text-left transition hover:border-slate-300 ${tab === "interested" && view !== "board" ? "border-slate-900 ring-1 ring-slate-900" : "border-[#ece7de]"}`}>
-            <p className={LABEL}>Interested</p>
+            <p className={LABEL}>Shortlisted</p>
             <p className="font-mono text-[22px] font-semibold text-slate-900">{counts.interested}</p>
           </button>
           <button type="button" onClick={() => setTab("interview")} className={`rounded-2xl border bg-white px-4 py-2.5 text-left transition hover:border-slate-300 ${tab === "interview" && view !== "board" ? "border-slate-900 ring-1 ring-slate-900" : "border-[#ece7de]"}`}>
-            <p className={LABEL}>Interviews</p>
+            <p className={LABEL}>Interviewing</p>
             <p className="font-mono text-[22px] font-semibold text-slate-900">{counts.interview}</p>
           </button>
           {median !== null && (
@@ -196,6 +199,19 @@ export default function RoleBoardView({
       )}
 
       {cands.length > 0 && view !== "board" && <TabBanner tab={activeTab.key} role={role} cands={cands} onOpen={setOpenId} />}
+
+      {cands.length > 0 && view !== "board" && activeTab.key === "passed" && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by why they are not moving forward">
+          {([["all", "All"], ["passed_cv", STATUS_NAME.passed_cv], ["not_selected", STATUS_NAME.not_selected], ["withdrawn", STATUS_NAME.withdrawn]] as const).map(([k, label]) => {
+            const n = k === "all" ? tabCounts.passed : cands.filter((c) => statusOf(c) === k).length;
+            return (
+              <button key={k} type="button" onClick={() => setClosedFilter(k)} className={`rounded-full border px-3 py-1 text-[12px] font-medium transition ${closedFilter === k ? "border-slate-900 bg-slate-900 text-white" : "border-[#e3ddd1] bg-white text-slate-600 hover:border-slate-400"}`}>
+                {label} <span className="font-mono">{n}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full sm:w-72">
@@ -253,10 +269,6 @@ export default function RoleBoardView({
           ) : (
             visible.map((c) => (
               <div key={c.link_id}>
-                <div className="mb-1.5 ml-1 flex items-center gap-1.5">
-                  <Chip tone="info">{STATUS_LABEL(c)}</Chip>
-                  {isNew(c) && <span className="rounded-full bg-[#e8896a] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-white">New</span>}
-                </div>
                 <ProfileCard role={role} c={c} onOpen={() => setOpenId(c.link_id)} getResumeUrl={getResumeUrl} onFeedback={handleFeedback} />
               </div>
             ))
@@ -293,10 +305,6 @@ export default function RoleBoardView({
           ) : (
             visible.map((c) => (
               <div key={c.link_id}>
-                <div className="mb-1.5 ml-1 flex items-center gap-1.5">
-                  <Chip tone="info">{STATUS_LABEL(c)}</Chip>
-                  {isNew(c) && <span className="rounded-full bg-[#e8896a] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-white">New</span>}
-                </div>
                 <CandidateCard role={role} c={c} onOpen={() => setOpenId(c.link_id)} getResumeUrl={getResumeUrl} onFeedback={handleFeedback} />
               </div>
             ))

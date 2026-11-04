@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { FileText, MapPin } from "lucide-react";
 import type { BoardCandidate, FeedbackValue, Role } from "./types";
-import { closedReason, columnOf } from "./fit";
+import { columnOf } from "./fit";
+import { statusOf } from "./status";
+import StatusChip from "./StatusChip";
 import ResumePreview from "@/components/common/ResumePreview";
 import { Chip, initials, lakhLabel } from "./ui";
-import { passReasonLabel } from "./PassReasonDialog";
 import FeedbackBar, { ReconsiderBar } from "./FeedbackBar";
 
 function firstSentence(s: string | null) {
@@ -62,9 +63,10 @@ export default function CandidateCard({
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-3"><StatusChip c={c} /></div>
+
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {c.recommendation === "Strong Fit" && <Chip tone="good">Recommended</Chip>}
-          {col === "closed" && <Chip tone={closedReason(c) === "hired" ? "good" : "neutral"}>{closedReason(c) === "hired" ? "Hired" : closedReason(c) === "withdrawn" ? "Withdrawn" : "Passed"}</Chip>}
           {c.total_experience_years !== null && c.total_experience_years !== "" && <Chip>{Number(c.total_experience_years)} yrs</Chip>}
           {currentCtc && <Chip>{currentCtc} current</Chip>}
           {ctc && <Chip>{ctc} expected</Chip>}
@@ -76,7 +78,6 @@ export default function CandidateCard({
             <MapPin className="h-3 w-3" /> {c.current_location}
           </p>
         )}
-        {col === "closed" && c.client_pass_reason && <p className="mt-2 text-[12px] leading-5 text-slate-500">Passed: {passReasonLabel(c.client_pass_reason)}</p>}
         {c.client_note && (
           <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[12.5px] leading-5 text-amber-900">
             <span className="font-semibold">Note from StaffAnchor:</span> {c.client_note}
@@ -105,7 +106,7 @@ export default function CandidateCard({
           <FeedbackBar candidate={c} onFeedback={onFeedback} compact onOpenProfile={onOpen} />
         </div>
       )}
-      {col === "closed" && closedReason(c) === "passed" && (
+      {statusOf(c) === "passed_cv" && (
         <div className="mt-3 border-t border-[#f1ece3] pt-3">
           <ReconsiderBar candidate={c} onFeedback={onFeedback} />
         </div>

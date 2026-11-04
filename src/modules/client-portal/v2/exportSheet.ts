@@ -1,8 +1,8 @@
 import type { BoardCandidate, Role } from "./types";
-import { columnOf, computeFit } from "./fit";
+import { computeFit } from "./fit";
+import { STATUS_NAME, statusOf } from "./status";
 import { passReasonLabel } from "./PassReasonDialog";
 
-const STATUS: Record<string, string> = { review: "To review", interested: "Interested", interview: "Interview", closed: "Closed" };
 
 const esc = (v: unknown) => {
   const s = v === null || v === undefined ? "" : String(v);
@@ -20,8 +20,7 @@ export function shortlistCsv(role: Role, candidates: BoardCandidate[], roleUrl: 
   const rows = candidates.map((c) => {
     const fit = computeFit(role, c);
     const reqs = fit.rows.filter((r) => r.key.startsWith("req-"));
-    const col = columnOf(c);
-    const status = c.stage === "placed" ? "Hired" : col === "closed" ? "Passed" : STATUS[col];
+    const status = STATUS_NAME[statusOf(c)];
     const pass = [passReasonLabel(c.client_pass_reason), c.client_pass_note].filter(Boolean).join(": ");
     return [
       c.full_name, c.current_job_title, c.current_employer, c.current_location, c.total_experience_years, c.current_fixed_ctc ?? "", c.expected_fixed_ctc, c.notice_period,

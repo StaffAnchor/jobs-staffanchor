@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { Check, Download, FileText, GraduationCap, MapPin, Minus, X } from "lucide-react";
 import type { BoardCandidate, FeedbackValue, Role } from "./types";
-import { closedReason, columnOf, computeFit, type FitState } from "./fit";
+import { columnOf, computeFit, type FitState } from "./fit";
+import { statusOf } from "./status";
+import StatusChip from "./StatusChip";
 import ResumePreview from "@/components/common/ResumePreview";
-import { Chip, FitRing, formatSlot, initials, lakhLabel, monthLabel } from "./ui";
-import { passReasonLabel } from "./PassReasonDialog";
+import { Chip, FitRing, initials, lakhLabel, monthLabel } from "./ui";
 import FeedbackBar, { ReconsiderBar } from "./FeedbackBar";
 
 type Job = { company: string; title: string; period: string };
@@ -75,7 +76,6 @@ export default function ProfileCard({
   const summary = firstSentence(c.ai_summary);
   const notice = c.verified_notice || c.notice_period;
   const relocation = c.verified_relocation || c.open_to_relocation;
-  const slot = c.confirmed_interview_at ?? c.requested_interview_at;
   const reviewRows = c.share_review?.requirements ?? [];
   const reviewMet = reviewRows.filter((r) => r.status === "met").length;
   const [cvUrl, setCvUrl] = useState<string | null>(null);
@@ -124,11 +124,10 @@ export default function ProfileCard({
               </p>
             </div>
           </div>
+          <div className="mt-2"><StatusChip c={c} /></div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {c.recommendation === "Strong Fit" && <Chip tone="good">Recommended</Chip>}
-            {col === "closed" && <Chip tone={closedReason(c) === "hired" ? "good" : "neutral"}>{closedReason(c) === "hired" ? "Hired" : closedReason(c) === "withdrawn" ? "Withdrawn" : "Passed"}</Chip>}
             {c.confirmed_on_call_at && <Chip tone="info">Confirmed on a call</Chip>}
-            {slot && col === "interview" && <Chip tone="info">{c.confirmed_interview_at ? "Interview" : "Requested"} {formatSlot(slot)}</Chip>}
           </div>
           <dl className="mt-3 space-y-1 text-[13px]">
             {facts.map(([k, v]) =>
@@ -240,7 +239,6 @@ export default function ProfileCard({
           <span className="font-semibold">Note from StaffAnchor:</span> {c.client_note}
         </p>
       )}
-      {col === "closed" && c.client_pass_reason && <p className="mt-2 text-[12px] text-slate-500">Passed: {passReasonLabel(c.client_pass_reason)}</p>}
 
       {/* CV and decision */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#f1ece3] pt-3">
@@ -265,7 +263,7 @@ export default function ProfileCard({
             <FeedbackBar candidate={c} onFeedback={onFeedback} compact onOpenProfile={onOpen} />
           </div>
         )}
-        {col === "closed" && closedReason(c) === "passed" && <ReconsiderBar candidate={c} onFeedback={onFeedback} />}
+        {statusOf(c) === "passed_cv" && <ReconsiderBar candidate={c} onFeedback={onFeedback} />}
       </div>
       {cvUrl && c.resume_file_url && <ResumePreview signedUrl={cvUrl} fileName={c.resume_file_url.replace(/^resumes\//, "")} hideTrigger defaultOpen onClose={() => setCvUrl(null)} />}
     </div>

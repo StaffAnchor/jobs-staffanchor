@@ -143,14 +143,14 @@ export function computeFit(role: Role, c: BoardCandidate): Fit {
 export type Column = "review" | "interested" | "interview" | "closed";
 
 export function columnOf(c: BoardCandidate): Column {
-  if (c.stage === "placed" || c.stage === "rejected" || c.stage === "pulled_back" || c.client_feedback === "not_interested") return "closed";
+  if (c.stage === "placed" || c.stage === "offer" || c.stage === "rejected" || c.stage === "pulled_back" || c.client_feedback === "not_interested") return "closed";
   if (c.client_feedback === "interview_requested" || c.stage === "client_interview" || c.confirmed_interview_at) return "interview";
-  if (c.client_feedback === "interested") return "interested";
+  if (c.client_feedback === "interested" || c.stage === "client_shortlisted") return "interested";
   return "review";
 }
 
 export function closedReason(c: BoardCandidate): "hired" | "passed" | "withdrawn" {
-  if (c.stage === "placed") return "hired";
+  if (c.stage === "placed" || c.stage === "offer") return "hired";
   if (c.stage === "pulled_back") return "withdrawn";
   return "passed";
 }
