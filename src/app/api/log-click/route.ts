@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const eventType =
       body.eventType === "form_opened" || body.eventType === "paid_call_click" || body.eventType === "submitted" || body.eventType === "gate_shown" ? body.eventType : "click";
     // Where the ₹199 offer was tapped (list, preview, detail, bar, confirm); anything else is dropped.
-    const spot = eventType === "paid_call_click" && ["list", "preview", "detail", "bar", "confirm"].includes(body.spot ?? "") ? body.spot : null;
+    const spot = eventType === "paid_call_click" && ["list", "preview", "detail", "bar", "confirm", "registered", "portal_home", "profile"].includes(body.spot ?? "") ? body.spot : null;
 
     const userAgent = req.headers.get("user-agent") ?? null;
     // The Referer header here is always this site's own page (the beacon is sent from it), so the real origin comes from

@@ -16,6 +16,7 @@ import { FormField } from "@/components/forms/form-field";
 import SignInPanel from "@/modules/auth/SignInPanel";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
+import ProfileCallCard from "@/components/paid-call/profile-call-card";
 import EdgePromo from "@/components/edge/edge-promo";
 import { logApplicationSubmitted, logQuickApplyFormOpened } from "@/modules/jobs/api";
 import {
@@ -660,6 +661,7 @@ export default function CandidateIntakeForm({
             <EdgePromo variant="after-apply" page="after-apply" roleTitle={mandateTitle} className="mt-4" />
           </div>
         )}
+        {!mandateId && submittedId && <ProfileCallCard candidateId={submittedId} spot="registered" className="mt-5" />}
         {!mandateId && <EdgePromo variant="profile-review" page="registered" className="mt-5" />}
         <WhatsAppActivate name={fullName} source={mandateId ? "intake_applied_activate" : "intake_registered_activate"} className="mt-5" />
         {!skippedVerify ? (

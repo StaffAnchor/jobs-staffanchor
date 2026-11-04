@@ -11,6 +11,7 @@ import RoleMatches from "./RoleMatches";
 import SavedAndAlerts from "./SavedAndAlerts";
 import EdgePromo from "@/components/edge/edge-promo";
 import WhatsAppActivate from "@/components/WhatsAppActivate";
+import ProfileCallCard from "@/components/paid-call/profile-call-card";
 import HomeGreeting from "./HomeGreeting";
 import ProfileCoach from "./ProfileCoach";
 import ApplicationsSnapshot from "./ApplicationsSnapshot";
@@ -36,6 +37,7 @@ type PipelineRow = {
 
 export default function PortalHome({
   candidate,
+  candidateId,
   activeReferralCount,
   onNavigate,
   publicSlug,
@@ -43,6 +45,7 @@ export default function PortalHome({
   onPassportChange,
 }: {
   candidate: ScoreCandidateRow & { ai_summary?: string | null };
+  candidateId: string;
   pipelineCount: number | null;
   pipelineRows?: PipelineRow[];
   activeReferralCount: number | null;
@@ -64,6 +67,7 @@ export default function PortalHome({
         <div className="min-w-0 space-y-6">
           {/* On a phone the sidebar sits far down, so the review offer comes first here. */}
           <EdgePromo variant="profile-review" page="portal-home" className="lg:hidden" />
+          <ProfileCallCard candidateId={candidateId} spot="portal_home" className="lg:hidden" />
           <LatestUpdates onSeeAll={() => onNavigate("pipeline")} />
           <RoleMatches />
           <ApplicationsSnapshot onNavigate={onNavigate} />
@@ -81,6 +85,7 @@ export default function PortalHome({
         <aside className="min-w-0 space-y-6">
           <ProfileCoach score={score} tier={tier} steps={steps} onNavigate={onNavigate} />
           <EdgePromo variant="profile-review" page="portal-home-side" className="hidden lg:block" />
+          <ProfileCallCard candidateId={candidateId} spot="portal_home" className="hidden lg:block" />
           <SavedAndAlerts />
         </aside>
       </div>

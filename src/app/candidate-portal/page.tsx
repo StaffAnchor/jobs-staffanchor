@@ -292,6 +292,7 @@ export default function CandidatePortalPage() {
       {tab === "home" && (
         <PortalHome
           candidate={profile}
+          candidateId={profile.id}
           pipelineCount={pipelineCount}
           pipelineRows={pipelineRows}
           activeReferralCount={activeReferralCount}

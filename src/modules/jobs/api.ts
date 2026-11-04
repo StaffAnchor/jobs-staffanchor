@@ -154,7 +154,7 @@ export async function getOpenJob(mandateId: string): Promise<JobListing | null> 
 
 
 // Silent count of taps on the "Apply + recruiter call" offer; candidates never see it, the CRM's paid-calls report does.
-export function logPaidCallClick(mandateId: string, spot: "list" | "preview" | "detail" | "bar" | "confirm") {
+export function logPaidCallClick(mandateId: string, spot: "list" | "preview" | "detail" | "bar" | "confirm" | "registered" | "portal_home" | "profile") {
   void logQuickApplyEvent(mandateId, "paid_call_click", spot);
 }
 

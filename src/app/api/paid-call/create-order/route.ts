@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { PAID_CALL_PAISE } from "@/lib/paid-call";
+import { PAID_CALL_PAISE, PROFILE_CALL_MANDATE_ID } from "@/lib/paid-call";
 
 export const runtime = "nodejs";
 
@@ -12,24 +12,32 @@ export async function POST(req: NextRequest) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!keyId || !keySecret || !serviceKey) return NextResponse.json({ error: "Payment isn't set up yet." }, { status: 503 });
 
-  const body = (await req.json().catch(() => ({}))) as { candidateId?: string; mandateId?: string };
-  if (!body.candidateId || !body.mandateId) return NextResponse.json({ error: "candidateId and mandateId are required." }, { status: 400 });
+  const body = (await req.json().catch(() => ({}))) as { candidateId?: string; mandateId?: string; kind?: string };
+  // A call for future roles has no role: it is recorded against the placeholder mandate, and its link is made once it is paid.
+  const profile = body.kind === "profile" && !body.mandateId;
+  const mandateId = profile ? PROFILE_CALL_MANDATE_ID : body.mandateId;
+  if (!body.candidateId || !mandateId) return NextResponse.json({ error: "candidateId and mandateId are required." }, { status: 400 });
 
   const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
   const { data: link } = await admin
     .from("candidate_mandate_links")
     .select("id, call_paid_at, candidates(full_name, email)")
     .eq("candidate_id", body.candidateId)
-    .eq("mandate_id", body.mandateId)
+    .eq("mandate_id", mandateId)
     .maybeSingle();
-  if (!link) return NextResponse.json({ error: "Apply for the role first." }, { status: 404 });
-  if (link.call_paid_at) return NextResponse.json({ error: "A recruiter call is already booked for this application." }, { status: 400 });
-  const cand = (Array.isArray(link.candidates) ? link.candidates[0] : link.candidates) as { full_name: string | null; email: string | null } | null;
+  if (!link && !profile) return NextResponse.json({ error: "Apply for the role first." }, { status: 404 });
+  if (link?.call_paid_at) return NextResponse.json({ error: profile ? "A recruiter call is already booked for you." : "A recruiter call is already booked for this application." }, { status: 400 });
+  let cand = (link ? (Array.isArray(link.candidates) ? link.candidates[0] : link.candidates) : null) as { full_name: string | null; email: string | null } | null;
+  if (profile && !cand) {
+    const { data: c } = await admin.from("candidates").select("full_name, email").eq("id", body.candidateId).maybeSingle();
+    if (!c) return NextResponse.json({ error: "We couldn't find your profile." }, { status: 404 });
+    cand = c as { full_name: string | null; email: string | null };
+  }
 
   const res = await fetch("https://api.razorpay.com/v1/orders", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Basic " + Buffer.from(`${keyId}:${keySecret}`).toString("base64") },
-    body: JSON.stringify({ amount: PAID_CALL_PAISE, currency: "INR", notes: { kind: "paid_call", candidate_id: body.candidateId, mandate_id: body.mandateId, link_id: link.id } }),
+    body: JSON.stringify({ amount: PAID_CALL_PAISE, currency: "INR", notes: { kind: profile ? "profile_call" : "paid_call", candidate_id: body.candidateId, mandate_id: mandateId, link_id: link?.id ?? null } }),
   });
   if (!res.ok) {
     console.error("Razorpay order creation failed:", await res.text());
@@ -38,8 +46,8 @@ export async function POST(req: NextRequest) {
   const order = (await res.json()) as { id: string; amount: number; currency: string };
   const { error } = await admin.from("paid_call_orders").insert({
     candidate_id: body.candidateId,
-    mandate_id: body.mandateId,
-    link_id: link.id,
+    mandate_id: mandateId,
+    link_id: link?.id ?? null,
     razorpay_order_id: order.id,
     amount_paise: PAID_CALL_PAISE,
   });

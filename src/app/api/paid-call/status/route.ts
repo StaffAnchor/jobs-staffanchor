@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { PROFILE_CALL_MANDATE_ID } from "@/lib/paid-call";
 
 export const runtime = "nodejs";
 
@@ -7,7 +8,7 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const candidateId = req.nextUrl.searchParams.get("candidateId");
-  const mandateId = req.nextUrl.searchParams.get("mandateId");
+  const mandateId = req.nextUrl.searchParams.get("kind") === "profile" ? PROFILE_CALL_MANDATE_ID : req.nextUrl.searchParams.get("mandateId");
   if (!serviceKey || !candidateId || !mandateId) return NextResponse.json({ paid: false });
   const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
   const { data } = await admin.from("candidate_mandate_links").select("call_paid_at").eq("candidate_id", candidateId).eq("mandate_id", mandateId).maybeSingle();

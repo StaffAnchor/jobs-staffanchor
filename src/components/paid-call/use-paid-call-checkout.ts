@@ -33,14 +33,14 @@ export function usePaidCallCheckout() {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const pay = useCallback((params: { candidateId: string; mandateId: string }): Promise<boolean> => {
+  const pay = useCallback((params: { candidateId: string; mandateId?: string }): Promise<boolean> => {
     return new Promise((resolve) => {
       (async () => {
         setStatus("loading");
         setError(null);
         try {
           await loadRazorpayScript();
-          const orderRes = await fetch("/api/paid-call/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(params) });
+          const orderRes = await fetch("/api/paid-call/create-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(params.mandateId ? params : { candidateId: params.candidateId, kind: "profile" }) });
           const order = await orderRes.json().catch(() => ({}));
           if (!orderRes.ok) throw new Error(order.error ?? "Couldn't start payment.");
           const rzp = new window.Razorpay({

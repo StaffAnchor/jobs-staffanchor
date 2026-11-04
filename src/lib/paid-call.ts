@@ -4,6 +4,10 @@ export const PAID_CALL_RUPEES = 199;
 export const PAID_CALL_PAISE = PAID_CALL_RUPEES * 100;
 export const PAID_CALL_WORKING_DAYS = 3;
 
+// The ₹199 call bought without a role ("for future roles") is tracked like any paid call, through a link to this on-hold
+// placeholder mandate in the CRM. It is never shown on the site.
+export const PROFILE_CALL_MANDATE_ID = "00000000-0000-4000-8000-00000000ca11";
+
 export const COPY = {
   freeTitle: "Apply free",
   freeLine: "We'll call you if your profile matches this role.",
@@ -22,6 +26,9 @@ export const COPY = {
   listLine: "Free: we call if you match · Paid: a guaranteed call",
   doneFree: "Application received. If your profile matches, a recruiter will call you. If it doesn't, we'll keep your profile for future roles.",
   donePaid: `Payment received. A recruiter will call you within ${PAID_CALL_WORKING_DAYS} working days to discuss your profile, whether or not it matches this role.`,
+  profileTitle: "Want a recruiter to call you about future roles?",
+  profileLine: `Not applying to a role yet? A StaffAnchor recruiter phones you within ${PAID_CALL_WORKING_DAYS} working days to understand what you want next and to match you to roles as they open.`,
+  profileDone: `Booked. A recruiter will call you within ${PAID_CALL_WORKING_DAYS} working days to talk about your profile and the roles that could suit you next.`,
   cardTitle: "Want a guaranteed call?",
   cardButton: "Book a Recruiter call",
 };
