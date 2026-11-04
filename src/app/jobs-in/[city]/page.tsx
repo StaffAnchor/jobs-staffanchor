@@ -5,6 +5,7 @@ import { getOpenJobsServer } from "@/lib/jobs-server";
 import { canonicalPath, isLive } from "@/lib/job-seo";
 import { slugify } from "@/lib/salary-pages";
 import { budgetLabel, experienceLabel, type JobListing } from "@/modules/jobs/api";
+import EdgePromo from "@/components/edge/edge-promo";
 
 export const revalidate = 1800;
 
@@ -52,6 +53,7 @@ export default async function CityJobs({ params }: { params: Promise<{ city: str
       <div className="mt-8">
         <Link href="/register" className="inline-block rounded-xl bg-teal-600 px-5 py-3 text-sm font-bold text-white hover:bg-teal-700">Create a free profile and get matched</Link>
       </div>
+      <EdgePromo variant="strip" page="city-page" className="mt-12" />
     </main>
   );
 }

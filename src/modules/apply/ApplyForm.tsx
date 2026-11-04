@@ -25,6 +25,7 @@ import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion, type ApplicationAnswerPayload } from "./applicationQuestions";
 import { logApplicationSubmitted, logQuickApplyFormOpened } from "@/modules/jobs/api";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
+import EdgePromo from "@/components/edge/edge-promo";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import {
   computeCareerGaps,
@@ -4268,6 +4269,7 @@ export default function ApplyForm({
         {submitted && !isEditMode && mandateId && submittedCandidateId && (
           <div className="mx-auto mb-6 max-w-3xl">
             <PaidCallCard candidateId={submittedCandidateId} mandateId={mandateId} />
+            <EdgePromo variant="after-apply" page="after-apply" roleTitle={mandateTitle} className="mt-4" />
           </div>
         )}
 

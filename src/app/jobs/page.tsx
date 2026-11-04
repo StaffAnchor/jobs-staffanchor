@@ -43,6 +43,7 @@ import {
 import { getRecentlyViewedJobs, type RecentlyViewedJob } from "@/lib/recentlyViewed";
 import { supabase } from "@/lib/supabaseClient";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
+import EdgePromo from "@/components/edge/edge-promo";
 import {
   createJobAlert,
   loadJobMatches,
@@ -968,6 +969,9 @@ export default function JobsPage() {
             </aside>
           )}
         </div>
+      </div>
+      <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
+        <EdgePromo variant="strip" page="jobs-list" />
       </div>
       {interestFor && (
         <QuickInterest paid={interestFor.paid} pipeline={isPipeline(interestFor.job)} jobId={interestFor.job.id} roleTitle={interestFor.job.role_title ?? "Open role"} client={interestFor.job.client_display ?? null} onClose={() => setInterestFor(null)} />

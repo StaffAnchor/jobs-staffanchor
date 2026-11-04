@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
+import EdgePromo from "@/components/edge/edge-promo";
 import type { AtsScoreResult } from "@/app/api/ats-score/route";
 
 // Free, no-signup ATS Score Checker -- the second "free career tool" after
@@ -242,6 +243,8 @@ export default function AtsScorePage() {
               )}
             </Card>
           )}
+
+          <EdgePromo variant="strip" page="ats-score-tool" className="mt-4" />
 
           <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-sm text-slate-600">Ready to put this into practice?</p>

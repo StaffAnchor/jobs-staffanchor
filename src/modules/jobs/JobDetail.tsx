@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { recordJobView } from "@/lib/recentlyViewed";
 import QuickInterest from "@/modules/jobs/QuickInterest";
 import WhyPrice from "@/components/paid-call/why-price";
+import EdgePromo from "@/components/edge/edge-promo";
 import { COPY, PAID_CALL_RUPEES } from "@/lib/paid-call";
 
 const MONOGRAM_GRADIENT: Record<string, string> = {
@@ -388,6 +389,8 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
             })}
           </div>
 
+          {/* Every job page, including each new mandate's: the interview prep for this role. */}
+          <EdgePromo variant="job" page="job-page" roleTitle={job.role_title} />
         </aside>
       </div>
 

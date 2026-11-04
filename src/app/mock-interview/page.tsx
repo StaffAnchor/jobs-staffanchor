@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
+import EdgePromo from "@/components/edge/edge-promo";
 import { CATEGORY_LABEL, QUESTIONS, randomQuestion, type MockInterviewCategory } from "@/modules/mock-interview/questions";
 
 type Feedback = {
@@ -213,6 +214,8 @@ export default function MockInterviewPage() {
               )}
             </Card>
           )}
+
+          <EdgePromo variant="practice" page="mock-interview-tool" className="mt-4" />
 
           <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-sm text-slate-600">Ready to put this into practice?</p>

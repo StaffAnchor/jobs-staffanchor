@@ -16,6 +16,7 @@ import { FormField } from "@/components/forms/form-field";
 import SignInPanel from "@/modules/auth/SignInPanel";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
+import EdgePromo from "@/components/edge/edge-promo";
 import { logApplicationSubmitted, logQuickApplyFormOpened } from "@/modules/jobs/api";
 import {
   fetchApplicationQuestions,
@@ -656,6 +657,7 @@ export default function CandidateIntakeForm({
         {mandateId && submittedId && (
           <div className="mt-5">
             <PaidCallCard candidateId={submittedId} mandateId={mandateId} />
+            <EdgePromo variant="after-apply" page="after-apply" roleTitle={mandateTitle} className="mt-4" />
           </div>
         )}
         <div className="mt-5 text-center">

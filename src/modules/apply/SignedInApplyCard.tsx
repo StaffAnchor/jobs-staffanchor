@@ -10,6 +10,7 @@ import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } 
 import ApplicationTimeline from "./ApplicationTimeline";
 import WhatsAppChatButton from "@/components/WhatsAppChatButton";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
+import EdgePromo from "@/components/edge/edge-promo";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
 import { logApplicationSubmitted, logQuickApplyFormOpened } from "@/modules/jobs/api";
@@ -242,6 +243,7 @@ export default function SignedInApplyCard({
         {pipelineStage !== "rejected" && (
           <PaidCallCard candidateId={candidate.id} mandateId={mandateId} />
         )}
+        <EdgePromo variant="after-apply" page="after-apply" roleTitle={mandateTitle} className="mt-4" />
       </div>
     );
   }

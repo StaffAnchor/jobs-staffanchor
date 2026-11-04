@@ -8,10 +8,12 @@ import EdgeViewTracker from "@/components/edge/edge-view-tracker";
 import StickyCta from "@/components/edge/sticky-cta";
 import { nextOpenSlot, slotLabel } from "@/lib/edge-slot";
 import { PAID_CALL_RUPEES, PAID_CALL_WORKING_DAYS } from "@/lib/paid-call";
+import { edgeJsonLd } from "@/lib/edge-seo";
+import { jsonLdString } from "@/lib/job-seo";
 
 // The one StaffAnchor Edge page. staffanchor.com/edge sends visitors here.
 export const metadata: Metadata = {
-  title: "StaffAnchor Edge | Interview Prep + Mock Interview, Job Search Strategy and Resume Rebuild",
+  title: "Sales Interview Prep, Mock Interview and Resume Writing | StaffAnchor Edge",
   description:
     "1:1 video sessions with Gagan Sharma, founder of StaffAnchor, for sales and leadership professionals: interview prep with a full mock interview, a job search strategy with a resume rebuild, and resume writing.",
   alternates: { canonical: "https://jobs.staffanchor.com/edge" },
@@ -153,6 +155,7 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
 
   return (
     <main className="overflow-x-clip bg-white text-[#12131A]">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(edgeJsonLd(FAQ)) }} />
       <EdgeViewTracker src={src} />
       {/* ───────── Hero ───────── */}
       <section className="relative isolate">

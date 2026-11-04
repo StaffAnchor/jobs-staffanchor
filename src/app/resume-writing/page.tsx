@@ -4,6 +4,8 @@ import { ArrowRight, ChevronDown, FileText, LayoutGrid, Search, ShieldCheck, Tre
 import Reveal from "@/components/home/reveal";
 import StickyCta from "@/components/edge/sticky-cta";
 import TierTabs, { type Tier } from "@/components/resume/tier-tabs";
+import { resumeJsonLd } from "@/lib/edge-seo";
+import { jsonLdString } from "@/lib/job-seo";
 
 export const metadata: Metadata = {
   title: "Resume Writing for Sales Professionals | StaffAnchor",
@@ -88,6 +90,7 @@ export default async function ResumeWritingPage({ searchParams }: { searchParams
 
   return (
     <main className="overflow-x-clip bg-white text-[#12131A]">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdString(resumeJsonLd(FAQ)) }} />
       {/* ───────── Hero ───────── */}
       <section className="relative isolate">
         <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(60%_60%_at_85%_10%,rgba(99,102,241,0.18),transparent_70%),radial-gradient(50%_50%_at_5%_40%,rgba(139,92,246,0.10),transparent_70%)]" />
