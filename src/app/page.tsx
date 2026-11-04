@@ -13,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import HeroSearch from "@/components/home/hero-search";
-import HeroVisual from "@/components/home/hero-visual";
+import EdgeHero from "@/components/home/edge-hero";
 import OpenRolesCount from "@/components/home/open-roles-count";
 import OpenRolesGrid from "@/components/home/open-roles-grid";
 import Reveal from "@/components/home/reveal";
@@ -85,7 +85,7 @@ export default async function Home() {
             </ul>
           </div>
 
-          <HeroVisual />
+          <EdgeHero />
         </div>
       </section>
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, CalendarCheck, Check, ChevronDown, CreditCard, FileText, Mic, Compass, PhoneCall, Sparkles, Video, Clock, Target, Users, TrendingUp } from "lucide-react";
 import Reveal from "@/components/home/reveal";
 import StickyCta from "@/components/edge/sticky-cta";
-import { CRM } from "@/lib/pro-sessions";
+import { nextOpenSlot, slotLabel } from "@/lib/edge-slot";
 import { PAID_CALL_RUPEES, PAID_CALL_WORKING_DAYS } from "@/lib/paid-call";
 
 // The one StaffAnchor Edge page. staffanchor.com/edge sends visitors here.
@@ -28,22 +28,6 @@ const BOOK = "/edge/book";
 // A source tag in the link (for example ?src=linkedin_profile) is carried to the booking pages, so each booking
 // records where the visitor came from. Anything else falls back to jobs_site.
 const cleanSrc = (raw: string | undefined) => (raw && /^[a-z0-9_-]{1,40}$/i.test(raw) ? raw : "jobs_site");
-
-// The earliest open time for a session, read live from the calendar (through the CRM). Hidden if it can't be read.
-async function nextOpenSlot(): Promise<string | null> {
-  try {
-    const res = await fetch(`${CRM}/api/pro/slots?service=mock-interview`, { next: { revalidate: 120 } });
-    if (!res.ok) return null;
-    const j = (await res.json()) as { ok?: boolean; days?: Record<string, string[]> };
-    if (!j.ok || !j.days) return null;
-    const first = Object.keys(j.days).sort()[0];
-    return first ? j.days[first][0] ?? null : null;
-  } catch {
-    return null;
-  }
-}
-const slotLabel = (iso: string) =>
-  new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true });
 
 const DISPLAY = "font-(family-name:--font-poppins)";
 const SERIF = "font-(family-name:--font-fraunces)";
