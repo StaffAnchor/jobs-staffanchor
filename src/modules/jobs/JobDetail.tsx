@@ -373,6 +373,11 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
             />
           </div>
 
+          {/* The same one-line teaser as the phone strip, right under the apply box, so it is seen without scrolling. */}
+          <div className="hidden lg:block">
+            <EdgePromo variant="job-top" page="job-side" />
+          </div>
+
           {/* Addresses the skepticism a candidate has right at the moment of
               applying ("is this recruiter for real, will anyone get back to me"). */}
           <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
