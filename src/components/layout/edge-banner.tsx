@@ -41,7 +41,7 @@ export default function EdgeBanner({ pathname }: { pathname: string }) {
   return (
     <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2 text-[13px] sm:px-6 lg:px-8">
-        <Link href="/edge?src=jobs_banner" className="group flex min-w-0 flex-1 items-center gap-2">
+        <Link href="/edge?src=jobs_banner" className="group flex min-w-0 flex-1 items-center gap-2 py-1.5">
           <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse" />
           <span className="min-w-0 truncate">
             <span className="font-semibold">StaffAnchor Edge</span>
@@ -52,7 +52,7 @@ export default function EdgeBanner({ pathname }: { pathname: string }) {
             Explore <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
           </span>
         </Link>
-        <button type="button" onClick={close} aria-label="Hide this for a week" className="shrink-0 rounded p-1 text-white/80 hover:bg-white/15 hover:text-white">
+        <button type="button" onClick={close} aria-label="Hide this for a week" className="-my-1 -mr-1.5 shrink-0 rounded p-2.5 text-white/80 hover:bg-white/15 hover:text-white">
           <X className="h-3.5 w-3.5" />
         </button>
       </div>

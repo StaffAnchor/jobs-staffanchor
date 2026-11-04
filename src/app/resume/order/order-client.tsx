@@ -127,7 +127,7 @@ export default function OrderClient() {
               <input className={field} placeholder="Mobile number" inputMode="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} autoComplete="tel" />
               <input className="hidden" tabIndex={-1} autoComplete="off" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} aria-hidden="true" />
               <label className="flex items-start gap-2 text-sm text-slate-600">
-                <input type="checkbox" className="mt-1" checked={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.checked })} />
+                <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.checked })} />
                 <span>I agree to the <a className="underline" href="https://www.staffanchor.com/terms" target="_blank" rel="noopener noreferrer">Terms</a> and <a className="underline" href="https://www.staffanchor.com/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>
               </label>
             </div>

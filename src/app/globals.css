@@ -67,3 +67,12 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .jobs-rise, .jobs-drift { animation: none; }
 }
+
+/* iPhone Safari zooms the whole page when a field smaller than 16px is focused. Keep text fields at 16px on phones. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

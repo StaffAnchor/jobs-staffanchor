@@ -22,10 +22,10 @@ export function Footer() {
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-5 text-sm text-slate-600 sm:px-6 lg:px-8">
         <p>© {new Date().getFullYear()} StaffAnchor</p>
         <div className="flex items-center gap-4">
-          <a href="https://www.staffanchor.com" className="text-xs text-slate-400 hover:text-slate-600">
+          <a href="https://www.staffanchor.com" className="py-2 text-xs text-slate-400 hover:text-slate-600">
             staffanchor.com
           </a>
-          <Link href="/client-login" className="text-xs text-slate-400 hover:text-slate-600">
+          <Link href="/client-login" className="py-2 text-xs text-slate-400 hover:text-slate-600">
             Client Login
           </Link>
         </div>

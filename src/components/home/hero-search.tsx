@@ -48,7 +48,7 @@ export default function HeroSearch() {
           <Link
             key={s}
             href={`/jobs?q=${encodeURIComponent(s)}`}
-            className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-blue-100 transition hover:bg-white/15 hover:text-white"
+            className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-blue-100 transition hover:bg-white/15 hover:text-white"
           >
             {s}
           </Link>
