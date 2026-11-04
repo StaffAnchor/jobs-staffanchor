@@ -9,12 +9,8 @@ import {
   BellPlus,
   Briefcase,
   Building2,
-  Clock,
   Flame,
-  FileText,
-  ShieldCheck,
   Share2,
-  Zap,
   SlidersHorizontal,
   Check,
   Heart,
@@ -27,7 +23,7 @@ import {
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import QuickInterest from "@/modules/jobs/QuickInterest";
-import { COPY } from "@/lib/paid-call";
+import { COPY, PAID_CALL_RUPEES, PAID_CALL_WORKING_DAYS } from "@/lib/paid-call";
 import WhyPrice from "@/components/paid-call/why-price";
 import {
   listOpenJobs,
@@ -123,13 +119,6 @@ function subDomainsOf(job: JobListing) {
   return job.sub_domains?.length ? job.sub_domains : job.sub_domain ? [job.sub_domain] : [];
 }
 
-function summaryOf(job: JobListing) {
-  const text = job.jd_overview || job.job_description || "";
-  const clean = text.replace(/\s+/g, " ").trim();
-  if (!clean) return "A recruiter will share the full role details when you apply.";
-  return clean.length > 320 ? `${clean.slice(0, 320).trimEnd()}…` : clean;
-}
-
 export default function JobsPage() {
   const router = useRouter();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
@@ -141,7 +130,6 @@ export default function JobsPage() {
   const [alertBusy, setAlertBusy] = useState(false);
   const [jobs, setJobs] = useState<JobListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [interestFor, setInterestFor] = useState<{ job: JobListing; paid: boolean } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [view, setView] = useState<"live" | "pipeline">("live");
@@ -307,7 +295,6 @@ export default function JobsPage() {
     return { roles: list.length, cities: cities.size, top };
   }, [jobs]);
 
-  const selected = shown.find((j) => j.id === selectedId) ?? shown[0] ?? null;
   const activeFilterCount = [location, experienceBand, payBand, workMode, posted].filter(Boolean).length;
   const hasFilters = industry || location || experienceBand || payBand || workMode || posted || search;
 
@@ -319,15 +306,6 @@ export default function JobsPage() {
     setWorkMode("");
     setPosted("");
     setSearch("");
-  }
-
-  // On wide screens a click previews the role beside the list; on phones it
-  // opens the role, as before.
-  function handleCardClick(e: React.MouseEvent, id: string) {
-    if (typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches) {
-      e.preventDefault();
-      setSelectedId(id);
-    }
   }
 
   return (
@@ -514,7 +492,6 @@ export default function JobsPage() {
                     aria-selected={on}
                     onClick={() => {
                       setView(t.key);
-                      setSelectedId(null);
                     }}
                     className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-[15px] font-extrabold transition sm:text-base ${
                       on ? "bg-slate-950 text-white shadow-md" : "text-slate-600 hover:bg-slate-50"
@@ -634,347 +611,216 @@ export default function JobsPage() {
               const subDomains = subDomainsOf(job);
               const m = matches.get(job.id);
               const tier = m && !m.applied ? matchTier(m.score) : null;
-              const isSelected = selected?.id === job.id;
+              const applied = !!m?.applied;
+              const openApply = (e: React.MouseEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(`${jobPath(job)}#apply-form`, "_blank", "noopener,noreferrer");
+              };
+              const iconButtons = (
+                <div className="flex shrink-0 items-center gap-0.5">
+                  <a
+                    href={shareLink(job)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label="Share this role on WhatsApp"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600"
+                  >
+                    <Share2 className="h-[18px] w-[18px]" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggleSave(e, job.id)}
+                    aria-label={saved.has(job.id) ? "Remove from saved roles" : "Save this role"}
+                    aria-pressed={saved.has(job.id)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                  >
+                    <Heart className={`h-[18px] w-[18px] ${saved.has(job.id) ? "fill-rose-500 text-rose-500" : ""}`} />
+                  </button>
+                </div>
+              );
+              const badges = [
+                isPipeline(job) && (
+                  <span key="p" className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 ring-1 ring-indigo-200">
+                    Pipeline role
+                  </span>
+                ),
+                isFresh(job.created_at) && !isPipeline(job) && !applied && (
+                  <span key="n" className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200">
+                    <Flame className="h-3 w-3" /> New
+                  </span>
+                ),
+                applied ? (
+                  <span key="a" className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">Applied</span>
+                ) : tier ? (
+                  <span key="m" className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${MATCH_TIER_CLASSES[tier]}`}>
+                    {MATCH_TIER_LABEL[tier]} · {m!.score}%
+                  </span>
+                ) : null,
+              ].filter(Boolean);
+              // Every action lives on the card: apply free, or apply and get a recruiter call. One block, shown under the card on a
+              // phone and in the right-hand column on a laptop.
+              const actions = applied ? (
+                <button type="button" onClick={openApply} className="flex h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-blue-50 text-[14px] font-extrabold text-blue-700">
+                  Already applied · view application <ArrowRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <div>
+                  <div className="grid grid-cols-[5fr_7fr] gap-2.5 lg:grid-cols-1">
+                    <button
+                      type="button"
+                      onClick={openApply}
+                      className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 py-1.5 text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98] lg:hover:shadow-lg"
+                    >
+                      <span className="flex flex-col items-center leading-[1.15]">
+                        <span className="text-[13px] font-extrabold lg:text-[14px]">{COPY.listFree}</span>
+                        <span className="mt-0.5 text-[10px] font-medium opacity-90 lg:text-[11px]">{COPY.listFreeSub}</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        logPaidCallClick(job.id, "list");
+                        setInterestFor({ job, paid: true });
+                      }}
+                      className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-1.5 text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98] lg:hover:shadow-lg"
+                    >
+                      <span className="flex flex-col items-center leading-[1.15]">
+                        <span className="whitespace-nowrap text-[13px] font-extrabold lg:text-[14px]">{COPY.listPaid}</span>
+                        <span className="mt-0.5 whitespace-nowrap text-[10px] font-medium opacity-90 lg:text-[11px]">{COPY.listPaidSub}</span>
+                      </span>
+                    </button>
+                  </div>
+                  <p className="mt-2 text-center text-[11.5px] leading-4 text-slate-500">No call in {PAID_CALL_WORKING_DAYS} working days? Full refund.</p>
+                </div>
+              );
               return (
-                <div key={job.id} className="space-y-4">
-                <Link
-                  href={jobPath(job)}
-                  onClick={(e) => handleCardClick(e, job.id)}
+                <div
+                  key={job.id}
                   style={{ animationDelay: `${Math.min(shown.indexOf(job), 8) * 55}ms` }}
-                  className={`jobs-rise group relative block overflow-hidden rounded-3xl border bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-6 ${
-                    isSelected ? "border-blue-500 ring-2 ring-blue-500/15 lg:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)]" : "border-slate-200 hover:border-blue-200"
-                  }`}
+                  className="jobs-rise group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-5 lg:p-6"
                 >
                   <span
                     aria-hidden
-                    className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b opacity-0 transition group-hover:opacity-100 ${isSelected ? "opacity-100" : ""} ${
+                    className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b opacity-0 transition group-hover:opacity-100 ${
                       MONOGRAM_GRADIENT[job.category ?? ""]?.split(" shadow")[0] ?? "from-slate-600 to-slate-800"
                     }`}
                   />
-                  <div className="flex gap-4">
-                    <span
-                      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-base font-extrabold text-white shadow-md ${
-                        MONOGRAM_GRADIENT[job.category ?? ""] ?? MONOGRAM_GRADIENT.non_sales
-                      }`}
-                    >
-                      {initials(job.role_title)}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h2 className="text-[17px] font-extrabold leading-snug tracking-tight text-slate-950 group-hover:text-blue-700">
-                            {job.role_title ?? "Open role"}
-                          </h2>
-                          {job.client_display && (
-                            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500">
-                              <Building2 className="h-3.5 w-3.5 text-slate-400" /> {job.client_display}
-                            </p>
+                  <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_252px] lg:gap-7">
+                    <div className="flex gap-3.5 sm:gap-4">
+                      <span
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-[15px] font-extrabold text-white shadow-md sm:h-14 sm:w-14 sm:text-base ${
+                          MONOGRAM_GRADIENT[job.category ?? ""] ?? MONOGRAM_GRADIENT.non_sales
+                        }`}
+                      >
+                        {initials(job.role_title)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            {/* The title is the link; its stretched area makes the whole card open the role, while the buttons sit above it. */}
+                            <h2 className="text-[17px] font-extrabold leading-snug tracking-tight text-slate-950 group-hover:text-blue-700 lg:text-[19px]">
+                              <Link href={jobPath(job)} className="after:absolute after:inset-0 after:z-0 after:content-['']">
+                                {job.role_title ?? "Open role"}
+                              </Link>
+                            </h2>
+                            {job.client_display && (
+                              <p className="mt-0.5 flex items-center gap-1.5 text-[13.5px] text-slate-500">
+                                <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" /> <span className="truncate">{job.client_display}</span>
+                              </p>
+                            )}
+                          </div>
+                          <div className="relative z-10 -mr-1 -mt-1 lg:hidden">{iconButtons}</div>
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-slate-600">
+                          {cities.length > 0 && (
+                            <span className="flex items-center gap-1.5">
+                              <MapPin className="h-3.5 w-3.5 text-slate-400" /> {cities.slice(0, 3).join(", ")}
+                              {cities.length > 3 && ` +${cities.length - 3}`}
+                            </span>
+                          )}
+                          {exp && <span>{exp}</span>}
+                          {job.budget_min || job.budget_max ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 font-bold text-emerald-700 ring-1 ring-emerald-200">
+                              <IndianRupee className="h-3.5 w-3.5" />
+                              {budgetLabel(job.budget_min, job.budget_max).replace("₹", "")}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">Pay on request</span>
                           )}
                         </div>
-                        <div className="flex shrink-0 items-center gap-1.5">
-                          {isPipeline(job) && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 ring-1 ring-indigo-200">
-                              Pipeline role
-                            </span>
-                          )}
-                          {isFresh(job.created_at) && !isPipeline(job) && !m?.applied && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200">
-                              <Flame className="h-3 w-3" /> New
-                            </span>
-                          )}
-                          {m?.applied ? (
-                            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">Applied</span>
-                          ) : tier ? (
-                            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${MATCH_TIER_CLASSES[tier]}`}>
-                              {MATCH_TIER_LABEL[tier]} · {m!.score}%
-                            </span>
-                          ) : null}
-                          <a
-                            href={shareLink(job)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label="Share this role on WhatsApp"
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600"
-                          >
-                            <Share2 className="h-[18px] w-[18px]" />
-                          </a>
-                          <button
-                            type="button"
-                            onClick={(e) => handleToggleSave(e, job.id)}
-                            aria-label={saved.has(job.id) ? "Remove from saved roles" : "Save this role"}
-                            aria-pressed={saved.has(job.id)}
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                          >
-                            <Heart className={`h-[18px] w-[18px] ${saved.has(job.id) ? "fill-rose-500 text-rose-500" : ""}`} />
-                          </button>
-                        </div>
-                      </div>
 
-                      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-slate-600">
-                        {cities.length > 0 && (
-                          <span className="flex items-center gap-1.5">
-                            <MapPin className="h-3.5 w-3.5 text-slate-400" /> {cities.slice(0, 3).join(", ")}
-                            {cities.length > 3 && ` +${cities.length - 3}`}
-                          </span>
-                        )}
-                        {exp && <span>{exp}</span>}
-                        {job.budget_min || job.budget_max ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 font-bold text-emerald-700 ring-1 ring-emerald-200">
-                            <IndianRupee className="h-3.5 w-3.5" />
-                            {budgetLabel(job.budget_min, job.budget_max).replace("₹", "")}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">Pay on request</span>
-                        )}
-                      </div>
+                        {badges.length > 0 && <div className="mt-2.5 flex flex-wrap items-center gap-1.5 lg:hidden">{badges}</div>}
 
-                      {salesFacts(job).length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {salesFacts(job).map((f) => (
-                            <span key={f.label} className="inline-flex items-baseline gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-[12px] ring-1 ring-slate-100">
-                              <span className="text-slate-400">{f.label}</span>
-                              <span className="font-semibold text-slate-800">{f.value}</span>
+                        {salesFacts(job).length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {salesFacts(job).map((f) => (
+                              <span key={f.label} className="inline-flex items-baseline gap-1.5 rounded-xl bg-slate-50 px-2.5 py-1.5 text-[12px] ring-1 ring-slate-100">
+                                <span className="text-slate-400">{f.label}</span>
+                                <span className="font-semibold text-slate-800">{f.value}</span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {tier && m && m.reasons.length > 0 && (
+                          <p className="mt-2.5 text-[12.5px] font-medium text-emerald-700">{m.reasons.slice(0, 2).join(" · ")}</p>
+                        )}
+
+                        <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${TAG_COLOR[job.category ?? ""] ?? "bg-slate-100 text-slate-600"}`}>
+                            {categoryLabel(job.category)}
+                          </span>
+                          {subDomains.slice(0, 2).map((sd) => (
+                            <span key={sd} className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                              {sd}
                             </span>
                           ))}
+                          {subDomains.length > 2 && <span className="text-[11px] font-medium text-slate-400">+{subDomains.length - 2}</span>}
+                          <span className="ml-auto text-[11px] font-medium text-slate-400 lg:hidden">{timeAgo(job.created_at)}</span>
                         </div>
-                      )}
-
-                      {tier && m && m.reasons.length > 0 && (
-                        <p className="mt-2.5 text-[12.5px] font-medium text-emerald-700">{m.reasons.slice(0, 2).join(" · ")}</p>
-                      )}
-
-                      <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
-                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${TAG_COLOR[job.category ?? ""] ?? "bg-slate-100 text-slate-600"}`}>
-                          {categoryLabel(job.category)}
-                        </span>
-                        {subDomains.slice(0, 2).map((sd) => (
-                          <span key={sd} className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-                            {sd}
-                          </span>
-                        ))}
-                        {subDomains.length > 2 && <span className="text-[11px] font-medium text-slate-400">+{subDomains.length - 2}</span>}
-                        <span className="ml-auto text-[11px] font-medium text-slate-400">{timeAgo(job.created_at)}</span>
                       </div>
+                    </div>
 
+                    {/* Laptop: the card's own column of actions. */}
+                    <div className="hidden lg:flex lg:flex-col lg:border-l lg:border-slate-100 lg:pl-7">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[12px] font-medium text-slate-400">{timeAgo(job.created_at)}</span>
+                        <div className="relative z-10 -mr-2">{iconButtons}</div>
+                      </div>
+                      {badges.length > 0 && <div className="mt-2 flex flex-wrap items-center gap-1.5">{badges}</div>}
+                      <div className="relative z-10 mt-auto pt-4">{actions}</div>
                     </div>
                   </div>
-                  <div className="mt-4 lg:hidden">
-                    {/* The paid label is longer, so it gets the wider column. */}
-                    <div className="grid grid-cols-[5fr_7fr] gap-2.5">
-                      {!m?.applied ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              window.open(`${jobPath(job)}#apply-form`, "_blank", "noopener,noreferrer");
-                            }}
-                            className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 py-1.5 text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98]"
-                          >
-                            <span className="flex flex-col items-center leading-[1.15]">
-              <span className="text-[13px] font-extrabold">{COPY.listFree}</span>
-              <span className="mt-0.5 text-[10px] font-medium opacity-90">{COPY.listFreeSub}</span>
-            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              logPaidCallClick(job.id, "list");
-                              setInterestFor({ job, paid: true });
-                            }}
-                            className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-1.5 text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98]"
-                          >
-                            <span className="flex flex-col items-center leading-[1.15]">
-              <span className="whitespace-nowrap text-[13px] font-extrabold">{COPY.listPaid}</span>
-              <span className="mt-0.5 whitespace-nowrap text-[10px] font-medium opacity-90">{COPY.listPaidSub}</span>
-            </span>
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            window.open(`${jobPath(job)}#apply-form`, "_blank", "noopener,noreferrer");
-                          }}
-                          className="col-span-2 flex h-12 items-center justify-center gap-1.5 rounded-xl bg-blue-50 text-[14px] font-extrabold text-blue-700"
-                        >
-                          Already applied · view application <ArrowRight className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                    {!m?.applied && <p className="mt-2 text-center text-[11.5px] leading-4 text-slate-500">{COPY.refundLine}</p>}
-                  </div>
-                </Link>
+
+                  {/* Phone: the same actions under the card. */}
+                  <div className="relative z-10 mt-4 lg:hidden">{actions}</div>
                 </div>
               );
             })}
           </div>
 
-          {/* ───────── Preview (desktop) ───────── */}
-          {selected && (
-            <aside className="sticky top-24 hidden max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white shadow-[0_30px_70px_-40px_rgba(15,23,42,0.4)] [scrollbar-width:thin] lg:block">
-              <div className="bg-gradient-to-br from-[#0A1630] to-[#14306b] p-5 text-white">
-                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-blue-200">
-                  {categoryLabel(selected.category)}
-                  {subDomainsOf(selected).length > 0 && ` · ${subDomainsOf(selected).slice(0, 2).join(", ")}`}
-                </p>
-                <h2 className="mt-2 text-2xl font-extrabold leading-tight tracking-tight">{selected.role_title ?? "Open role"}</h2>
-                {selected.client_display && <p className="mt-1 text-sm text-blue-100/90">{selected.client_display}</p>}
-                <div className="mt-4 flex items-end justify-between gap-3 border-t border-white/10 pt-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-200/70">Fixed pay</p>
-                    <p className="font-(family-name:--font-space-grotesk) text-3xl font-black leading-tight text-emerald-300">
-                      {selected.budget_min || selected.budget_max ? budgetLabel(selected.budget_min, selected.budget_max) : "On request"}
-                    </p>
-                  </div>
-                  <p className="flex items-center gap-1.5 pb-1 text-xs font-medium text-blue-100/80">
-                    <Clock className="h-3.5 w-3.5" /> {timeAgo(selected.created_at)}
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-4 p-5">
-                <dl className="grid grid-cols-2 gap-2.5 text-[13px]">
-                  <div className="rounded-2xl bg-slate-50 p-3.5">
-                    <dt className="text-xs text-slate-400">Location</dt>
-                    <dd className="mt-0.5 font-semibold text-slate-800">{jobCitiesOf(selected).slice(0, 2).join(", ") || "—"}</dd>
-                  </div>
-                  {experienceLabel(selected.experience_min, selected.experience_max) && (
-                    <div className="rounded-2xl bg-slate-50 p-3.5">
-                      <dt className="text-xs text-slate-400">Experience</dt>
-                      <dd className="mt-0.5 font-semibold text-slate-800">{experienceLabel(selected.experience_min, selected.experience_max)}</dd>
-                    </div>
-                  )}
-                  {salesFacts(selected).map((f) => (
-                    <div key={f.label} className="rounded-2xl bg-slate-50 p-3.5">
-                      <dt className="text-xs text-slate-400">{f.label}</dt>
-                      <dd className="mt-0.5 font-semibold text-slate-800">{f.value}</dd>
-                    </div>
-                  ))}
-                  {!(selected.budget_min || selected.budget_max) && (
-                    <div className="col-span-2 rounded-2xl bg-slate-50 p-3.5">
-                      <dt className="text-xs text-slate-400">Compensation</dt>
-                      <dd className="mt-0.5 font-semibold text-slate-800">Shared on the first call</dd>
-                    </div>
-                  )}
-                </dl>
-
-                {(() => {
-                  const m = matches.get(selected.id);
-                  const tier = m && !m.applied ? matchTier(m.score) : null;
-                  return tier && m ? (
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-                      <p className="flex items-center gap-2 text-sm font-bold text-emerald-900">
-                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${MATCH_TIER_CLASSES[tier]}`}>
-                          {MATCH_TIER_LABEL[tier]} · {m.score}%
-                        </span>
-                        Why you match
-                      </p>
-                      <ul className="mt-2.5 space-y-1.5 text-[13px] text-emerald-900">
-                        {m.reasons.slice(0, 4).map((r) => (
-                          <li key={r} className="flex items-center gap-2">
-                            <Check className="h-3.5 w-3.5 text-emerald-600" /> {r}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null;
-                })()}
-
-                {isPipeline(selected) && (
-                  <p className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3.5 text-[13px] leading-6 text-indigo-900">
-                    <span className="font-bold">Pipeline role.</span> We are building a shortlist for companies hiring in this space. Apply and a
-                    recruiter will contact you when a matching role opens.
-                  </p>
-                )}
-                <p className="line-clamp-3 text-[13.5px] leading-6 text-slate-600">{summaryOf(selected)}</p>
-
-                <div className="space-y-3">
-                  {matches.get(selected.id)?.applied ? (
-                    <Link
-                      href={`${jobPath(selected)}#apply-form`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group/apply flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                        <FileText className="h-5 w-5" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[15px] font-extrabold leading-tight">View application</span>
-                        <span className="block text-[12.5px] font-medium text-emerald-50">See where it stands</span>
-                      </span>
-                      <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/apply:translate-x-0.5" />
-                    </Link>
-                  ) : (
-                    <>
-                      <Link
-                        href={`${jobPath(selected)}#apply-form`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group/free flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3.5 text-left text-white shadow-lg shadow-emerald-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-600/35"
-                      >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                          <FileText className="h-5 w-5" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[15px] font-extrabold leading-tight">{COPY.freeTitle}</span>
-                          <span className="block text-[12.5px] font-medium text-emerald-50">{COPY.freeLine}</span>
-                        </span>
-                        <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/free:translate-x-0.5" />
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => { logPaidCallClick(selected.id, "preview"); setInterestFor({ job: selected, paid: true }); }}
-                        className="group/paid flex w-full items-center gap-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3.5 text-left text-white shadow-lg shadow-blue-600/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/40"
-                      >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                          <Zap className="h-5 w-5" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-center gap-2 whitespace-nowrap"><span className="text-[14.5px] font-extrabold leading-tight">{COPY.paidCardTitle}</span><span className="shrink-0 rounded-full bg-white/25 px-1.5 py-0.5 text-[12px] font-extrabold">{COPY.paidPrice}</span></span>
-                          <span className="block text-[12.5px] font-medium text-blue-100">{COPY.paidLine}</span>
-                        </span>
-                        <ArrowRight className="h-5 w-5 shrink-0 transition group-hover/paid:translate-x-0.5" />
-                      </button>
-                      <p className="text-center text-[11.5px] text-slate-500">{COPY.refundLine}</p>
-                      <WhyPrice />
-                    </>
-                  )}
-                </div>
-                <div className="flex gap-3">
-                  <a
-                    href={shareLink(selected)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-                  >
-                    <Share2 className="h-4 w-4" /> Share
-                  </a>
-                  <button
-                    type="button"
-                    onClick={(e) => handleToggleSave(e, selected.id)}
-                    aria-label={saved.has(selected.id) ? "Remove from saved roles" : "Save this role"}
-                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
-                  >
-                    <Heart className={`h-4 w-4 ${saved.has(selected.id) ? "fill-rose-500 text-rose-500" : ""}`} />
-                    {saved.has(selected.id) ? "Saved" : "Save"}
-                  </button>
-                </div>
-                <Link href={jobPath(selected)} className="flex items-center justify-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline">
-                  View full job description <ArrowRight className="h-4 w-4" />
-                </Link>
-                <p className="flex items-center justify-center gap-1.5 border-t border-slate-100 pt-4 text-xs text-slate-500">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Verified mandate, a StaffAnchor recruiter will get back to you
-                </p>
-              </div>
-            </aside>
-          )}
+          {/* ───────── Right rail (laptop): how applying works, and Edge ───────── */}
+          <aside className="sticky top-24 hidden space-y-4 lg:block">
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Two ways to apply</p>
+              <ul className="mt-3 space-y-3.5 text-[13.5px] leading-5 text-slate-600">
+                <li>
+                  <span className="font-extrabold text-slate-900">{COPY.listFree}.</span> {COPY.freeLine}
+                </li>
+                <li>
+                  <span className="font-extrabold text-slate-900">{COPY.listPaid} · ₹{PAID_CALL_RUPEES}.</span> {COPY.paidLine}
+                </li>
+              </ul>
+              <p className="mt-3 text-[12px] leading-5 text-slate-500">{COPY.refundLine}</p>
+              <WhyPrice className="mt-2 text-left [&_summary]:text-left [&_p]:text-left" />
+            </section>
+            <EdgePromo variant="job" page="jobs-rail" />
+          </aside>
         </div>
       </div>
       <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
