@@ -4,8 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 export const runtime = "nodejs";
 
 const BOT = /bot|crawl|spider|headless|preview|facebookexternalhit|slurp|bingpreview|whatsapp\/|telegram/i;
-const FLOWS = new Set(["edge", "resume"]);
-const STEPS = new Set(["view", "slot", "ready", "pay_click", "pay_open", "pay_dismiss", "paid", "error"]);
+const FLOWS = new Set(["edge", "resume", "home"]);
+const STEPS = new Set(["view", "slot", "ready", "pay_click", "pay_open", "pay_dismiss", "paid", "error", "click"]);
 
 // One row per step a visitor takes on the Edge booking and resume order pages, so the CRM can show where people drop off.
 // Best effort: it never fails the page, ignores crawlers and anything that does not look like a real step.

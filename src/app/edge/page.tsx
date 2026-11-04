@@ -3,6 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, CalendarCheck, Check, ChevronDown, CreditCard, FileText, Mic, Compass, PhoneCall, Sparkles, Video, Clock, Target, Users, TrendingUp } from "lucide-react";
 import Reveal from "@/components/home/reveal";
+import TrackedLink from "@/components/edge/tracked-link";
+import EdgeViewTracker from "@/components/edge/edge-view-tracker";
 import StickyCta from "@/components/edge/sticky-cta";
 import { nextOpenSlot, slotLabel } from "@/lib/edge-slot";
 import { PAID_CALL_RUPEES, PAID_CALL_WORKING_DAYS } from "@/lib/paid-call";
@@ -141,9 +143,9 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
                       <p className={`${DISPLAY} text-2xl font-semibold`}>{s.price}</p>
                       <p className="text-xs text-slate-500">{"note" in s ? s.note : "incl. GST"}</p>
                     </div>
-                    <Link href={book(s.id)} className="group inline-flex items-center whitespace-nowrap rounded-xl bg-[#12131A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-600">
+                    <TrackedLink href={book(s.id)} from="edge" track={`book-${s.id}`} className="group inline-flex items-center whitespace-nowrap rounded-xl bg-[#12131A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-600">
                       {s.id === "job-search-strategy" ? "Book the combo" : "Book this session"} <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Link>
+                    </TrackedLink>
                   </div>
                 </div>
               </Reveal>
@@ -151,6 +153,7 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
 
   return (
     <main className="overflow-x-clip bg-white text-[#12131A]">
+      <EdgeViewTracker src={src} />
       {/* ───────── Hero ───────── */}
       <section className="relative isolate">
         <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(60%_60%_at_85%_10%,rgba(99,102,241,0.18),transparent_70%),radial-gradient(50%_50%_at_5%_40%,rgba(139,92,246,0.10),transparent_70%)]" />
@@ -267,9 +270,9 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
                     <p className={`${DISPLAY} text-2xl font-semibold`}>From ₹1,199</p>
                     <p className="text-xs text-slate-500">incl. GST</p>
                   </div>
-                  <Link href="/resume-writing?src=edge_page" className="group inline-flex items-center whitespace-nowrap rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900">
+                  <TrackedLink href="/resume-writing?src=edge_page" from="edge" track="resume-writing" className="group inline-flex items-center whitespace-nowrap rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900">
                     See resume writing <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
+                  </TrackedLink>
                 </div>
               </div>
             </Reveal>
@@ -291,9 +294,9 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
                   <p className={`${DISPLAY} text-2xl font-semibold`}>₹{PAID_CALL_RUPEES}</p>
                   <p className="text-xs text-slate-500">incl. GST · added when you apply</p>
                 </div>
-                <Link href={`/jobs?src=${src}`} className="group inline-flex items-center whitespace-nowrap rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900">
+                <TrackedLink href={`/jobs?src=${src}`} from="edge" track="recruiter-call" className="group inline-flex items-center whitespace-nowrap rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900">
                   Choose a role <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
+                </TrackedLink>
               </div>
             </div>
           </Reveal>

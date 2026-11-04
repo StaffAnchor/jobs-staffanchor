@@ -4,8 +4,8 @@
 // To keep your own testing out of the numbers, open any page once with ?me=1 (for example /edge?me=1) on that browser.
 // After that nothing from this browser is recorded.
 
-type Flow = "edge" | "resume";
-type Step = "view" | "slot" | "ready" | "pay_click" | "pay_open" | "pay_dismiss" | "paid" | "error";
+type Flow = "edge" | "resume" | "home";
+type Step = "view" | "slot" | "ready" | "pay_click" | "pay_open" | "pay_dismiss" | "paid" | "error" | "click";
 
 const SID_KEY = "sa_edge_sid";
 const OFF_KEY = "sa_internal";
