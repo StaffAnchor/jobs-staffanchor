@@ -80,18 +80,6 @@ const CATEGORY_TABS: { value: string; label: string }[] = [
   { value: "non_sales", label: "Non-Sales" },
 ];
 
-const TAG_COLOR: Record<string, string> = {
-  b2b_sales: "bg-blue-50 text-blue-700",
-  b2c_sales: "bg-violet-50 text-violet-700",
-  non_sales: "bg-slate-100 text-slate-600",
-};
-
-const MONOGRAM_GRADIENT: Record<string, string> = {
-  b2b_sales: "from-blue-600 to-indigo-700 shadow-blue-600/25",
-  b2c_sales: "from-violet-600 to-fuchsia-600 shadow-violet-600/25",
-  non_sales: "from-slate-600 to-slate-800 shadow-slate-700/25",
-};
-
 function initials(title: string | null) {
   const words = (title ?? "Sales").split(/\s+/).filter(Boolean);
   return ((words[0]?.[0] ?? "S") + (words[1]?.[0] ?? "")).toUpperCase();
@@ -603,8 +591,8 @@ export default function JobsPage() {
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
           {/* ───────── List ───────── */}
-          <div className="min-w-0 space-y-4">
-            {jobs === null && !error && [0, 1, 2, 3].map((i) => <div key={i} className="h-36 animate-pulse rounded-3xl bg-slate-100" />)}
+          <div className="min-w-0 divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            {jobs === null && !error && [0, 1, 2, 3].map((i) => <div key={i} className="h-36 animate-pulse bg-slate-50" />)}
             {shown.map((job) => {
               const exp = experienceLabel(job.experience_min, job.experience_max);
               const cities = jobCitiesOf(job);
@@ -671,7 +659,7 @@ export default function JobsPage() {
                     <button
                       type="button"
                       onClick={openApply}
-                      className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 py-1.5 text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98] lg:min-h-11 lg:rounded-lg lg:py-1 lg:shadow-sm"
+                      className="flex min-h-14 items-center justify-center rounded-xl bg-slate-900 px-2 py-1.5 text-white transition hover:bg-slate-800 active:scale-[0.98] lg:min-h-11 lg:rounded-lg lg:py-1"
                     >
                       <span className="flex flex-col items-center leading-[1.15]">
                         <span className="text-[13px] font-extrabold lg:text-[13px]">{COPY.listFree}</span>
@@ -686,7 +674,7 @@ export default function JobsPage() {
                         logPaidCallClick(job.id, "list");
                         setInterestFor({ job, paid: true });
                       }}
-                      className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-1.5 text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98] lg:min-h-11 lg:rounded-lg lg:py-1 lg:shadow-sm"
+                      className="flex min-h-14 items-center justify-center rounded-xl border-2 border-indigo-500 bg-indigo-50 px-2 py-1.5 text-indigo-900 transition hover:bg-indigo-100 active:scale-[0.98] lg:min-h-11 lg:rounded-lg lg:py-1"
                     >
                       <span className="flex flex-col items-center leading-[1.15]">
                         <span className="whitespace-nowrap text-[13px] font-extrabold lg:text-[13px]">{COPY.listPaid}</span>
@@ -701,20 +689,12 @@ export default function JobsPage() {
                 <div
                   key={job.id}
                   style={{ animationDelay: `${Math.min(shown.indexOf(job), 8) * 55}ms` }}
-                  className="jobs-rise group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-[0_24px_50px_-28px_rgba(37,87,230,0.35)] sm:p-5 lg:p-6"
+                  className="jobs-rise group relative bg-white p-4 transition-colors duration-200 hover:bg-slate-50/70 sm:p-5 lg:px-7 lg:py-6"
                 >
-                  <span
-                    aria-hidden
-                    className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b opacity-0 transition group-hover:opacity-100 ${
-                      MONOGRAM_GRADIENT[job.category ?? ""]?.split(" shadow")[0] ?? "from-slate-600 to-slate-800"
-                    }`}
-                  />
                   <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_216px] lg:gap-6">
                     <div className="flex gap-3.5 sm:gap-4">
                       <span
-                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-[15px] font-extrabold text-white shadow-md sm:h-14 sm:w-14 sm:text-base ${
-                          MONOGRAM_GRADIENT[job.category ?? ""] ?? MONOGRAM_GRADIENT.non_sales
-                        }`}
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-[15px] font-semibold text-slate-500 sm:h-14 sm:w-14 sm:text-base"
                       >
                         {initials(job.role_title)}
                       </span>
@@ -722,7 +702,7 @@ export default function JobsPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             {/* The title is the link; its stretched area makes the whole card open the role, while the buttons sit above it. */}
-                            <h2 className="text-[17px] font-extrabold leading-snug tracking-tight text-slate-950 group-hover:text-blue-700 lg:text-[19px]">
+                            <h2 className="text-[18px] font-semibold leading-snug tracking-tight text-slate-900 group-hover:text-blue-700 lg:text-[20px]">
                               <Link href={jobPath(job)} className="after:absolute after:inset-0 after:z-0 after:content-['']">
                                 {job.role_title ?? "Open role"}
                               </Link>
@@ -745,7 +725,7 @@ export default function JobsPage() {
                           )}
                           {exp && <span>{exp}</span>}
                           {job.budget_min || job.budget_max ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 font-bold text-emerald-700 ring-1 ring-emerald-200">
+                            <span className="inline-flex items-center gap-0.5 font-semibold text-slate-900">
                               <IndianRupee className="h-3.5 w-3.5" />
                               {budgetLabel(job.budget_min, job.budget_max).replace("₹", "")}
                             </span>
@@ -772,7 +752,7 @@ export default function JobsPage() {
                         )}
 
                         <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
-                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${TAG_COLOR[job.category ?? ""] ?? "bg-slate-100 text-slate-600"}`}>
+                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold border border-slate-200 text-slate-600`}>
                             {categoryLabel(job.category)}
                           </span>
                           {subDomains.slice(0, 2).map((sd) => (
