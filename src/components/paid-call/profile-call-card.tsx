@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, PhoneCall, ShieldCheck } from "lucide-react";
-import { logPaidCallClick } from "@/modules/jobs/api";
+import { logPaidCallClick, logPaidCallView } from "@/modules/jobs/api";
 import { usePaidCallCheckout } from "./use-paid-call-checkout";
 import { COPY, PAID_CALL_RUPEES, PAID_CALL_WORKING_DAYS, PROFILE_CALL_MANDATE_ID } from "@/lib/paid-call";
 
@@ -24,6 +24,10 @@ export default function ProfileCallCard({ candidateId, spot = "profile" as const
       live = false;
     };
   }, [candidateId]);
+
+  useEffect(() => {
+    if (checked && !done) logPaidCallView(PROFILE_CALL_MANDATE_ID, spot);
+  }, [checked, done, spot]);
 
   if (!checked) return null;
   if (done) {

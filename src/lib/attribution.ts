@@ -87,6 +87,16 @@ export function parseTouch(raw: string | null | undefined): Touch | null {
 }
 
 /** Runs once per browser session, on the first page. Returns the touch to report, if there is one worth reporting. */
+// A running count of this browser's visits (one per session), kept on the device so the site can tell someone who keeps coming back.
+export const VISIT_COUNT_KEY = "sa_visit_count";
+function bumpVisitCount() {
+  try {
+    window.localStorage.setItem(VISIT_COUNT_KEY, String((Number(window.localStorage.getItem(VISIT_COUNT_KEY)) || 0) + 1));
+  } catch {
+    // Storage blocked: the nudge for returning visitors simply never shows.
+  }
+}
+
 export function captureLanding(): { visitorId: string; touch: Touch } | null {
   if (typeof window === "undefined") return null;
   try {
@@ -95,6 +105,7 @@ export function captureLanding(): { visitorId: string; touch: Touch } | null {
   } catch {
     // Storage blocked: still capture, once per page load.
   }
+  bumpVisitCount();
   let visitorId = readCookie(VISITOR_COOKIE);
   if (!visitorId) {
     visitorId = crypto.randomUUID();

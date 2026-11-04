@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, PhoneCall, ShieldCheck } from "lucide-react";
-import { logPaidCallClick } from "@/modules/jobs/api";
+import { logPaidCallClick, logPaidCallView } from "@/modules/jobs/api";
 import { usePaidCallCheckout } from "./use-paid-call-checkout";
 import { COPY, PAID_CALL_RUPEES } from "@/lib/paid-call";
 import WhyPrice from "./why-price";
@@ -25,6 +25,11 @@ export default function PaidCallCard({ candidateId, mandateId }: { candidateId: 
       live = false;
     };
   }, [candidateId, mandateId]);
+
+  // Count the offer as seen once it is actually on screen (not for someone who has already paid).
+  useEffect(() => {
+    if (checked && !done) logPaidCallView(mandateId, "confirm");
+  }, [checked, done, mandateId]);
 
   if (!checked) return null;
 

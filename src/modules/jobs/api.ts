@@ -102,7 +102,7 @@ export async function listOpenJobs(): Promise<JobListing[]> {
 // happens to also be signed in as a candidate on this device -- we skip
 // logging if the current session's own `profiles` row (readable only via
 // the "read own profile" RLS policy) resolves to a recruiter/admin role.
-async function logQuickApplyEvent(mandateId: string, eventType: "click" | "form_opened" | "paid_call_click" | "submitted" | "gate_shown", spot?: string) {
+async function logQuickApplyEvent(mandateId: string, eventType: "click" | "form_opened" | "paid_call_click" | "submitted" | "gate_shown" | "paid_call_view", spot?: string) {
   try {
     const {
       data: { user },
@@ -156,6 +156,11 @@ export async function getOpenJob(mandateId: string): Promise<JobListing | null> 
 // Silent count of taps on the "Apply + recruiter call" offer; candidates never see it, the CRM's paid-calls report does.
 export function logPaidCallClick(mandateId: string, spot: "list" | "preview" | "detail" | "bar" | "confirm" | "registered" | "portal_home" | "profile") {
   void logQuickApplyEvent(mandateId, "paid_call_click", spot);
+}
+
+// Silent count of how many people are shown the recruiter-call offer, so its tap rate can be worked out.
+export function logPaidCallView(mandateId: string, spot: "confirm" | "registered" | "portal_home" | "profile") {
+  void logQuickApplyEvent(mandateId, "paid_call_view", spot);
 }
 
 // Fired once when a candidate's application for a role is actually submitted on the website (not a system match).

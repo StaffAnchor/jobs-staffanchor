@@ -9,7 +9,7 @@ import { useAuthStore } from "@/modules/auth/store";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 import NotificationBell from "./notification-bell";
-import EdgeBanner from "./edge-banner";
+import ReturnVisitStrip from "./return-visit-strip";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -112,7 +112,7 @@ export function Navbar() {
 
   return (
     <>
-    <EdgeBanner pathname={pathname} />
+    <ReturnVisitStrip pathname={pathname} signedIn={candidateSignedIn} />
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
       {/* Which StaffAnchor site you are on, and a way across. The company site
           (employers, services, about) and this Job Portal are separate

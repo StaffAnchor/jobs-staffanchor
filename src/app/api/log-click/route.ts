@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => ({}))) as {
       mandateId?: string;
-      eventType?: "click" | "form_opened" | "paid_call_click" | "submitted" | "gate_shown";
+      eventType?: "click" | "form_opened" | "paid_call_click" | "submitted" | "gate_shown" | "paid_call_view";
       spot?: string;
       utmSource?: string;
       utmMedium?: string;
@@ -38,9 +38,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "mandateId is required." }, { status: 400 });
     }
     const eventType =
-      body.eventType === "form_opened" || body.eventType === "paid_call_click" || body.eventType === "submitted" || body.eventType === "gate_shown" ? body.eventType : "click";
+      body.eventType === "form_opened" || body.eventType === "paid_call_click" || body.eventType === "paid_call_view" || body.eventType === "submitted" || body.eventType === "gate_shown" ? body.eventType : "click";
     // Where the ₹199 offer was tapped (list, preview, detail, bar, confirm); anything else is dropped.
-    const spot = eventType === "paid_call_click" && ["list", "preview", "detail", "bar", "confirm", "registered", "portal_home", "profile"].includes(body.spot ?? "") ? body.spot : null;
+    const spot = (eventType === "paid_call_click" || eventType === "paid_call_view") && ["list", "preview", "detail", "bar", "confirm", "registered", "portal_home", "profile"].includes(body.spot ?? "") ? body.spot : null;
 
     const userAgent = req.headers.get("user-agent") ?? null;
     // The Referer header here is always this site's own page (the beacon is sent from it), so the real origin comes from
