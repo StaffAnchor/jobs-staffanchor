@@ -265,6 +265,11 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
 
     <JobMatchBanner mandateId={mandateId} />
 
+    {/* On a phone the full card is far down the page, so a one-line teaser sits right under the title. */}
+    <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6 lg:hidden">
+      <EdgePromo variant="job-top" page="job-top" />
+    </div>
+
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 md:pb-10 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <div className="min-w-0 space-y-6">

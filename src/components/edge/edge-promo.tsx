@@ -1,4 +1,4 @@
-import { ArrowRight, FileText, Mic, PhoneCall } from "lucide-react";
+import { ArrowRight, ChevronRight, FileText, Mic, PhoneCall } from "lucide-react";
 import TrackedLink from "@/components/edge/tracked-link";
 import { PAID_CALL_RUPEES, PAID_CALL_WORKING_DAYS } from "@/lib/paid-call";
 import { MOCK_INTERVIEW_RUPEES, RESUME_FROM_RUPEES, inr } from "@/lib/edge-prices";
@@ -6,11 +6,12 @@ import { MOCK_INTERVIEW_RUPEES, RESUME_FROM_RUPEES, inr } from "@/lib/edge-price
 // Promotions for StaffAnchor Edge and the recruiter call, placed around the site. Each link records where it was clicked
 // (flow "promo", the `page` name plus the service) so the CRM can show which placement brings paying leads.
 //   job         on a job page: practise the interview for this role
+//   job-top     a one-line teaser high on a job page (phones), so it is seen without scrolling
 //   after-apply right after someone applies: prepare while they wait
 //   strip       a band for list, city and tool pages: all three services
 //   practice    after a free AI practice or score: the real thing with a sales leader
 //   footer      one slim line at the bottom of every public page
-type Variant = "job" | "after-apply" | "strip" | "practice" | "footer";
+type Variant = "job" | "job-top" | "after-apply" | "strip" | "practice" | "footer";
 
 const MOCK = "/edge/book/mock-interview";
 
@@ -19,6 +20,24 @@ export default function EdgePromo({ variant, page, roleTitle, className = "" }: 
   const link = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold transition";
   const primary = `${link} bg-indigo-600 text-white shadow-sm hover:bg-indigo-500`;
   const quiet = "text-[13px] font-semibold text-indigo-700 underline-offset-4 hover:underline";
+
+  if (variant === "job-top") {
+    return (
+      <TrackedLink
+        href={`${MOCK}?${src}`}
+        from="promo"
+        track={`${page}-mock-interview`}
+        className={`group flex items-center gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 px-3.5 py-3 transition hover:border-indigo-400 ${className}`}
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white"><Mic className="h-4.5 w-4.5" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-extrabold leading-tight text-slate-900">Interview coming up?</span>
+          <span className="mt-0.5 block text-[12.5px] leading-snug text-slate-600">Practise it with Gagan Sharma, 60 mins · {inr(MOCK_INTERVIEW_RUPEES)}</span>
+        </span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-indigo-600 transition-transform group-hover:translate-x-0.5" />
+      </TrackedLink>
+    );
+  }
 
   if (variant === "footer") {
     return (
