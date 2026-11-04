@@ -659,11 +659,11 @@ export default function JobsPage() {
                     <button
                       type="button"
                       onClick={openApply}
-                      className="flex min-h-14 items-center justify-center rounded-xl bg-slate-900 px-2 py-1.5 text-white transition hover:bg-slate-800 active:scale-[0.98] lg:min-h-11 lg:rounded-lg lg:py-1"
+                      className="flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-2 py-1 text-white transition hover:bg-slate-800 active:scale-[0.98] lg:min-h-9 lg:py-0.5"
                     >
                       <span className="flex flex-col items-center leading-[1.15]">
-                        <span className="text-[13px] font-extrabold lg:text-[13px]">{COPY.listFree}</span>
-                        <span className="mt-0.5 text-[10px] font-medium opacity-90 lg:text-[10.5px]">{COPY.listFreeSub}</span>
+                        <span className="text-[12px] font-bold lg:text-[11.5px]">{COPY.listFree}</span>
+                        <span className="text-[9.5px] font-medium opacity-90 lg:text-[9.5px]">{COPY.listFreeSub}</span>
                       </span>
                     </button>
                     <button
@@ -674,11 +674,11 @@ export default function JobsPage() {
                         logPaidCallClick(job.id, "list");
                         setInterestFor({ job, paid: true });
                       }}
-                      className="flex min-h-14 items-center justify-center rounded-xl border-2 border-indigo-500 bg-indigo-50 px-2 py-1.5 text-indigo-900 transition hover:bg-indigo-100 active:scale-[0.98] lg:min-h-11 lg:rounded-lg lg:py-1"
+                      className="flex min-h-11 items-center justify-center rounded-lg border border-indigo-400 bg-indigo-50 px-2 py-1 text-indigo-900 transition hover:bg-indigo-100 active:scale-[0.98] lg:min-h-9 lg:py-0.5"
                     >
                       <span className="flex flex-col items-center leading-[1.15]">
-                        <span className="whitespace-nowrap text-[13px] font-extrabold lg:text-[13px]">{COPY.listPaid}</span>
-                        <span className="mt-0.5 whitespace-nowrap text-[10px] font-medium opacity-90 lg:text-[10.5px]">{COPY.listPaidSub}</span>
+                        <span className="whitespace-nowrap text-[12px] font-bold lg:text-[11.5px]">{COPY.listPaid}</span>
+                        <span className="whitespace-nowrap text-[9.5px] font-medium opacity-90 lg:text-[9.5px]">{COPY.listPaidSub}</span>
                       </span>
                     </button>
                   </div>
