@@ -316,7 +316,7 @@ export default function JobsPage() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(55%_70%_at_90%_0%,rgba(76,123,255,0.38),transparent_60%),radial-gradient(40%_60%_at_0%_100%,rgba(16,185,129,0.18),transparent_60%)]" />
         <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:radial-gradient(#fff_1px,transparent_1px)] [background-size:26px_26px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
         <div className="jobs-drift pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#4C7BFF]/25 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl px-4 pb-10 pt-12 sm:px-6 md:pt-16 lg:px-8">
+        <div className="relative mx-auto max-w-[1360px] px-4 pb-10 pt-12 sm:px-6 md:pt-16 lg:px-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-blue-100">
             <Sparkles className="h-3.5 w-3.5 text-amber-300" /> StaffAnchor careers
           </div>
@@ -456,7 +456,7 @@ export default function JobsPage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1360px] px-4 py-8 sm:px-6 lg:px-8">
         {recentlyViewed.length > 0 && (
           <div className="mb-5">
             <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -601,7 +601,7 @@ export default function JobsPage() {
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
           {/* ───────── List ───────── */}
           <div className="min-w-0 space-y-4">
             {jobs === null && !error && [0, 1, 2, 3].map((i) => <div key={i} className="h-36 animate-pulse rounded-3xl bg-slate-100" />)}
@@ -667,15 +667,15 @@ export default function JobsPage() {
                 </button>
               ) : (
                 <div>
-                  <div className="grid grid-cols-[5fr_7fr] gap-2.5 lg:grid-cols-1">
+                  <div className="grid grid-cols-[5fr_7fr] gap-2.5 lg:grid-cols-1 lg:gap-2">
                     <button
                       type="button"
                       onClick={openApply}
-                      className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 py-1.5 text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98] lg:hover:shadow-lg"
+                      className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 py-1.5 text-white shadow-md shadow-emerald-600/25 transition active:scale-[0.98] lg:min-h-11 lg:rounded-lg lg:py-1 lg:shadow-sm"
                     >
                       <span className="flex flex-col items-center leading-[1.15]">
-                        <span className="text-[13px] font-extrabold lg:text-[14px]">{COPY.listFree}</span>
-                        <span className="mt-0.5 text-[10px] font-medium opacity-90 lg:text-[11px]">{COPY.listFreeSub}</span>
+                        <span className="text-[13px] font-extrabold lg:text-[13px]">{COPY.listFree}</span>
+                        <span className="mt-0.5 text-[10px] font-medium opacity-90 lg:text-[10.5px]">{COPY.listFreeSub}</span>
                       </span>
                     </button>
                     <button
@@ -686,15 +686,15 @@ export default function JobsPage() {
                         logPaidCallClick(job.id, "list");
                         setInterestFor({ job, paid: true });
                       }}
-                      className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-1.5 text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98] lg:hover:shadow-lg"
+                      className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-1.5 text-white shadow-md shadow-blue-600/25 transition active:scale-[0.98] lg:min-h-11 lg:rounded-lg lg:py-1 lg:shadow-sm"
                     >
                       <span className="flex flex-col items-center leading-[1.15]">
-                        <span className="whitespace-nowrap text-[13px] font-extrabold lg:text-[14px]">{COPY.listPaid}</span>
-                        <span className="mt-0.5 whitespace-nowrap text-[10px] font-medium opacity-90 lg:text-[11px]">{COPY.listPaidSub}</span>
+                        <span className="whitespace-nowrap text-[13px] font-extrabold lg:text-[13px]">{COPY.listPaid}</span>
+                        <span className="mt-0.5 whitespace-nowrap text-[10px] font-medium opacity-90 lg:text-[10.5px]">{COPY.listPaidSub}</span>
                       </span>
                     </button>
                   </div>
-                  <p className="mt-2 text-center text-[11.5px] leading-4 text-slate-500">No call in {PAID_CALL_WORKING_DAYS} working days? Full refund.</p>
+                  <p className="mt-2 text-center text-[11.5px] leading-4 text-slate-500 lg:mt-1.5 lg:text-[11px]">No call in {PAID_CALL_WORKING_DAYS} working days? Full refund.</p>
                 </div>
               );
               return (
@@ -709,7 +709,7 @@ export default function JobsPage() {
                       MONOGRAM_GRADIENT[job.category ?? ""]?.split(" shadow")[0] ?? "from-slate-600 to-slate-800"
                     }`}
                   />
-                  <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_252px] lg:gap-7">
+                  <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_216px] lg:gap-6">
                     <div className="flex gap-3.5 sm:gap-4">
                       <span
                         className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-[15px] font-extrabold text-white shadow-md sm:h-14 sm:w-14 sm:text-base ${
@@ -787,7 +787,7 @@ export default function JobsPage() {
                     </div>
 
                     {/* Laptop: the card's own column of actions. */}
-                    <div className="hidden lg:flex lg:flex-col lg:border-l lg:border-slate-100 lg:pl-7">
+                    <div className="hidden lg:flex lg:flex-col lg:border-l lg:border-slate-100 lg:pl-6">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[12px] font-medium text-slate-400">{timeAgo(job.created_at)}</span>
                         <div className="relative z-10 -mr-2">{iconButtons}</div>
@@ -823,7 +823,7 @@ export default function JobsPage() {
           </aside>
         </div>
       </div>
-      <div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1360px] px-4 pb-12 sm:px-6 lg:px-8">
         <EdgePromo variant="strip" page="jobs-list" />
       </div>
       {interestFor && (
