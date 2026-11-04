@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { PLANS, planForYears, type PlanKey } from "@/lib/resume-plans";
+import { trackStep } from "@/lib/edge-step";
 
 type RazorpayCtor = new (o: Record<string, unknown>) => { open: () => void };
 // The site already declares window.Razorpay for Priority Applicant, so it is only read here.
@@ -27,9 +28,18 @@ export default function OrderClient() {
   const plan: PlanKey | null = valid ? planForYears(y!) : null;
   const detailsOk = valid && form.name.trim().length > 1 && /\S+@\S+\.\S+/.test(form.email) && form.phone.replace(/\D/g, "").length >= 10 && form.consent;
 
+  // Which step of the order people reach, so the CRM can show where they drop off.
+  useEffect(() => {
+    trackStep("resume", "resume-writing", "view", { src });
+  }, [src]);
+  useEffect(() => {
+    if (detailsOk) trackStep("resume", "resume-writing", "ready", { src });
+  }, [detailsOk, src]);
+
   async function pay() {
     setError(null);
     setBusy(true);
+    trackStep("resume", "resume-writing", "pay_click", { src });
     const res = await fetch("/api/resume/order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -38,11 +48,13 @@ export default function OrderClient() {
     const json = await res.json().catch(() => ({ ok: false, error: "Something went wrong." }));
     if (!json.ok || !json.orderId) {
       setBusy(false);
+      trackStep("resume", "resume-writing", "error", { src, note: String(json.error ?? "start failed") });
       return setError(json.error ?? "Couldn't start the payment.");
     }
     const Rz = razorpay();
     if (!Rz) {
       setBusy(false);
+      trackStep("resume", "resume-writing", "error", { src, note: "payment window did not load" });
       return setError("The payment window didn't load. Please refresh and try again.");
     }
     const rz = new Rz({
@@ -57,6 +69,7 @@ export default function OrderClient() {
       modal: {
         ondismiss: () => {
           setBusy(false);
+          trackStep("resume", "resume-writing", "pay_dismiss", { src });
           setError("Payment wasn't completed. You can try again whenever you're ready.");
         },
       },
@@ -68,10 +81,14 @@ export default function OrderClient() {
         });
         const vj = await v.json().catch(() => ({ ok: false }));
         setBusy(false);
-        if (vj.ok) setIntakeUrl(vj.intakeUrl);
+        if (vj.ok) {
+          trackStep("resume", "resume-writing", "paid", { src });
+          setIntakeUrl(vj.intakeUrl);
+        }
         else setError("Your payment went through but we couldn't confirm it on screen. You'll get an email shortly; if not, write to info@staffanchor.com with your payment receipt.");
       },
     });
+    trackStep("resume", "resume-writing", "pay_open", { src });
     rz.open();
   }
 

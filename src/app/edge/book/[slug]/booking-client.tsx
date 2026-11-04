@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { comboFor } from "@/lib/resume-plans";
+import { trackStep } from "@/lib/edge-step";
 import { ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Clock, Video } from "lucide-react";
 
 type Service = { slug: string; title: string; tagline: string | null; description: string; duration_min: number; price_inr: number; popular: boolean; price_by_experience?: boolean };
@@ -51,6 +52,14 @@ export default function BookingClient({ service }: { service: Service }) {
     return () => clearTimeout(t);
   }, [loadSlots]);
 
+  // Which step of the booking people reach, so the CRM can show where they drop off.
+  useEffect(() => {
+    trackStep("edge", service.slug, "view", { src });
+  }, [service.slug, src]);
+  useEffect(() => {
+    if (slot) trackStep("edge", service.slug, "slot", { src });
+  }, [slot, service.slug, src]);
+
   const dates = useMemo(() => Object.keys(slots?.days ?? {}).sort(), [slots]);
   const visible = dates.slice(offset, offset + 5);
   const times = date ? slots?.days[date] ?? [] : [];
@@ -59,6 +68,7 @@ export default function BookingClient({ service }: { service: Service }) {
     setError(null);
     if (!slot) return setError("Please pick a time.");
     setBusy(true);
+    trackStep("edge", service.slug, "pay_click", { src });
     const res = await fetch("/api/pro/book", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -67,6 +77,7 @@ export default function BookingClient({ service }: { service: Service }) {
     const json = await res.json().catch(() => ({ ok: false, error: "Something went wrong." }));
     if (!json.ok || !json.orderId) {
       setBusy(false);
+      trackStep("edge", service.slug, "error", { src, note: String(json.error ?? "start failed") });
       setError(json.error ?? "Couldn't start the payment.");
       if (res.status === 409) {
         setStep("time");
@@ -78,6 +89,7 @@ export default function BookingClient({ service }: { service: Service }) {
     const Rz = razorpay();
     if (!Rz) {
       setBusy(false);
+      trackStep("edge", service.slug, "error", { src, bookingId: json.bookingId, note: "payment window did not load" });
       return setError("The payment window didn't load. Please refresh and try again.");
     }
     const rz = new Rz({
@@ -92,6 +104,7 @@ export default function BookingClient({ service }: { service: Service }) {
       modal: {
         ondismiss: () => {
           setBusy(false);
+          trackStep("edge", service.slug, "pay_dismiss", { src, bookingId: json.bookingId });
           setError("Payment wasn't completed. Your time is held for 15 minutes if you'd like to try again.");
         },
       },
@@ -104,6 +117,7 @@ export default function BookingClient({ service }: { service: Service }) {
         const vj = await v.json().catch(() => ({ ok: false }));
         setBusy(false);
         if (vj.ok) {
+          trackStep("edge", service.slug, "paid", { src, bookingId: json.bookingId });
           setDone({ start: vj.start, meetLink: vj.meetLink ?? null, intakeToken: vj.intakeToken ?? null });
           setStep("done");
         } else {
@@ -111,6 +125,7 @@ export default function BookingClient({ service }: { service: Service }) {
         }
       },
     });
+    trackStep("edge", service.slug, "pay_open", { src, bookingId: json.bookingId });
     rz.open();
   }
 
@@ -138,6 +153,9 @@ export default function BookingClient({ service }: { service: Service }) {
   ) : null;
   const detailsOk = yearsOk && form.name.trim().length > 1 && /\S+@\S+\.\S+/.test(form.email) && form.phone.replace(/\D/g, "").length >= 10 && form.consent;
   const paras = service.description.split(/\n{2,}/);
+  useEffect(() => {
+    if (detailsOk && slot) trackStep("edge", service.slug, "ready", { src });
+  }, [detailsOk, slot, service.slug, src]);
 
   return (
     <div className="min-h-screen bg-[#F4F2EE] px-4 py-8 md:py-12">
