@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, CalendarCheck, Check, ChevronDown, CreditCard, FileText, Mic, Compass, Sparkles, Video, Clock, Target, Users, TrendingUp } from "lucide-react";
+import { ArrowRight, BadgeCheck, CalendarCheck, Check, ChevronDown, CreditCard, FileText, Mic, Compass, PhoneCall, Sparkles, Video, Clock, Target, Users, TrendingUp } from "lucide-react";
 import Reveal from "@/components/home/reveal";
 import StickyCta from "@/components/edge/sticky-cta";
 import { CRM } from "@/lib/pro-sessions";
+import { PAID_CALL_RUPEES, PAID_CALL_WORKING_DAYS } from "@/lib/paid-call";
 
 // The one StaffAnchor Edge page. staffanchor.com/edge sends visitors here.
 export const metadata: Metadata = {
@@ -56,7 +57,7 @@ const SESSIONS = [
     sub: "Sales and Leadership Role",
     tagline: "A real interview, then the feedback nobody gives you.",
     meta: "60 mins · Video meeting",
-    price: "₹1,899",
+    price: "₹1,999",
     points: [
       "Interview prep first: we shape your story, your numbers and your answers to the likely questions for the role.",
       "Then a full interview loop for the role you're targeting: discovery on your numbers, a scenario on team or pipeline management, and the tough questions on gaps and attrition.",
@@ -74,10 +75,15 @@ const SESSIONS = [
     price: "From ₹1,758",
     was: "From ₹2,198",
     note: "20% off the two, incl. GST",
+    bands: [
+      { label: "Early stage", band: "0-5 yrs", price: "₹1,758", was: "₹2,198" },
+      { label: "Mid level", band: "6-12 yrs", price: "₹2,799", was: "₹3,499" },
+      { label: "Senior / CXO", band: "13+ yrs", price: "₹3,999", was: "₹4,999" },
+    ],
     popular: true,
     points: [
-      "A 45-minute 1:1 strategy session (₹999): where your next role comes from, which companies, which route in, what to say, and a sharper LinkedIn headline and About.",
-      "Plus Resume Writing, written for you for your experience level (from ₹1,199), as Word and PDF.",
+      "A 45-minute 1:1 strategy session (₹999 early stage, ₹1,500 mid level, ₹2,000 senior): where your next role comes from, which companies, which route in, what to say, and a sharper LinkedIn headline and About.",
+      "Plus Resume Writing, written for you for your experience level (₹1,199, ₹1,999 or ₹2,999), as Word and PDF.",
       "Pay one price, 20% less than buying the two separately. Enter your years of experience to see yours.",
     ],
   },
@@ -87,6 +93,7 @@ const GUIDE = [
   { when: "I have an interview coming up", then: "Interview Prep + Mock Interview", href: "#mock-interview" },
   { when: "I just want a great resume, written for me", then: "Resume Writing", href: "#resume-writing" },
   { when: "I'm not getting shortlisted or called", then: "Job Strategy + Resume Rebuild", href: "#job-search-strategy" },
+  { when: "I want a recruiter to look at my profile and call me", then: "Receive a call from a recruiter", href: "#recruiter-call" },
 ];
 
 const LOOP = [
@@ -109,8 +116,22 @@ const FAQ = [
   { q: "Can I reschedule?", a: "Yes. Reply to your confirmation email and we'll move it." },
   { q: "Do prices include GST? Can I get an invoice?", a: "Yes, prices include GST. A tax invoice is generated for every payment. Reply to your confirmation email and we'll send it to you." },
   { q: "Are the sessions only for sales professionals?", a: "They're built for sales and revenue professionals, from BDRs to leaders. If you're in another field you can still book, but the interview scenarios and examples are sales-focused." },
-  { q: "What do I get in the Job Strategy + Resume Rebuild combo?", a: "Resume Writing is done for you: you fill in a short form and receive a finished resume as Word and PDF. The combo adds a 45-minute 1:1 strategy session (₹999) to Resume Writing and takes 20% off the total." },
+  { q: "What do I get in the Job Strategy + Resume Rebuild combo?", a: "Resume Writing is done for you: you fill in a short form and receive a finished resume as Word and PDF. The combo adds a 45-minute 1:1 strategy session (₹999 early stage, ₹1,500 mid level, ₹2,000 senior) to Resume Writing for your experience level and takes 20% off the total." },
 ];
+
+// Prices by experience level, laid out as a small table inside a card. `was` is the price before the 20% combo discount.
+function BandPrices({ rows }: { rows: { label: string; band: string; price: string; was?: string }[] }) {
+  return (
+    <dl className="mt-5 divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/60 text-sm">
+      {rows.map((r) => (
+        <div key={r.label} className="flex items-center justify-between gap-3 px-4 py-2.5">
+          <dt className="text-slate-700"><span className="font-medium text-slate-900">{r.label}</span> <span className="text-slate-500">· {r.band}</span></dt>
+          <dd className="text-right"><span className={`${DISPLAY} font-semibold text-slate-900`}>{r.price}</span>{r.was && <span className="ml-2 text-xs text-slate-400 line-through">{r.was}</span>}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 export default async function EdgePage({ searchParams }: { searchParams: Promise<{ src?: string }> }) {
   const src = cleanSrc((await searchParams).src);
@@ -129,6 +150,7 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
                       <li key={p} className="flex gap-2.5"><BadgeCheck className="mt-0.5 h-4.5 w-4.5 shrink-0 text-indigo-500" /> <span>{p}</span></li>
                     ))}
                   </ul>
+                  {"bands" in s && s.bands && <BandPrices rows={s.bands} />}
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
                     <div>
                       {"was" in s && <p className="text-xs text-slate-400 line-through">{s.was}</p>}
@@ -247,10 +269,15 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
                 <h3 className={`${DISPLAY} mt-1 text-[22px] font-semibold leading-snug tracking-tight`}>Resume Writing</h3>
                 <p className="mt-3 font-medium text-slate-900">Written for you by StaffAnchor, ready for applicant tracking systems.</p>
                 <ul className="mt-4 flex-1 space-y-2.5 text-[14.5px] leading-relaxed text-slate-600">
-                  {["Priced by experience level: 0-5, 6-12 and 13+ years.", "ATS-friendly structure with role-specific keywords and impact-led bullet points.", "Revision round included."].map((p) => (
+                  {["ATS-friendly structure with role-specific keywords and impact-led bullet points.", "Revision round included (two for Senior / CXO).", "Priced by your years of experience, as below."].map((p) => (
                     <li key={p} className="flex gap-2.5"><BadgeCheck className="mt-0.5 h-4.5 w-4.5 shrink-0 text-indigo-500" /> <span>{p}</span></li>
                   ))}
                 </ul>
+                <BandPrices rows={[
+                  { label: "Early stage", band: "0-5 yrs", price: "₹1,199" },
+                  { label: "Mid level", band: "6-12 yrs", price: "₹1,999" },
+                  { label: "Senior / CXO", band: "13+ yrs", price: "₹2,999" },
+                ]} />
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
                   <div>
                     <p className={`${DISPLAY} text-2xl font-semibold`}>From ₹1,199</p>
@@ -265,6 +292,27 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
 
             {sessionCard(SESSIONS[1], 2)}
           </div>
+
+          <Reveal delay={120}>
+            <div id="recruiter-call" className="mt-6 flex scroll-mt-24 flex-col gap-5 rounded-3xl border border-slate-200 bg-white p-7 shadow-sm md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600"><PhoneCall className="h-6 w-6" /></span>
+                <div>
+                  <h3 className={`${DISPLAY} text-[22px] font-semibold leading-snug tracking-tight`}>Receive a call from a recruiter</h3>
+                  <p className="mt-1.5 max-w-2xl text-[14.5px] leading-relaxed text-slate-600">Apply to any open role and add the recruiter call. A StaffAnchor recruiter phones you within {PAID_CALL_WORKING_DAYS} working days for a one-to-one profile discussion, whether or not that role is a match. No call in time, full refund.</p>
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-4 md:flex-col md:items-end md:gap-2">
+                <div className="md:text-right">
+                  <p className={`${DISPLAY} text-2xl font-semibold`}>₹{PAID_CALL_RUPEES}</p>
+                  <p className="text-xs text-slate-500">incl. GST · added when you apply</p>
+                </div>
+                <Link href={`/jobs?src=${src}`} className="group inline-flex items-center whitespace-nowrap rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900">
+                  Choose a role <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 

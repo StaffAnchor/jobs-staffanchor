@@ -4,18 +4,20 @@ export type PlanKey = "early" | "mid" | "senior";
 
 export const PLANS: Record<PlanKey, { label: string; band: string; price: number; revisions: number; finalDelivery: string }> = {
   early: { label: "Early Stage", band: "0-5 years", price: 1199, revisions: 1, finalDelivery: "about 5 working days" },
-  mid: { label: "Mid Level", band: "6-12 years", price: 1799, revisions: 1, finalDelivery: "about 5 working days" },
-  senior: { label: "Senior / CXO", band: "13+ years", price: 2499, revisions: 2, finalDelivery: "about 7 working days" },
+  mid: { label: "Mid Level", band: "6-12 years", price: 1999, revisions: 1, finalDelivery: "about 5 working days" },
+  senior: { label: "Senior / CXO", band: "13+ years", price: 2999, revisions: 2, finalDelivery: "about 7 working days" },
 };
 
-// Job Strategy + Resume Rebuild: the 45-minute strategy session (999) plus Resume Writing for the band, less 20%. Display
-// only; the CRM works the price out again when the session is held.
+// Job Strategy + Resume Rebuild: the 45-minute strategy session plus Resume Writing for the band, less 20%. The session is
+// priced by band too (999 early, 1500 mid, 2000 senior). Display only; the CRM works the price out again when it is held.
+export const STRATEGY_PRICE: Record<PlanKey, number> = { early: 999, mid: 1500, senior: 2000 };
 export function comboFor(years: number) {
   const plan = planForYears(years);
   const resume = PLANS[plan].price;
-  const subtotal = 999 + resume;
+  const strategy = STRATEGY_PRICE[plan];
+  const subtotal = strategy + resume;
   const total = Math.round((subtotal * 80) / 100);
-  return { plan, strategy: 999, resume, subtotal, discount: subtotal - total, total };
+  return { plan, strategy, resume, subtotal, discount: subtotal - total, total };
 }
 
 export const planForYears = (years: number): PlanKey => (years <= 5 ? "early" : years <= 12 ? "mid" : "senior");
