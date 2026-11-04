@@ -460,7 +460,7 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
               onClick={() => { logPaidCallClick(mandateId, "detail"); setPaidOpen(true); }}
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-500"
             >
-              Book recruiter call · ₹{PAID_CALL_RUPEES}
+              Book a Recruiter call · ₹{PAID_CALL_RUPEES}
             </button>
           </div>
         )}
@@ -496,16 +496,22 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
           <a
             href="#apply-form"
             onClick={() => logQuickApplyClick(mandateId)}
-            className="flex h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/25"
+            className="flex min-h-14 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2 py-1.5 text-white shadow-lg shadow-emerald-600/25"
           >
-            {COPY.listFree}
+            <span className="flex flex-col items-center leading-[1.15]">
+              <span className="text-[14px] font-extrabold">{COPY.listFree}</span>
+              <span className="mt-0.5 text-[10.5px] font-medium opacity-90">{COPY.listFreeSub}</span>
+            </span>
           </a>
           <button
             type="button"
             onClick={() => { logPaidCallClick(mandateId, "bar"); setPaidOpen(true); }}
-            className="flex h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-extrabold text-white shadow-lg shadow-blue-600/30"
+            className="flex min-h-14 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-1.5 text-white shadow-lg shadow-blue-600/30"
           >
-            {COPY.listPaid}
+            <span className="flex flex-col items-center leading-[1.15]">
+              <span className="text-[14px] font-extrabold">{COPY.listPaid}</span>
+              <span className="mt-0.5 text-[10.5px] font-medium opacity-90">{COPY.listPaidSub}</span>
+            </span>
           </button>
         </div>
       </div>

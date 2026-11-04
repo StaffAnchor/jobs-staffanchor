@@ -7,20 +7,23 @@ export const PAID_CALL_WORKING_DAYS = 3;
 export const COPY = {
   freeTitle: "Apply free",
   freeLine: "We'll call you if your profile matches this role.",
-  paidTitle: `Apply + recruiter call · ₹${PAID_CALL_RUPEES}`,
-  paidCardTitle: "Apply + recruiter call",
+  paidTitle: `Apply + Recruiter call · ₹${PAID_CALL_RUPEES}`,
+  paidCardTitle: "Apply + Recruiter call",
   paidPrice: `₹${PAID_CALL_RUPEES}`,
   paidLine: `A recruiter calls you within ${PAID_CALL_WORKING_DAYS} working days, match or not.`,
   refundLine: `No call within ${PAID_CALL_WORKING_DAYS} working days? Full refund. A profile discussion, not a job guarantee.`,
   whyLabel: `Why ₹${PAID_CALL_RUPEES}?`,
   whyLine: `₹${PAID_CALL_RUPEES} (GST included) pays for a recruiter's time on a one-to-one profile call, and keeps these calls for people who are serious about this role or future ones.`,
+  // The two compact buttons (sticky bar, list cards): a bold name and a small line saying what you get.
   listFree: "Apply free",
-  listPaid: `Apply + call ₹${PAID_CALL_RUPEES}`,
+  listFreeSub: "We call if you match",
+  listPaid: "Apply + Recruiter call",
+  listPaidSub: `₹${PAID_CALL_RUPEES} · call in ${PAID_CALL_WORKING_DAYS} working days`,
   listLine: "Free: we call if you match · Paid: a guaranteed call",
   doneFree: "Application received. If your profile matches, a recruiter will call you. If it doesn't, we'll keep your profile for future roles.",
   donePaid: `Payment received. A recruiter will call you within ${PAID_CALL_WORKING_DAYS} working days to discuss your profile, whether or not it matches this role.`,
   cardTitle: "Want a guaranteed call?",
-  cardButton: "Book my call",
+  cardButton: "Book a Recruiter call",
 };
 
 // The end of the Nth working day (Mon to Fri) after `from`, in Indian time.
