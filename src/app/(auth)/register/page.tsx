@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Spinner } from "@/components/ui/spinner";
 import { getOpenJob } from "@/modules/jobs/api";
 import Link from "next/link";
+import EdgePromo from "@/components/edge/edge-promo";
 
 export default function RegisterPage() {
   return (
@@ -135,6 +136,7 @@ function RegisterForm() {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <CandidateIntakeForm email={email} returnTo={returnTo ?? undefined} />
         </div>
+        <EdgePromo variant="profile-review" page="register-page" className="mt-6" />
       </div>
     </>
   );

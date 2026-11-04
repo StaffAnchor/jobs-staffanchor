@@ -1,7 +1,7 @@
-import { ArrowRight, ChevronRight, FileText, Mic, PhoneCall } from "lucide-react";
+import { ArrowRight, ChevronRight, FileText, Mic, PhoneCall, UserCheck } from "lucide-react";
 import TrackedLink from "@/components/edge/tracked-link";
 import { PAID_CALL_RUPEES, PAID_CALL_WORKING_DAYS } from "@/lib/paid-call";
-import { MOCK_INTERVIEW_RUPEES, RESUME_FROM_RUPEES, inr } from "@/lib/edge-prices";
+import { COMBO_FROM_RUPEES, MOCK_INTERVIEW_RUPEES, RESUME_FROM_RUPEES, inr } from "@/lib/edge-prices";
 
 // Promotions for StaffAnchor Edge and the recruiter call, placed around the site. Each link records where it was clicked
 // (flow "promo", the `page` name plus the service) so the CRM can show which placement brings paying leads.
@@ -11,7 +11,8 @@ import { MOCK_INTERVIEW_RUPEES, RESUME_FROM_RUPEES, inr } from "@/lib/edge-price
 //   strip       a band for list, city and tool pages: all three services
 //   practice    after a free AI practice or score: the real thing with a sales leader
 //   footer      one slim line at the bottom of every public page
-type Variant = "job" | "job-top" | "after-apply" | "strip" | "practice" | "footer";
+//   profile-review  for someone who has built or is building a profile: have it reviewed live with Gagan
+type Variant = "job" | "job-top" | "after-apply" | "strip" | "practice" | "footer" | "profile-review";
 
 const MOCK = "/edge/book/mock-interview";
 
@@ -20,6 +21,25 @@ export default function EdgePromo({ variant, page, roleTitle, className = "" }: 
   const link = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold transition";
   const primary = `${link} bg-indigo-600 text-white shadow-sm hover:bg-indigo-500`;
   const quiet = "text-[13px] font-semibold text-indigo-700 underline-offset-4 hover:underline";
+
+  if (variant === "profile-review") {
+    return (
+      <section className={`rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-6 shadow-sm ${className}`}>
+        <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-700"><UserCheck className="h-3.5 w-3.5" /> StaffAnchor Edge</p>
+        <p className="mt-1.5 text-[17px] font-extrabold leading-snug text-slate-900">Want your profile reviewed live?</p>
+        <p className="mt-1.5 text-[13.5px] leading-6 text-slate-600">
+          A 1:1 video session with Gagan Sharma, who has built and led sales teams for 15+ years. He goes through your profile and resume with you, shows where you would be screened out, and plans where your next role comes from. Your resume is rewritten for you as part of it.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2.5">
+          <TrackedLink href={`/edge/book/job-search-strategy?${src}`} from="promo" track={`${page}-profile-review`} className={primary}>
+            <UserCheck className="h-4 w-4" /> Book a live profile review · from {inr(COMBO_FROM_RUPEES)}
+          </TrackedLink>
+          <TrackedLink href={`${MOCK}?${src}`} from="promo" track={`${page}-mock-interview`} className={quiet}>Interview prep {inr(MOCK_INTERVIEW_RUPEES)}</TrackedLink>
+          <TrackedLink href={`/edge?${src}`} from="promo" track={`${page}-explore`} className={quiet}>All Edge services</TrackedLink>
+        </div>
+      </section>
+    );
+  }
 
   if (variant === "job-top") {
     return (

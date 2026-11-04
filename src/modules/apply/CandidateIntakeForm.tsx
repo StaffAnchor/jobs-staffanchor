@@ -660,6 +660,7 @@ export default function CandidateIntakeForm({
             <EdgePromo variant="after-apply" page="after-apply" roleTitle={mandateTitle} className="mt-4" />
           </div>
         )}
+        {!mandateId && <EdgePromo variant="profile-review" page="registered" className="mt-5" />}
         <div className="mt-5 text-center">
           <p className="mb-2 text-xs text-slate-500">Prefer a faster reply?</p>
           <WhatsAppChatButton

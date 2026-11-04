@@ -9,6 +9,7 @@ import AccountSecurityCard from "./AccountSecurityCard";
 import LatestUpdates from "./LatestUpdates";
 import RoleMatches from "./RoleMatches";
 import SavedAndAlerts from "./SavedAndAlerts";
+import EdgePromo from "@/components/edge/edge-promo";
 import HomeGreeting from "./HomeGreeting";
 import ProfileCoach from "./ProfileCoach";
 import ApplicationsSnapshot from "./ApplicationsSnapshot";
@@ -59,6 +60,8 @@ export default function PortalHome({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="min-w-0 space-y-6">
+          {/* On a phone the sidebar sits far down, so the review offer comes first here. */}
+          <EdgePromo variant="profile-review" page="portal-home" className="lg:hidden" />
           <LatestUpdates onSeeAll={() => onNavigate("pipeline")} />
           <RoleMatches />
           <ApplicationsSnapshot onNavigate={onNavigate} />
@@ -75,6 +78,7 @@ export default function PortalHome({
 
         <aside className="min-w-0 space-y-6">
           <ProfileCoach score={score} tier={tier} steps={steps} onNavigate={onNavigate} />
+          <EdgePromo variant="profile-review" page="portal-home-side" className="hidden lg:block" />
           <SavedAndAlerts />
         </aside>
       </div>
