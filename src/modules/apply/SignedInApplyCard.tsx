@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { computeProfileScore, PROFILE_SCORE_TIER_META, type ScoreCandidateRow } from "@/modules/candidate-portal/profile-score";
 import ApplicationTimeline from "./ApplicationTimeline";
-import WhatsAppChatButton from "@/components/WhatsAppChatButton";
+import WhatsAppActivate from "@/components/WhatsAppActivate";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
 import EdgePromo from "@/components/edge/edge-promo";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
@@ -226,13 +226,7 @@ export default function SignedInApplyCard({
           </p>
           <ApplicationTimeline stage={pipelineStage} rejected={pipelineStage === "rejected"} />
           {pipelineStage !== "rejected" && (
-            <div className="mt-6 border-t border-emerald-200/70 pt-5">
-              <p className="mb-3 text-sm text-slate-600">Want a quicker reply? Message us on WhatsApp.</p>
-              <WhatsAppChatButton
-                source="apply_success"
-                text={`Hi StaffAnchor, I'm ${candidate.full_name ?? "a candidate"}. I just applied${mandateTitle ? ` for ${mandateTitle}` : ""}. Could you update me on the next step?`}
-              />
-            </div>
+            <WhatsAppActivate name={candidate.full_name} source="apply_success_activate" className="mt-6" />
           )}
         </div>
         {/* Signed-in candidates skip ApplyForm's own confirmation screen

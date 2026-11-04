@@ -1,7 +1,7 @@
 "use client";
 
 import { indianMobileFromInput } from "@/lib/phone";
-import WhatsAppChatButton from "@/components/WhatsAppChatButton";
+import WhatsAppActivate from "@/components/WhatsAppActivate";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -661,14 +661,7 @@ export default function CandidateIntakeForm({
           </div>
         )}
         {!mandateId && <EdgePromo variant="profile-review" page="registered" className="mt-5" />}
-        <div className="mt-5 text-center">
-          <p className="mb-2 text-xs text-slate-500">Prefer a faster reply?</p>
-          <WhatsAppChatButton
-            source={mandateId ? "intake_applied" : "intake_registered"}
-            variant="outline"
-            text={`Hi StaffAnchor, I'm ${fullName.trim() || "a candidate"}. I just ${mandateId ? `applied${mandateTitle ? ` for ${mandateTitle}` : ""}` : "registered"} on jobs.staffanchor.com. Could you tell me what happens next?`}
-          />
-        </div>
+        <WhatsAppActivate name={fullName} source={mandateId ? "intake_applied_activate" : "intake_registered_activate"} className="mt-5" />
         {!skippedVerify ? (
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <SignInPanel

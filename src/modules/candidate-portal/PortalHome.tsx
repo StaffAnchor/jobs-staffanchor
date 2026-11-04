@@ -10,6 +10,7 @@ import LatestUpdates from "./LatestUpdates";
 import RoleMatches from "./RoleMatches";
 import SavedAndAlerts from "./SavedAndAlerts";
 import EdgePromo from "@/components/edge/edge-promo";
+import WhatsAppActivate from "@/components/WhatsAppActivate";
 import HomeGreeting from "./HomeGreeting";
 import ProfileCoach from "./ProfileCoach";
 import ApplicationsSnapshot from "./ApplicationsSnapshot";
@@ -57,6 +58,7 @@ export default function PortalHome({
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <HomeGreeting fullName={candidate.full_name} score={score} topStep={steps[0]} onNavigate={onNavigate} />
+      <WhatsAppActivate name={candidate.full_name} source="portal_home_activate" remember className="mb-6" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="min-w-0 space-y-6">
