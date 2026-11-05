@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, Space_Grotesk, Fraunces } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import GlobalWhatsApp from "@/components/GlobalWhatsApp";
 import AttributionTracker from "@/components/AttributionTracker";
+import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -28,6 +29,9 @@ const fraunces = Fraunces({
   style: ["italic"],
 });
 
+// Colours the phone's status bar to match the site header when the site is opened from the home screen.
+export const viewport: Viewport = { themeColor: "#0A1630" };
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://jobs.staffanchor.com"),
   title: "StaffAnchor | Sales Recruitment Specialists",
@@ -42,6 +46,8 @@ export const metadata: Metadata = {
     type: "website",
   },
   twitter: { card: "summary_large_image" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "StaffAnchor", statusBarStyle: "default" },
 };
 
 export default function RootLayout({
@@ -63,6 +69,7 @@ export default function RootLayout({
           </div>
           <GlobalWhatsApp />
           <AttributionTracker />
+          <ServiceWorkerRegister />
         </AppProviders>
       </body>
     </html>
