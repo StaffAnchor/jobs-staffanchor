@@ -36,7 +36,8 @@ export default function BookingClient({ service }: { service: Service }) {
   const [slot, setSlot] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const long = LONG_LENGTH[service.slug];
-  const [minutes, setMinutes] = useState(service.duration_min);
+  // The longer length is the one pre-selected where it is offered; people can switch to the shorter one.
+  const [minutes, setMinutes] = useState(long?.minutes ?? service.duration_min);
   const [step, setStep] = useState<"time" | "details" | "done">("time");
   const [form, setForm] = useState({ name: "", email: "", phone: "", targetRole: "", notes: "", years: "", consent: false, website: "" });
   const [busy, setBusy] = useState(false);
