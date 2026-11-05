@@ -13,7 +13,7 @@ export function GET() {
 
 ## StaffAnchor Edge: paid services for jobseekers (all prices in INR, GST included)
 
-- [Interview Prep + Mock Interview](${SITE}/edge/book/mock-interview): ${inr(MOCK_INTERVIEW_RUPEES)}. A 60-minute 1:1 video session for a sales or leadership role: interview prep, a full mock interview loop (discovery on your numbers, a team or pipeline scenario, tough questions on gaps and attrition) and a plain debrief on where you would be screened out.
+- [Interview Prep + Mock Interview](${SITE}/edge/book/mock-interview): ${inr(MOCK_INTERVIEW_RUPEES)} for 60 minutes, ₹2,999 for 90 minutes. A 1:1 video session for a sales or leadership role: interview prep, a full mock interview loop (discovery on your numbers, a team or pipeline scenario, tough questions on gaps and attrition) and a plain debrief on where you would be screened out.
 - [Resume Writing](${SITE}/resume-writing): from ${inr(RESUME_FROM_RUPEES)}, by years of experience: ${inr(RESUME_FROM_RUPEES)} for 0-5 years, ₹1,999 for 6-12 years, ₹2,999 for 13+ years. ATS-friendly, delivered as Word and PDF, first draft within 3 working days of the candidate's details.
 - [Job Strategy + Resume Rebuild](${SITE}/edge/book/job-search-strategy): from ${inr(COMBO_FROM_RUPEES)} (${inr(COMBO_FROM_RUPEES)} early stage, ₹2,799 mid level, ₹3,999 senior). A 45-minute strategy session plus resume writing for the candidate's experience level, 20% off the two together.
 - [Recruiter call](${SITE}/jobs): ${inr(PAID_CALL_RUPEES)}. Apply to any open role and add a recruiter call: a StaffAnchor recruiter phones within ${PAID_CALL_WORKING_DAYS} working days for a one-to-one profile discussion, whether or not that role is a match. Refunded if the call does not happen in time.

@@ -6,7 +6,7 @@ import { nextOpenSlot, slotLabel } from "@/lib/edge-slot";
 const EDGE = "/edge?src=jobs_home";
 
 const SERVICES = [
-  { id: "mock-interview", icon: Mic, title: "Interview Prep + Mock Interview", line: "A real 60-minute interview loop, then the honest debrief", price: "₹1,999" },
+  { id: "mock-interview", icon: Mic, title: "Interview Prep + Mock Interview", line: "A real 60 or 90-minute interview loop, then the honest debrief", price: "from ₹1,999" },
   { id: "resume-writing", icon: FileText, title: "Resume Writing", line: "Written for you by experience level, in Word and PDF", price: "from ₹1,199" },
   { id: "job-search-strategy", icon: Compass, title: "Job Strategy + Resume Rebuild", line: "Both together, 20% less than buying them apart", price: "from ₹1,758" },
 ];

@@ -44,8 +44,8 @@ const SESSIONS = [
     title: "Interview Prep + Mock Interview",
     sub: "Sales and Leadership Role",
     tagline: "A real interview, then the feedback nobody gives you.",
-    meta: "60 mins · Video meeting",
-    price: "₹1,999",
+    meta: "60 or 90 mins · Video meeting",
+    price: "from ₹1,999",
     points: [
       "Interview prep first: we shape your story, your numbers and your answers to the likely questions for the role.",
       "Then a full interview loop for the role you're targeting: discovery on your numbers, a scenario on team or pipeline management, and the tough questions on gaps and attrition.",

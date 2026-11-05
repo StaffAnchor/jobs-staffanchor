@@ -1,7 +1,7 @@
 import { ArrowRight, ChevronRight, FileText, Mic, PhoneCall, UserCheck } from "lucide-react";
 import TrackedLink from "@/components/edge/tracked-link";
 import { PAID_CALL_RUPEES, PAID_CALL_WORKING_DAYS } from "@/lib/paid-call";
-import { COMBO_FROM_RUPEES, MOCK_INTERVIEW_RUPEES, RESUME_FROM_RUPEES, inr } from "@/lib/edge-prices";
+import { COMBO_FROM_RUPEES, MOCK_INTERVIEW_FROM, RESUME_FROM_RUPEES, inr } from "@/lib/edge-prices";
 
 // Promotions for StaffAnchor Edge and the recruiter call, placed around the site. Each link records where it was clicked
 // (flow "promo", the `page` name plus the service) so the CRM can show which placement brings paying leads.
@@ -34,7 +34,7 @@ export default function EdgePromo({ variant, page, roleTitle, className = "" }: 
           <TrackedLink href={`/edge/book/job-search-strategy?${src}`} from="promo" track={`${page}-profile-review`} className={primary}>
             <UserCheck className="h-4 w-4" /> Book a live profile review · from {inr(COMBO_FROM_RUPEES)}
           </TrackedLink>
-          <TrackedLink href={`${MOCK}?${src}`} from="promo" track={`${page}-mock-interview`} className={quiet}>Interview prep {inr(MOCK_INTERVIEW_RUPEES)}</TrackedLink>
+          <TrackedLink href={`${MOCK}?${src}`} from="promo" track={`${page}-mock-interview`} className={quiet}>Interview prep {MOCK_INTERVIEW_FROM}</TrackedLink>
           <TrackedLink href={`/edge?${src}`} from="promo" track={`${page}-explore`} className={quiet}>All Edge services</TrackedLink>
         </div>
       </section>
@@ -52,7 +52,7 @@ export default function EdgePromo({ variant, page, roleTitle, className = "" }: 
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white"><Mic className="h-4.5 w-4.5" /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-[14px] font-extrabold leading-tight text-slate-900">Interview coming up?</span>
-          <span className="mt-0.5 block text-[12.5px] leading-snug text-slate-600">Practise it with Gagan Sharma, 60 mins · {inr(MOCK_INTERVIEW_RUPEES)}</span>
+          <span className="mt-0.5 block text-[12.5px] leading-snug text-slate-600">Practise it with Gagan Sharma, 60 or 90 mins · {MOCK_INTERVIEW_FROM}</span>
         </span>
         <ChevronRight className="h-5 w-5 shrink-0 text-indigo-600 transition-transform group-hover:translate-x-0.5" />
       </TrackedLink>
@@ -64,7 +64,7 @@ export default function EdgePromo({ variant, page, roleTitle, className = "" }: 
       <div className={`border-t border-slate-200 bg-white ${className}`}>
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-[13px] sm:px-6 lg:px-8">
           <p className="text-slate-600">
-            <b className="font-bold text-slate-900">StaffAnchor Edge</b> · interview prep {inr(MOCK_INTERVIEW_RUPEES)} · resume writing from {inr(RESUME_FROM_RUPEES)} · recruiter call {inr(PAID_CALL_RUPEES)}
+            <b className="font-bold text-slate-900">StaffAnchor Edge</b> · interview prep {MOCK_INTERVIEW_FROM} · resume writing from {inr(RESUME_FROM_RUPEES)} · recruiter call {inr(PAID_CALL_RUPEES)}
           </p>
           <TrackedLink href={`/edge?${src}`} from="promo" track={`${page}-explore`} className="group inline-flex items-center gap-1.5 py-1 font-bold text-indigo-700 hover:underline">
             Explore <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -82,7 +82,7 @@ export default function EdgePromo({ variant, page, roleTitle, className = "" }: 
         <p className="mt-2 max-w-2xl text-[14.5px] leading-relaxed text-indigo-100/90">Practise with someone who has built and led sales teams for 15+ years, get a resume written for you, or have a recruiter call you about your profile.</p>
         <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
           {[
-            { icon: Mic, t: "Interview prep + mock interview", p: inr(MOCK_INTERVIEW_RUPEES), href: `${MOCK}?${src}`, k: `${page}-mock-interview` },
+            { icon: Mic, t: "Interview prep + mock interview", p: MOCK_INTERVIEW_FROM, href: `${MOCK}?${src}`, k: `${page}-mock-interview` },
             { icon: FileText, t: "Resume writing", p: `from ${inr(RESUME_FROM_RUPEES)}`, href: `/resume-writing?${src}`, k: `${page}-resume` },
             { icon: PhoneCall, t: "Recruiter call", p: inr(PAID_CALL_RUPEES), href: `/jobs?${src}`, k: `${page}-recruiter-call` },
           ].map((s) => (
@@ -106,9 +106,9 @@ export default function EdgePromo({ variant, page, roleTitle, className = "" }: 
       <section className={`rounded-2xl border border-indigo-200 bg-indigo-50/70 p-5 ${className}`}>
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-700">StaffAnchor Edge</p>
         <p className="mt-1 text-[16px] font-extrabold leading-snug text-slate-900">That was practice with AI. Want the real thing?</p>
-        <p className="mt-1 text-[13.5px] leading-6 text-slate-600">A 60-minute mock interview with Gagan Sharma, who has built and led sales teams for 15+ years, then an honest debrief on where you would be screened out and how to fix it.</p>
+        <p className="mt-1 text-[13.5px] leading-6 text-slate-600">A 60 or 90-minute mock interview with Gagan Sharma, who has built and led sales teams for 15+ years, then an honest debrief on where you would be screened out and how to fix it.</p>
         <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-          <TrackedLink href={`${MOCK}?${src}`} from="promo" track={`${page}-mock-interview`} className={primary}>Book interview prep · {inr(MOCK_INTERVIEW_RUPEES)}</TrackedLink>
+          <TrackedLink href={`${MOCK}?${src}`} from="promo" track={`${page}-mock-interview`} className={primary}>Book interview prep · {MOCK_INTERVIEW_FROM}</TrackedLink>
           <TrackedLink href={`/resume-writing?${src}`} from="promo" track={`${page}-resume`} className={quiet}>Resume writing from {inr(RESUME_FROM_RUPEES)}</TrackedLink>
         </div>
       </section>
@@ -124,11 +124,11 @@ export default function EdgePromo({ variant, page, roleTitle, className = "" }: 
         {after ? "While you wait, get ready for the interview." : role ? `Interviewing for ${role}? Practise it first.` : "Interviewing for a sales role? Practise it first."}
       </p>
       <p className="mt-1.5 text-[13.5px] leading-6 text-slate-600">
-        A 60-minute mock interview with Gagan Sharma, who has built and led sales teams for 15+ years, then a plain debrief on where you would be screened out and how to fix it.
+        A 60 or 90-minute mock interview with Gagan Sharma, who has built and led sales teams for 15+ years, then a plain debrief on where you would be screened out and how to fix it.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2.5">
         <TrackedLink href={`${MOCK}?${src}`} from="promo" track={`${page}-mock-interview`} className={primary}>
-          <Mic className="h-4 w-4" /> Book interview prep · {inr(MOCK_INTERVIEW_RUPEES)}
+          <Mic className="h-4 w-4" /> Book interview prep · {MOCK_INTERVIEW_FROM}
         </TrackedLink>
         <TrackedLink href={`/resume-writing?${src}`} from="promo" track={`${page}-resume`} className={quiet}>Resume writing from {inr(RESUME_FROM_RUPEES)}</TrackedLink>
         <TrackedLink href={`/edge?${src}`} from="promo" track={`${page}-explore`} className={quiet}>All Edge services</TrackedLink>
