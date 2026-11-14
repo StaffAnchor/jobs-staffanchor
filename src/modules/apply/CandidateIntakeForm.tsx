@@ -1020,19 +1020,16 @@ export default function CandidateIntakeForm({
               </Group>
             )}
             <Group label="How do you sell? (pick all that apply)" required>
-              <div className="grid gap-3">
-                {motionGroups.map((g) => (
-                  <div key={g.group}>
-                    {motionGroups.length > 1 && <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">{g.group}</p>}
-                    <Chips
-                      multi
-                      values={motions}
-                      options={g.options.map((o) => ({ value: o, label: o }))}
-                      onToggle={(v) => setMotions((m) => (m.includes(v) ? m.filter((x) => x !== v) : [...m, v]))}
-                    />
-                  </div>
-                ))}
-              </div>
+              {category === "b2c_sales" ? (
+                <Chips
+                  multi
+                  values={motions}
+                  options={b2cMotionChoices.map((o) => ({ value: o, label: o }))}
+                  onToggle={(v) => setMotions((m) => (m.includes(v) ? m.filter((x) => x !== v) : [...m, v]))}
+                />
+              ) : (
+                <GroupedPicker groups={motionGroups} selected={motions} onChange={setMotions} placeholder="Search, e.g. channel, inside sales, field" />
+              )}
             </Group>
             <Group label="Industries you've sold into" required>
               <GroupedPicker groups={industrySoldGroups} selected={industriesSold} onChange={setIndustriesSold} placeholder="Search, e.g. BFSI, pharma, FMCG" />
@@ -1514,7 +1511,7 @@ function GroupedPicker({
                 }}
                 className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-[13px] font-medium transition-colors sm:py-1.5 ${on ? "bg-slate-100 text-slate-900 ring-1 ring-slate-300" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
               >
-                {g.group}
+                {g.group.replace(/\s*\(.*\)\s*$/, "").replace(/\s+(Sales\s+)?Motions?$/i, "")}
                 {n > 0 && <span className="ml-1.5 rounded-full bg-slate-900 px-1.5 text-[11px] text-white">{n}</span>}
               </button>
             );
