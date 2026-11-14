@@ -1222,7 +1222,7 @@ export default function CandidateIntakeForm({
               <Chips value={relocation} options={relocationOptions.map((o) => ({ value: o, label: o }))} onChange={setRelocation} />
             </Group>
             <Group label="Preferred work mode?" required>
-              <Chips value={workMode} options={workModeOptions.map((o) => ({ value: o, label: o }))} onChange={setWorkMode} />
+              <Chips value={workMode} options={workModeOptions.map((o) => ({ value: o, label: o.startsWith("Open to Any") ? "Open to any" : o }))} onChange={setWorkMode} />
             </Group>
             <Group label="Any offer in hand?" required>
               <Chips value={offerInHand} options={["Yes", "No"].map((o) => ({ value: o, label: o }))} onChange={setOfferInHand} />
@@ -1331,7 +1331,7 @@ function Chips(props: ChipProps) {
             type="button"
             aria-pressed={on}
             onClick={() => (props.multi ? props.onToggle(o.value) : props.onChange(o.value))}
-            className={`rounded-full border px-4 py-2 text-left text-[15px] transition-all duration-200 active:scale-95 ${
+            className={`rounded-full border px-3.5 py-1.5 text-left text-sm transition-all duration-150 active:scale-95 ${
               on
                 ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
@@ -1427,9 +1427,9 @@ function MultiSearch({
   );
 }
 
-// Grouped, searchable multi-select: pills for what's picked, a search box, and
-// the full list as collapsible groups. `hidden` options (picked elsewhere) are
-// left out; `max` caps the number of picks.
+// Pick-from-a-list multi-select: what is picked shows as chips on top, the groups are small tabs, and the options of the open
+// group are chips to tap. Search is a small extra for people who know the word. `hidden` options (picked elsewhere) are left
+// out; `max` caps the number of picks.
 function GroupedPicker({
   groups,
   selected,
@@ -1446,7 +1446,10 @@ function GroupedPicker({
   max?: number;
 }) {
   const [q, setQ] = useState("");
-  const [openGroups, setOpenGroups] = useState<string[]>([]);
+  const [searching, setSearching] = useState(false);
+  const visibleGroups = groups.map((g) => ({ ...g, options: g.options.filter((o) => !hidden.includes(o)) })).filter((g) => g.options.length > 0);
+  const [tab, setTab] = useState<string | null>(null);
+  const active = visibleGroups.find((g) => g.group === tab) ?? visibleGroups.find((g) => g.options.some((o) => selected.includes(o))) ?? visibleGroups[0];
   const ql = q.trim().toLowerCase();
   const toggle = (v: string) => {
     if (selected.includes(v)) onChange(selected.filter((x) => x !== v));
@@ -1462,23 +1465,24 @@ function GroupedPicker({
         aria-pressed={on}
         disabled={!on && full}
         onClick={() => toggle(o)}
-        className={`rounded-full border px-3.5 py-1.5 text-left text-sm transition-all duration-200 active:scale-95 disabled:opacity-40 ${
-          on ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
+        className={`rounded-full border px-3 py-1.5 text-left text-[13.5px] transition-all duration-150 active:scale-95 disabled:opacity-40 ${
+          on ? "border-slate-900 bg-slate-900 text-white shadow-sm" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
         }`}
       >
+        {on ? "✓ " : ""}
         {o}
       </button>
     );
   };
   const matches = ql
-    ? groups.flatMap((g) => g.options).filter((o) => o.toLowerCase().includes(ql) && !hidden.includes(o)).slice(0, 14)
+    ? visibleGroups.flatMap((g) => g.options).filter((o) => o.toLowerCase().includes(ql)).slice(0, 16)
     : [];
   return (
-    <div className="grid gap-2.5">
+    <div className="grid gap-3">
       {selected.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {selected.map((t, i) => (
-            <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-sm text-white">
+            <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-[13.5px] text-white">
               {t}
               {i === 0 && max ? <span className="rounded bg-white/20 px-1 text-[10px] uppercase tracking-wide">main</span> : null}
               <button type="button" aria-label={`Remove ${t}`} onClick={() => onChange(selected.filter((x) => x !== t))} className="text-slate-300 hover:text-white">
@@ -1486,46 +1490,58 @@ function GroupedPicker({
               </button>
             </span>
           ))}
+          {max ? <span className="text-xs text-slate-400">{selected.length} of {max}</span> : null}
         </div>
       )}
-      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} />
-      {ql ? (
-        <div className="flex flex-wrap gap-1.5">
-          {matches.length ? matches.map(chip) : <p className="text-xs text-slate-400">No match. Try a broader word.</p>}
-        </div>
-      ) : (
-        <div className="grid gap-2">
-          {groups.map((g) => {
-            const opts = g.options.filter((o) => !hidden.includes(o));
-            if (!opts.length) return null;
-            const n = opts.filter((o) => selected.includes(o)).length;
-            const isOpen = openGroups.includes(g.group);
+
+      <div className="flex items-center gap-2">
+        <div role="tablist" className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {visibleGroups.map((g) => {
+            const n = g.options.filter((o) => selected.includes(o)).length;
+            const on = !searching && active?.group === g.group;
             return (
-              <div key={g.group} className="rounded-2xl border border-slate-200 bg-white transition-colors hover:border-slate-300">
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  onClick={() => setOpenGroups((o) => (o.includes(g.group) ? o.filter((x) => x !== g.group) : [...o, g.group]))}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left text-[15px] font-medium text-slate-800"
-                >
-                  {g.group}
-                  <span className="flex items-center gap-2 text-xs font-normal text-slate-400">
-                    {n > 0 ? <span className="rounded-full bg-slate-900 px-2 py-0.5 text-white">{n}</span> : opts.length}
-                    <svg viewBox="0 0 20 20" className={`h-4 w-4 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.8">
-                      <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                </button>
-                <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                  <div className="overflow-hidden">
-                    <div className="flex flex-wrap gap-2 px-4 pb-4">{opts.map(chip)}</div>
-                  </div>
-                </div>
-              </div>
+              <button
+                key={g.group}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => {
+                  setTab(g.group);
+                  setSearching(false);
+                  setQ("");
+                }}
+                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${on ? "bg-slate-100 text-slate-900 ring-1 ring-slate-300" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+              >
+                {g.group}
+                {n > 0 && <span className="ml-1.5 rounded-full bg-slate-900 px-1.5 text-[11px] text-white">{n}</span>}
+              </button>
             );
           })}
         </div>
+        <button
+          type="button"
+          aria-label="Search the list"
+          aria-pressed={searching}
+          onClick={() => setSearching((v) => !v)}
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-slate-500 transition-colors hover:text-slate-900 ${searching ? "border-slate-900 bg-slate-100" : "border-slate-200"}`}
+        >
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="9" r="5.5" /><path d="M13.5 13.5L17 17" strokeLinecap="round" /></svg>
+        </button>
+      </div>
+
+      {searching && (
+        <input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={placeholder}
+          className="h-9 w-full rounded-lg border border-slate-200 px-3 text-sm"
+        />
       )}
+
+      <div className="flex flex-wrap gap-1.5">
+        {searching && ql ? (matches.length ? matches.map(chip) : <p className="text-xs text-slate-400">Nothing like that in the list. Try a broader word, or pick from the tabs.</p>) : active ? active.options.map(chip) : null}
+      </div>
     </div>
   );
 }
