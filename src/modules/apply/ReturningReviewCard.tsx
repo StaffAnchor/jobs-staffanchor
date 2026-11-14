@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, LogOut, Pencil } from "lucide-react";
+import type { ReactNode } from "react";
+import { CheckCircle2, FileText, LogOut, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { yourLevelOptions } from "./options";
 
@@ -23,7 +24,14 @@ export type ReviewRow = {
   segment_data?: Record<string, unknown> | null;
   details_confirmed_at?: string | null;
   updated_at?: string | null;
+  resume_file_url?: string | null;
 };
+
+/** The CV file name as the candidate uploaded it (the stored name starts with a random id). */
+export function resumeDisplayName(path: string | null | undefined): string {
+  const base = (path ?? "").split("/").pop() ?? "";
+  return base.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "") || "Your resume";
+}
 
 const STALE_DAYS = 60;
 
@@ -65,6 +73,7 @@ export default function ReturningReviewCard({
   onApply,
   onUpdate,
   onLogout,
+  beforeApply,
 }: {
   candidate: ReviewRow;
   mandateTitle?: string;
@@ -73,6 +82,8 @@ export default function ReturningReviewCard({
   onApply: () => void;
   onUpdate: () => void;
   onLogout: () => void;
+  // Shown right above the apply button (the optional voice note).
+  beforeApply?: ReactNode;
 }) {
   const first = candidate.full_name?.trim().split(/\s+/)[0] ?? "";
   const age = daysSince(candidate.details_confirmed_at ?? candidate.updated_at);
@@ -108,6 +119,20 @@ export default function ReturningReviewCard({
             </div>
           ))}
         </dl>
+
+        {candidate.resume_file_url && (
+          <div className="mt-3 flex items-start gap-3 rounded-2xl border border-slate-200 px-4 py-3">
+            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-slate-900">{resumeDisplayName(candidate.resume_file_url)}</p>
+              <p className="text-xs text-slate-500">This is the resume we will send. Changed your resume since?{" "}
+                <button type="button" onClick={onUpdate} className="font-semibold text-blue-700 hover:underline">Replace it</button>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {beforeApply && <div className="mt-4">{beforeApply}</div>}
 
         {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
 

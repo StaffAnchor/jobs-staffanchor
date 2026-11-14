@@ -4,8 +4,6 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ApplicationQuestion } from "./applicationQuestions";
-import VoicePitch from "./VoicePitch";
-import { APPLY_VOICE_ENABLED } from "./applyVoice";
 
 // Shown right before the actual submit, on both the anonymous (ApplyForm)
 // and signed-in (SignedInApplyCard) Quick Apply paths -- a mandate with
@@ -13,14 +11,12 @@ import { APPLY_VOICE_ENABLED } from "./applyVoice";
 // them first, instead of weaving them into either of those already-large
 // components' own step logic.
 export default function ApplicationQuestionsModal({
-  mandateId,
   mandateTitle,
   questions,
   submitting,
   onCancel,
   onSubmit,
 }: {
-  mandateId?: string;
   mandateTitle?: string;
   questions: ApplicationQuestion[];
   submitting: boolean;
@@ -100,12 +96,6 @@ export default function ApplicationQuestionsModal({
             </div>
           ))}
         </div>
-
-        {APPLY_VOICE_ENABLED && mandateId && (
-          <div className={questions.length > 0 ? "mt-4" : ""}>
-            <VoicePitch mandateId={mandateId ?? ""} />
-          </div>
-        )}
 
         {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
 

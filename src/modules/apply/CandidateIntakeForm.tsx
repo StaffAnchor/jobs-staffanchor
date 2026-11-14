@@ -16,6 +16,8 @@ import { FormField } from "@/components/forms/form-field";
 import SignInPanel from "@/modules/auth/SignInPanel";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { APPLY_VOICE_ENABLED, voiceField } from "./applyVoice";
+import VoicePitch from "./VoicePitch";
+import { resumeDisplayName } from "./ReturningReviewCard";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
 import ProfileCallCard from "@/components/paid-call/profile-call-card";
 import EdgePromo from "@/components/edge/edge-promo";
@@ -625,7 +627,7 @@ export default function CandidateIntakeForm({
       return;
     }
     setErrorMsg(null);
-    if (mandateId && (screeningQuestions.length > 0 || APPLY_VOICE_ENABLED) && screeningAnswersRef.current === null) {
+    if (mandateId && screeningQuestions.length > 0 && screeningAnswersRef.current === null) {
       setShowScreeningModal(true);
       return;
     }
@@ -776,7 +778,7 @@ export default function CandidateIntakeForm({
               <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-6 text-sm text-slate-600 transition hover:border-slate-400 hover:bg-slate-50">
                 <FileText className="h-5 w-5 shrink-0 text-slate-400" />
                 <span className="min-w-0 flex-1 truncate">
-                  {resumeFile ? resumeFile.name : hasExistingResume ? "Resume on file. Choose a file to replace it" : "Tap to upload PDF or Word (.pdf, .doc, .docx)"}
+                  {resumeFile ? resumeFile.name : hasExistingResume ? `${resumeDisplayName(existing?.resume_file_url)} is on file. If you have updated your resume, choose a new file to replace it` : "Tap to upload PDF or Word (.pdf, .doc, .docx)"}
                 </span>
                 <input
                   type="file"
@@ -1209,6 +1211,8 @@ export default function CandidateIntakeForm({
           </p>
         )}
 
+        {isLast && mandateId && APPLY_VOICE_ENABLED && <VoicePitch mandateId={mandateId} />}
+
         <div className="flex items-center gap-3">
           {pos > 0 && (
             <Button type="button" variant="outline" onClick={goBack} className="h-12 shrink-0 rounded-xl">
@@ -1234,7 +1238,6 @@ export default function CandidateIntakeForm({
 
       {showScreeningModal && (
         <ApplicationQuestionsModal
-          mandateId={mandateId}
           mandateTitle={mandateTitle}
           questions={screeningQuestions}
           submitting={submitting}
