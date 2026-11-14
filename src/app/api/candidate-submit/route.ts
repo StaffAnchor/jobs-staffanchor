@@ -5,6 +5,7 @@ import { generateAiPassportForCandidate } from "@/lib/ai-passport";
 import { waitUntil } from "@vercel/functions";
 import { decideSubmitAccess } from "@/lib/submit-access";
 import { recordAcquisition } from "@/lib/attribution-server";
+import { saveApplicationVoice, type VoiceNoteInput } from "@/lib/application-voice";
 
 export const runtime = "nodejs";
 
@@ -46,6 +47,8 @@ export async function POST(req: NextRequest) {
     completionRef?: string;
     // True when the candidate has just reviewed their details and confirmed them.
     confirmDetails?: boolean;
+    // Optional voice note ("why do you suit this role?") that comes with an application. Only used with a mandateId.
+    voiceNote?: VoiceNoteInput;
   };
   try {
     body = await req.json();
@@ -53,7 +56,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { payload, mandateId, screeningAnswers, skipWelcomeEmail, completionRef, confirmDetails } = body;
+  const { payload, mandateId, screeningAnswers, skipWelcomeEmail, completionRef, confirmDetails, voiceNote } = body;
   if (!payload || typeof payload !== "object") {
     return NextResponse.json({ error: "payload is required." }, { status: 400 });
   }
@@ -157,6 +160,10 @@ export async function POST(req: NextRequest) {
       // ai_summary/stability_score despite having a resume: the generation
       // was getting cut off mid-flight. waitUntil() keeps the invocation
       // alive until the promise settles, even after the response returns.
+      if (mandateId && voiceNote && typeof voiceNote === "object") {
+        // Never fails the application: the voice note is an extra.
+        waitUntil(saveApplicationVoice(admin, { mandateId, candidateId: candidateId as string, voice: voiceNote }).catch((err) => console.error("Voice note save failed", err)));
+      }
       waitUntil(recordAcquisition(admin, req, { candidateId: candidateId as string, mandateId: mandateId ?? null, isNewSignup }));
       waitUntil(
         generateAiPassportForCandidate(candidateId as string, admin, { note: "auto_generated_on_submit" }).catch(

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/forms/form-field";
 import SignInPanel from "@/modules/auth/SignInPanel";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
+import { APPLY_VOICE_ENABLED, voiceField } from "./applyVoice";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
 import ProfileCallCard from "@/components/paid-call/profile-call-card";
 import EdgePromo from "@/components/edge/edge-promo";
@@ -571,6 +572,7 @@ export default function CandidateIntakeForm({
           payload,
           ...(mandateId ? { mandateId } : {}),
           ...(screeningAnswersRef.current?.length ? { screeningAnswers: screeningAnswersRef.current } : {}),
+          ...voiceField(mandateId),
           // Anonymous candidates get a sign-in code on the success screen, so
           // the separate "welcome, here's how to sign back in" email would
           // just be a second, redundant message seconds later.
@@ -623,7 +625,7 @@ export default function CandidateIntakeForm({
       return;
     }
     setErrorMsg(null);
-    if (mandateId && screeningQuestions.length > 0 && screeningAnswersRef.current === null) {
+    if (mandateId && (screeningQuestions.length > 0 || APPLY_VOICE_ENABLED) && screeningAnswersRef.current === null) {
       setShowScreeningModal(true);
       return;
     }
@@ -1232,6 +1234,7 @@ export default function CandidateIntakeForm({
 
       {showScreeningModal && (
         <ApplicationQuestionsModal
+          mandateId={mandateId}
           mandateTitle={mandateTitle}
           questions={screeningQuestions}
           submitting={submitting}
