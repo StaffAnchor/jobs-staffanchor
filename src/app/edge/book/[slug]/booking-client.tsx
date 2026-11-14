@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Script from "next/script";
-import { comboFor } from "@/lib/resume-plans";
+import { PLANS, SESSION_PRICE, comboFor, planForYears } from "@/lib/resume-plans";
 import { trackStep } from "@/lib/edge-step";
-import { LONG_LENGTH } from "@/lib/pro-lengths";
+import { FLEX_SLUGS, SESSION_LENGTHS } from "@/lib/pro-lengths";
+import { experienceOptions } from "@/modules/apply/options";
 import OtherServices from "@/components/edge/other-services";
 import { ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Clock, Video } from "lucide-react";
 
@@ -35,9 +36,10 @@ export default function BookingClient({ service }: { service: Service }) {
   const [date, setDate] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
-  const long = LONG_LENGTH[service.slug];
+  const flex = FLEX_SLUGS.has(service.slug);
+  const isCombo = service.slug === "job-search-strategy";
   // The longer length is the one pre-selected where it is offered; people can switch to the shorter one.
-  const [minutes, setMinutes] = useState(long?.minutes ?? service.duration_min);
+  const [minutes, setMinutes] = useState<number>(flex ? 90 : service.duration_min);
   const [step, setStep] = useState<"time" | "details" | "done">("time");
   const [form, setForm] = useState({ name: "", email: "", phone: "", targetRole: "", notes: "", years: "", consent: false, website: "" });
   const [busy, setBusy] = useState(false);
@@ -134,29 +136,38 @@ export default function BookingClient({ service }: { service: Service }) {
     rz.open();
   }
 
-  const byExp = !!service.price_by_experience;
+  const byExp = flex || !!service.price_by_experience;
   const yearsNum = form.years.trim() === "" ? NaN : Math.floor(Number(form.years));
   const yearsOk = !byExp || (Number.isFinite(yearsNum) && yearsNum >= 0 && yearsNum <= 60);
-  const combo = byExp && yearsOk ? comboFor(yearsNum) : null;
-  const payable = combo ? combo.total : long && minutes === long.minutes ? long.priceInr : service.price_inr;
+  const known = byExp && Number.isFinite(yearsNum) && yearsOk;
+  const plan = known ? planForYears(yearsNum) : null;
+  const priceFor = (m: number): number | null => (plan ? (isCombo ? comboFor(yearsNum, m).total : SESSION_PRICE[plan][m === 90 ? 90 : 60]) : null);
+  const combo = isCombo && known ? comboFor(yearsNum, minutes) : null;
+  const payable = priceFor(minutes) ?? service.price_inr;
   const expBox = byExp ? (
     <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3.5">
-                  <label className="text-sm font-medium text-slate-900" htmlFor="yrs">Years of total work experience</label>
-                  <input id="yrs" className={`${field} mt-2`} placeholder="For example 8" inputMode="numeric" value={form.years} onChange={(e) => setForm({ ...form, years: e.target.value.replace(/\D/g, "").slice(0, 2) })} />
-                  {combo ? (
-                    <dl className="mt-3 space-y-1 text-sm text-slate-700">
-                      <div className="flex justify-between"><dt>Job strategy session (45 mins)</dt><dd>{rupees(combo.strategy)}</dd></div>
-                      <div className="flex justify-between"><dt>Resume Writing, {yearsNum} yrs</dt><dd>{rupees(combo.resume)}</dd></div>
-                      <div className="flex justify-between text-slate-500"><dt>Total</dt><dd className="line-through">{rupees(combo.subtotal)}</dd></div>
-                      <div className="flex justify-between font-medium text-emerald-700"><dt>Combo discount (20%)</dt><dd>-{rupees(combo.discount)}</dd></div>
-                      <div className="flex justify-between border-t border-indigo-100 pt-1.5 text-base font-semibold text-slate-900"><dt>You pay</dt><dd>{rupees(combo.total)}</dd></div>
-                    </dl>
-                  ) : (
-                    <p className="mt-2 text-xs text-slate-500">Your price depends on your experience: Resume Writing is priced for 0-5, 6-12 and 13+ years, and the combo takes 20% off.</p>
-                  )}
-                </div>
+      <label className="text-sm font-medium text-slate-900" htmlFor="yrs">First, your total work experience</label>
+      <select id="yrs" className={`${field} mt-2`} value={form.years} onChange={(e) => setForm({ ...form, years: e.target.value })}>
+        <option value="">Select your experience</option>
+        {experienceOptions.map((o) => (
+          <option key={o.label} value={String(o.value)}>{o.label}</option>
+        ))}
+      </select>
+      {plan && <p className="mt-2 text-xs text-slate-600">{PLANS[plan].label} · {PLANS[plan].band}. Your price is set by this.</p>}
+      {combo ? (
+        <dl className="mt-3 space-y-1 text-sm text-slate-700">
+          <div className="flex justify-between"><dt>Interview prep + job strategy ({minutes} mins)</dt><dd>{rupees(combo.session)}</dd></div>
+          <div className="flex justify-between"><dt>Resume Writing, {PLANS[combo.plan].label}</dt><dd>{rupees(combo.resume)}</dd></div>
+          <div className="flex justify-between text-slate-500"><dt>Total</dt><dd className="line-through">{rupees(combo.subtotal)}</dd></div>
+          <div className="flex justify-between font-medium text-emerald-700"><dt>Combo discount (20%)</dt><dd>-{rupees(combo.discount)}</dd></div>
+          <div className="flex justify-between border-t border-indigo-100 pt-1.5 text-base font-semibold text-slate-900"><dt>You pay</dt><dd>{rupees(combo.total)}</dd></div>
+        </dl>
+      ) : !plan ? (
+        <p className="mt-2 text-xs text-slate-500">{isCombo ? "Select your experience to see your price: the session and Resume Writing are priced by experience, and the combo takes 20% off." : "Select your experience to see your price. It is set by experience and by how long you book."}</p>
+      ) : null}
+    </div>
   ) : null;
-  const detailsOk = yearsOk && form.name.trim().length > 1 && /\S+@\S+\.\S+/.test(form.email) && form.phone.replace(/\D/g, "").length >= 10 && form.consent;
+  const detailsOk = yearsOk && (!byExp || !!plan) && form.name.trim().length > 1 && /\S+@\S+\.\S+/.test(form.email) && form.phone.replace(/\D/g, "").length >= 10 && form.consent;
   const paras = service.description.split(/\n{2,}/);
   useEffect(() => {
     if (detailsOk && slot) trackStep("edge", service.slug, "ready", { src });
@@ -177,7 +188,7 @@ export default function BookingClient({ service }: { service: Service }) {
             <p className="mt-2 text-sm text-slate-600">with Gagan Sharma, Founder, StaffAnchor</p>
           </div>
           <div className="grid grid-cols-3 divide-x divide-slate-100 border-y border-slate-100 text-sm">
-            <div className="px-5 py-4 font-semibold">{byExp && !combo ? <span className="text-xs font-normal text-slate-500">from </span> : null}{rupees(payable)} <span className="text-xs font-normal text-slate-500">incl. GST</span></div>
+            <div className="px-5 py-4 font-semibold">{byExp && !plan ? <span className="text-xs font-normal text-slate-500">from </span> : null}{rupees(payable)} <span className="text-xs font-normal text-slate-500">incl. GST</span></div>
             <div className="flex items-center gap-2 px-5 py-4"><CalendarDays className="h-4 w-4" /> {minutes} mins</div>
             <div className="flex items-center gap-2 px-5 py-4"><Video className="h-4 w-4" /> Video meeting</div>
           </div>
@@ -217,7 +228,11 @@ export default function BookingClient({ service }: { service: Service }) {
             <div className="space-y-3">
               <button onClick={() => setStep("time")} className="mb-1 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900"><ArrowLeft className="h-4 w-4" /> Change time</button>
               <p className="flex items-center gap-2 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700"><Clock className="h-4 w-4" /> {slot ? longWhen(slot) : ""} IST, {minutes} mins</p>
-              {combo && <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">{yearsNum} yrs experience: {rupees(combo.subtotal)} less 20% = <b>{rupees(combo.total)}</b></p>}
+              {combo ? (
+                <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">{yearsNum} yrs experience: {rupees(combo.subtotal)} less 20% = <b>{rupees(combo.total)}</b></p>
+              ) : plan ? (
+                <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">{PLANS[plan].label} ({PLANS[plan].band}), {minutes} mins: <b>{rupees(payable)}</b></p>
+              ) : null}
               <h2 className="pt-1 text-lg font-semibold text-slate-900">Your details</h2>
               <input className={field} placeholder="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="name" />
               <input className={field} placeholder="Email (the invite goes here)" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} autoComplete="email" />
@@ -237,24 +252,27 @@ export default function BookingClient({ service }: { service: Service }) {
           ) : (
             <div className="space-y-5">
               {expBox}
-              {long && (
+              {flex && (
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">How long?</h2>
                   <div className="mt-2 grid grid-cols-2 gap-2">
-                    {[{ m: service.duration_min, p: service.price_inr }, { m: long.minutes, p: long.priceInr }].map((o) => (
-                      <button
-                        key={o.m}
-                        type="button"
-                        aria-pressed={minutes === o.m}
-                        onClick={() => { if (minutes !== o.m) { setMinutes(o.m); setSlot(null); setError(null); } }}
-                        className={`rounded-xl border px-3 py-2.5 text-left ${minutes === o.m ? "border-amber-700 bg-amber-50" : "border-slate-200 hover:border-slate-400"}`}
-                      >
-                        <span className="block text-sm font-semibold text-slate-900">{o.m} minutes</span>
-                        <span className="block text-[13px] text-slate-600">{rupees(o.p)} <span className="text-xs text-slate-400">incl. GST</span></span>
-                      </button>
-                    ))}
+                    {SESSION_LENGTHS.map((m) => {
+                      const p = priceFor(m);
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          aria-pressed={minutes === m}
+                          onClick={() => { if (minutes !== m) { setMinutes(m); setSlot(null); setError(null); } }}
+                          className={`rounded-xl border px-3 py-2.5 text-left ${minutes === m ? "border-amber-700 bg-amber-50" : "border-slate-200 hover:border-slate-400"}`}
+                        >
+                          <span className="block text-sm font-semibold text-slate-900">{m} minutes</span>
+                          <span className="block text-[13px] text-slate-600">{p != null ? rupees(p) : "price after experience"} {p != null && <span className="text-xs text-slate-400">incl. GST</span>}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  {minutes === long.minutes && <p className="mt-2 text-xs text-slate-500">A longer session, with more time for questions and feedback.</p>}
+                  {minutes === 90 && <p className="mt-2 text-xs text-slate-500">A longer session, with more time for questions and feedback.</p>}
                 </div>
               )}
               <h2 className="text-lg font-semibold text-slate-900">When should we meet?</h2>
@@ -293,8 +311,8 @@ export default function BookingClient({ service }: { service: Service }) {
                   </div>
                   <p className="text-xs text-slate-500">All times are in India Standard Time (GMT+5:30).</p>
                   {error && <p className="text-sm text-red-600">{error}</p>}
-                  <button onClick={() => { setError(null); setStep("details"); }} disabled={!slot || !yearsOk} className="flex w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-3.5 text-[15px] font-semibold text-white disabled:opacity-40">
-                    {yearsOk ? "Continue" : "Enter your years of experience to continue"}
+                  <button onClick={() => { setError(null); setStep("details"); }} disabled={!slot || !yearsOk || (byExp && !plan)} className="flex w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-3.5 text-[15px] font-semibold text-white disabled:opacity-40">
+                    {yearsOk && (!byExp || plan) ? "Continue" : "Select your experience to continue"}
                   </button>
                 </>
               )}

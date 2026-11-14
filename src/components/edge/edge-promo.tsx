@@ -82,7 +82,7 @@ export default function EdgePromo({ variant, page, roleTitle, className = "" }: 
         <p className="mt-2 max-w-2xl text-[14.5px] leading-relaxed text-indigo-100/90">Practise with someone who has built and led sales teams for 15+ years, get a resume written for you, or have a recruiter call you about your profile.</p>
         <div className="mt-5 grid gap-2.5 sm:grid-cols-3">
           {[
-            { icon: Mic, t: "Interview prep + mock interview", p: MOCK_INTERVIEW_FROM, href: `${MOCK}?${src}`, k: `${page}-mock-interview` },
+            { icon: Mic, t: "Interview prep + job strategy", p: MOCK_INTERVIEW_FROM, href: `${MOCK}?${src}`, k: `${page}-mock-interview` },
             { icon: FileText, t: "Resume writing", p: `from ${inr(RESUME_FROM_RUPEES)}`, href: `/resume-writing?${src}`, k: `${page}-resume` },
             { icon: PhoneCall, t: "Recruiter call", p: inr(PAID_CALL_RUPEES), href: `/jobs?${src}`, k: `${page}-recruiter-call` },
           ].map((s) => (

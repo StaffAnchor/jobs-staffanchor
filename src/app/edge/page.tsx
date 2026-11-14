@@ -13,14 +13,14 @@ import { jsonLdString } from "@/lib/job-seo";
 
 // The one StaffAnchor Edge page. staffanchor.com/edge sends visitors here.
 export const metadata: Metadata = {
-  title: "Sales Interview Prep, Mock Interview and Resume Writing | StaffAnchor Edge",
+  title: "Sales Interview Preparation, Job Strategy and Resume Writing | StaffAnchor Edge",
   description:
-    "1:1 video sessions with Gagan Sharma, founder of StaffAnchor, for sales and leadership professionals: interview prep with a full mock interview, a job search strategy with a resume rebuild, and resume writing.",
+    "1:1 video sessions with Gagan Sharma, founder of StaffAnchor, for sales and leadership professionals: interview preparation with job strategy, resume writing, and both together at 20% off.",
   alternates: { canonical: "https://jobs.staffanchor.com/edge" },
   // The share card (app/edge/opengraph-image.png) needs its own title here, or the link preview shows the site-wide one.
   openGraph: {
     title: "StaffAnchor Edge | Your next sales role deserves an edge",
-    description: "1:1 sessions for sales and leadership professionals: interview prep with a mock interview, job strategy with a resume rebuild, and resume writing.",
+    description: "1:1 sessions for sales and leadership professionals: interview preparation with job strategy, resume writing, and both together at 20% off.",
     url: "https://jobs.staffanchor.com/edge",
     siteName: "StaffAnchor Edge",
     type: "website",
@@ -41,46 +41,53 @@ const SESSIONS = [
   {
     id: "mock-interview",
     icon: Mic,
-    title: "Interview Prep + Mock Interview",
+    title: "Interview Preparation + Job Strategy",
     sub: "Sales and Leadership Role",
-    tagline: "A real interview, then the feedback nobody gives you.",
+    tagline: "A real interview, the feedback nobody gives you, and a plan for your next role.",
     meta: "60 or 90 mins · Video meeting",
-    price: "from ₹1,999",
+    price: "from ₹2,000",
+    note: "60 mins / 90 mins, incl. GST",
+    bands: [
+      { label: "Early stage", band: "0-5 yrs", price: "₹2,000 / ₹3,000" },
+      { label: "Mid level", band: "6-12 yrs", price: "₹3,000 / ₹4,500" },
+      { label: "Senior / CXO", band: "13+ yrs", price: "₹5,000 / ₹7,500" },
+    ],
     points: [
-      "Interview prep first: we shape your story, your numbers and your answers to the likely questions for the role.",
+      "Interview preparation first: we shape your story, your numbers and your answers to the likely questions for the role.",
       "Then a full interview loop for the role you're targeting: discovery on your numbers, a scenario on team or pipeline management, and the tough questions on gaps and attrition.",
       "A plain debrief on exactly where you'd have been screened out, and how to fix it.",
+      "Job strategy: where your next role comes from, which companies, which route in, what to say, and a sharper LinkedIn headline and About.",
       "Bring a specific role or JD if you have one.",
     ],
   },
   {
     id: "job-search-strategy",
     icon: Compass,
-    title: "Job Strategy + Resume Rebuild",
+    title: "Interview Prep + Job Strategy + Resume Rebuild",
     sub: "",
-    tagline: "Get the resume written. Then fix how you're using it.",
-    meta: "45 mins · Video meeting · Resume in Word and PDF",
-    price: "From ₹1,758",
-    was: "From ₹2,198",
-    note: "20% off the two, incl. GST",
+    tagline: "Get the resume written. Then get ready to use it.",
+    meta: "60 or 90 mins · Video meeting · Resume in Word and PDF",
+    price: "From ₹3,200",
+    was: "From ₹4,000",
+    note: "60 mins / 90 mins, 20% off the two, incl. GST",
     bands: [
-      { label: "Early stage", band: "0-5 yrs", price: "₹1,758", was: "₹2,198" },
-      { label: "Mid level", band: "6-12 yrs", price: "₹2,799", was: "₹3,499" },
-      { label: "Senior / CXO", band: "13+ yrs", price: "₹3,999", was: "₹4,999" },
+      { label: "Early stage", band: "0-5 yrs", price: "₹3,200 / ₹4,000", was: "₹4,000 / ₹5,000" },
+      { label: "Mid level", band: "6-12 yrs", price: "₹4,800 / ₹6,000", was: "₹6,000 / ₹7,500" },
+      { label: "Senior / CXO", band: "13+ yrs", price: "₹7,200 / ₹9,200", was: "₹9,000 / ₹11,500" },
     ],
     popular: true,
     points: [
-      "A 45-minute 1:1 strategy session (₹999 early stage, ₹1,500 mid level, ₹2,000 senior): where your next role comes from, which companies, which route in, what to say, and a sharper LinkedIn headline and About.",
-      "Plus Resume Writing, written for you for your experience level (₹1,199, ₹1,999 or ₹2,999), as Word and PDF.",
-      "Pay one price, 20% less than buying the two separately. Enter your years of experience to see yours.",
+      "The Interview Preparation + Job Strategy session (60 or 90 minutes): a full mock interview and debrief, and where your next role comes from, which companies, which route in and what to say.",
+      "Plus Resume Writing, written for you for your experience level (₹2,000, ₹3,000 or ₹4,000), as Word and PDF.",
+      "Pay one price, 20% less than buying the two separately. Select your experience first to see yours.",
     ],
   },
 ];
 
 const GUIDE = [
-  { when: "I have an interview coming up", then: "Interview Prep + Mock Interview", href: "#mock-interview" },
+  { when: "I have an interview coming up", then: "Interview Preparation + Job Strategy", href: "#mock-interview" },
   { when: "I just want a great resume, written for me", then: "Resume Writing", href: "#resume-writing" },
-  { when: "I'm not getting shortlisted or called", then: "Job Strategy + Resume Rebuild", href: "#job-search-strategy" },
+  { when: "I'm not getting shortlisted or called", then: "Interview Prep + Job Strategy + Resume Rebuild", href: "#job-search-strategy" },
   { when: "I want a recruiter to look at my profile and call me", then: "Receive a call from a recruiter", href: "#recruiter-call" },
 ];
 
@@ -100,11 +107,12 @@ const STEPS = [
 const FAQ = [
   { q: "Do I need to create an account?", a: "No. A name, email and mobile number is all we need to book." },
   { q: "How do I join the session?", a: "Right after you pay, you get a Google Calendar invite with the Meet link, and a confirmation email from StaffAnchor with what to prepare." },
-  { q: "What should I prepare?", a: "For the interview prep and mock interview, bring the role or job description you're targeting. For the strategy session, send your resume at least 24 hours before." },
+  { q: "What should I prepare?", a: "Bring the role or job description you're targeting, and send your resume at least 24 hours before the session." },
   { q: "Can I reschedule?", a: "Yes. Reply to your confirmation email and we'll move it." },
   { q: "Do prices include GST? Can I get an invoice?", a: "Yes, prices include GST. A tax invoice is generated for every payment. Reply to your confirmation email and we'll send it to you." },
   { q: "Are the sessions only for sales professionals?", a: "They're built for sales and revenue professionals, from BDRs to leaders. If you're in another field you can still book, but the interview scenarios and examples are sales-focused." },
-  { q: "What do I get in the Job Strategy + Resume Rebuild combo?", a: "Resume Writing is done for you: you fill in a short form and receive a finished resume as Word and PDF. The combo adds a 45-minute 1:1 strategy session (₹999 early stage, ₹1,500 mid level, ₹2,000 senior) to Resume Writing for your experience level and takes 20% off the total." },
+  { q: "How is the price decided?", a: "By your years of experience and, for the session, how long you book. Interview Preparation + Job Strategy is ₹2,000 (60 mins) or ₹3,000 (90 mins) for 0-5 years, ₹3,000 or ₹4,500 for 6-12 years, and ₹5,000 or ₹7,500 for 13+ years. Resume Writing is ₹2,000, ₹3,000 or ₹4,000 for the same bands. All prices include GST." },
+  { q: "What do I get in the Interview Prep + Job Strategy + Resume Rebuild combo?", a: "Resume Writing is done for you: you fill in a short form and receive a finished resume as Word and PDF. The combo adds the Interview Preparation + Job Strategy session (60 or 90 minutes) and takes 20% off the total of the two, for your experience level." },
 ];
 
 // Prices by experience level, laid out as a small table inside a card. `was` is the price before the 20% combo discount.
@@ -264,13 +272,13 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
                   ))}
                 </ul>
                 <BandPrices rows={[
-                  { label: "Early stage", band: "0-5 yrs", price: "₹1,199" },
-                  { label: "Mid level", band: "6-12 yrs", price: "₹1,999" },
-                  { label: "Senior / CXO", band: "13+ yrs", price: "₹2,999" },
+                  { label: "Early stage", band: "0-5 yrs", price: "₹2,000" },
+                  { label: "Mid level", band: "6-12 yrs", price: "₹3,000" },
+                  { label: "Senior / CXO", band: "13+ yrs", price: "₹4,000" },
                 ]} />
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
                   <div>
-                    <p className={`${DISPLAY} text-2xl font-semibold`}>From ₹1,199</p>
+                    <p className={`${DISPLAY} text-2xl font-semibold`}>From ₹2,000</p>
                     <p className="text-xs text-slate-500">incl. GST</p>
                   </div>
                   <TrackedLink href="/resume-writing?src=edge_page" from="edge" track="resume-writing" className="group inline-flex items-center whitespace-nowrap rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-slate-900">
@@ -310,11 +318,11 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
       <section className="bg-[#12131A] px-4 py-20 text-white sm:px-6">
         <div className="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-2">
           <Reveal>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200">Inside the interview prep + mock interview</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200">Inside the interview preparation + job strategy session</span>
             <h2 className={`${DISPLAY} mt-4 text-3xl font-light leading-tight tracking-tight sm:text-5xl`}>Not a chat. A <span className={`${SERIF} font-medium italic text-indigo-300`}>real</span> interview loop.</h2>
             <p className="mt-5 max-w-md text-lg leading-8 text-slate-300">You get the questions a hiring manager would actually ask for the role you want, then the honest verdict most candidates never hear.</p>
             <a href={`${BOOK}/mock-interview?src=${src}`} className="group mt-8 inline-flex items-center rounded-xl bg-white px-6 py-3.5 text-[15px] font-semibold text-[#12131A] transition hover:bg-indigo-100">
-              Book interview prep + mock interview <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              Book interview prep + job strategy <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
           </Reveal>
           <Reveal delay={100}>
@@ -435,7 +443,7 @@ export default async function EdgePage({ searchParams }: { searchParams: Promise
               Book the combo <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
             <a href={`${BOOK}/mock-interview?src=${src}`} className="inline-flex items-center rounded-xl border border-white/30 px-7 py-4 text-[15px] font-semibold text-white transition hover:bg-white/10">
-              Book interview prep + mock interview
+              Book interview prep + job strategy
             </a>
           </div>
         </Reveal>

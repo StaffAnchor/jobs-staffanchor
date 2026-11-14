@@ -6,8 +6,8 @@ import { COMBO_FROM_RUPEES, MOCK_INTERVIEW_FROM, RESUME_FROM_RUPEES, inr } from 
 // On a booking page: the other StaffAnchor Edge services, so someone who arrived for one can see what else is there.
 // Placed below the booking area so it never gets between a visitor and paying. Clicks are recorded as "booking-page".
 const ALL = [
-  { slug: "mock-interview", what: "mock-interview", icon: Mic, title: "Interview Prep + Mock Interview", line: "60 or 90 mins with Gagan Sharma: a real interview loop, then the honest debrief.", price: MOCK_INTERVIEW_FROM, href: "/edge/book/mock-interview" },
-  { slug: "job-search-strategy", what: "strategy", icon: Compass, title: "Job Strategy + Resume Rebuild", line: "A 45-minute strategy session plus your resume written for you. 20% off the two.", price: `from ${inr(COMBO_FROM_RUPEES)}`, href: "/edge/book/job-search-strategy" },
+  { slug: "mock-interview", what: "mock-interview", icon: Mic, title: "Interview Preparation + Job Strategy", line: "60 or 90 mins with Gagan Sharma: a real interview loop, the honest debrief and a plan for your next role.", price: MOCK_INTERVIEW_FROM, href: "/edge/book/mock-interview" },
+  { slug: "job-search-strategy", what: "strategy", icon: Compass, title: "Interview Prep + Job Strategy + Resume Rebuild", line: "The session plus your resume written for you. 20% off the two.", price: `from ${inr(COMBO_FROM_RUPEES)}`, href: "/edge/book/job-search-strategy" },
   { slug: "resume-writing", what: "resume", icon: FileText, title: "Resume Writing", line: "Written for you by experience level, ATS-friendly, in Word and PDF.", price: `from ${inr(RESUME_FROM_RUPEES)}`, href: "/resume-writing" },
   { slug: "recruiter-call", what: "recruiter-call", icon: PhoneCall, title: "Apply + Recruiter call", line: `Apply to any role and a recruiter phones you within ${PAID_CALL_WORKING_DAYS} working days.`, price: inr(PAID_CALL_RUPEES), href: "/jobs" },
 ];

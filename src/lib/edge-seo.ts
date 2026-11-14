@@ -33,9 +33,9 @@ export function edgeJsonLd(faq: { q: string; a: string }[]) {
     "@graph": [
       ORG,
       GAGAN,
-      service("Interview Prep + Mock Interview for sales roles", "Interview coaching", "A 60-minute 1:1 video session: interview prep, then a full mock interview loop for the sales or leadership role you are targeting, and a plain debrief on where you would be screened out and how to fix it.", `${SITE}/edge/book/mock-interview`, price(MOCK_INTERVIEW_RUPEES)),
-      service("Job Strategy + Resume Rebuild", "Career coaching and resume writing", "A 45-minute 1:1 job search strategy session plus a resume written for your experience level, delivered as Word and PDF. Priced by experience level, 20% off the two together.", `${SITE}/edge/book/job-search-strategy`, range(COMBO_FROM_RUPEES, 3999)),
-      service("Resume Writing for sales professionals", "Resume writing", "A professionally written, ATS-friendly resume delivered as Word and PDF, priced by years of experience: early stage, mid level and senior / CXO.", `${SITE}/resume-writing`, range(RESUME_FROM_RUPEES, 2999)),
+      service("Interview Preparation + Job Strategy for sales roles", "Interview coaching", "A 60 or 90-minute 1:1 video session: interview preparation, a full mock interview loop for the sales or leadership role you are targeting, a plain debrief on where you would be screened out and how to fix it, and a job strategy for your next role. Priced by years of experience and length.", `${SITE}/edge/book/mock-interview`, range(MOCK_INTERVIEW_RUPEES, 7500)),
+      service("Interview Prep + Job Strategy + Resume Rebuild", "Career coaching and resume writing", "The 60 or 90-minute 1:1 interview preparation and job strategy session plus a resume written for your experience level, delivered as Word and PDF. Priced by experience level and length, 20% off the two together.", `${SITE}/edge/book/job-search-strategy`, range(COMBO_FROM_RUPEES, 9200)),
+      service("Resume Writing for sales professionals", "Resume writing", "A professionally written, ATS-friendly resume delivered as Word and PDF, priced by years of experience: early stage, mid level and senior / CXO.", `${SITE}/resume-writing`, range(RESUME_FROM_RUPEES, 4000)),
       service("Recruiter call", "Recruiter profile discussion", `Apply to a role and a StaffAnchor recruiter phones you within ${PAID_CALL_WORKING_DAYS} working days for a one-to-one profile discussion, whether or not that role is a match. Refunded if we miss it.`, `${SITE}/jobs`, price(PAID_CALL_RUPEES)),
       faqJsonLd(faq),
     ],
@@ -48,7 +48,7 @@ export function resumeJsonLd(faq: { q: string; a: string }[]) {
     "@context": "https://schema.org",
     "@graph": [
       ORG,
-      service("Resume Writing for sales professionals", "Resume writing", "A professionally written, ATS-friendly resume delivered as Word and PDF. First draft within 3 working days of your details.", `${SITE}/resume-writing`, [tier("Early Stage (0-5 years)", 1199), tier("Mid Level (6-12 years)", 1999), tier("Senior / CXO (13+ years)", 2999)]),
+      service("Resume Writing for sales professionals", "Resume writing", "A professionally written, ATS-friendly resume delivered as Word and PDF. First draft within 3 working days of your details.", `${SITE}/resume-writing`, [tier("Early Stage (0-5 years)", 2000), tier("Mid Level (6-12 years)", 3000), tier("Senior / CXO (13+ years)", 4000)]),
       faqJsonLd(faq),
     ],
   };

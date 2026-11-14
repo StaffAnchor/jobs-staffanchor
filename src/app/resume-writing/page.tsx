@@ -26,7 +26,7 @@ const TIERS: Tier[] = [
     key: "early",
     label: "Early Stage",
     band: "0-5 years",
-    price: "₹1,199",
+    price: "₹2,000",
     headline: "Your first impression starts with your resume.",
     sub: "Whether you're a fresher or a few years in, your resume needs to communicate potential with clarity and confidence.",
     revisions: "1 revision round",
@@ -37,7 +37,7 @@ const TIERS: Tier[] = [
     key: "mid",
     label: "Mid Level",
     band: "6-12 years",
-    price: "₹1,999",
+    price: "₹3,000",
     headline: "Mid-career deserves mid-career positioning.",
     sub: "Your resume must go beyond listing roles and present leadership, ownership, and measurable business impact.",
     revisions: "1 revision round",
@@ -48,7 +48,7 @@ const TIERS: Tier[] = [
     key: "senior",
     label: "Senior / CXO",
     band: "13+ years",
-    price: "₹2,999",
+    price: "₹4,000",
     headline: "Executive presence starts on the page.",
     sub: "Senior professionals need an executive narrative that communicates strategic leadership, scale, and transformation.",
     revisions: "2 revision rounds",
@@ -74,7 +74,7 @@ const DELIVERABLES = [
 ];
 
 const FAQ = [
-  { q: "How is the price decided?", a: "By your years of experience only: ₹1,199 for 0-5 years, ₹1,999 for 6-12 years and ₹2,999 for 13 or more. All prices include GST." },
+  { q: "How is the price decided?", a: "By your years of experience only: ₹2,000 for 0-5 years, ₹3,000 for 6-12 years and ₹4,000 for 13 or more. All prices include GST." },
   { q: "What format will I receive my resume in?", a: "You receive your final resume in both editable Word and print-ready PDF formats." },
   { q: "How many revision rounds are included?", a: "Early Stage and Mid Level plans include 1 revision round. Senior / CXO includes 2 revision rounds." },
   { q: "When does the 3-day delivery clock start?", a: "The 3 working day timeline starts once we receive your completed details form. Working days are Monday to Saturday." },
@@ -107,11 +107,11 @@ export default async function ResumeWritingPage({ searchParams }: { searchParams
                 Order my resume <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link href="/edge/book/job-search-strategy?src=resume_page" className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-6 py-4 text-[15px] font-semibold text-slate-800 transition hover:border-slate-900">
-                Add a strategy session, save 20%
+                Add interview prep + job strategy, save 20%
               </Link>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500">
-              {["From ₹1,199, GST included", "Word and PDF", "No account needed"].map((t) => (
+              {["From ₹2,000, GST included", "Word and PDF", "No account needed"].map((t) => (
                 <li key={t} className="flex items-center gap-1.5"><Check className="h-4 w-4 text-emerald-500" /> {t}</li>
               ))}
             </ul>
@@ -252,11 +252,11 @@ export default async function ResumeWritingPage({ searchParams }: { searchParams
         <Reveal>
           <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm md:flex-row md:items-center">
             <div>
-              <h2 className={`${DISPLAY} text-2xl font-semibold tracking-tight`}>Add a strategy session and save 20%</h2>
-              <p className="mt-2 max-w-xl text-slate-600">Take Resume Writing together with a 45-minute 1:1 strategy session with Gagan (₹999 early stage, ₹1,500 mid level, ₹2,000 senior), where he maps where your next role comes from. The combo takes 20% off the total: ₹1,758, ₹2,799 or ₹3,999 for your level.</p>
+              <h2 className={`${DISPLAY} text-2xl font-semibold tracking-tight`}>Add interview prep + job strategy and save 20%</h2>
+              <p className="mt-2 max-w-xl text-slate-600">Take Resume Writing together with a 60 or 90-minute 1:1 interview preparation and job strategy session with Gagan, where he runs a mock interview and maps where your next role comes from. The combo takes 20% off the total, from ₹3,200 for your level.</p>
             </div>
             <Link href="/edge/book/job-search-strategy?src=resume_page" className="group inline-flex shrink-0 items-center whitespace-nowrap rounded-xl border border-slate-300 px-6 py-3.5 text-[15px] font-semibold transition hover:border-slate-900">
-              Book the combo · from ₹1,758 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              Book the combo · from ₹3,200 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
         </Reveal>

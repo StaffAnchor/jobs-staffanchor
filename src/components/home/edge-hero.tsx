@@ -6,9 +6,9 @@ import { nextOpenSlot, slotLabel } from "@/lib/edge-slot";
 const EDGE = "/edge?src=jobs_home";
 
 const SERVICES = [
-  { id: "mock-interview", icon: Mic, title: "Interview Prep + Mock Interview", line: "A real 60 or 90-minute interview loop, then the honest debrief", price: "from ₹1,999" },
-  { id: "resume-writing", icon: FileText, title: "Resume Writing", line: "Written for you by experience level, in Word and PDF", price: "from ₹1,199" },
-  { id: "job-search-strategy", icon: Compass, title: "Job Strategy + Resume Rebuild", line: "Both together, 20% less than buying them apart", price: "from ₹1,758" },
+  { id: "mock-interview", icon: Mic, title: "Interview Preparation + Job Strategy", line: "A real 60 or 90-minute interview loop, the honest debrief, and a plan for your next role", price: "from ₹2,000" },
+  { id: "resume-writing", icon: FileText, title: "Resume Writing", line: "Written for you by experience level, in Word and PDF", price: "from ₹2,000" },
+  { id: "job-search-strategy", icon: Compass, title: "Interview Prep + Job Strategy + Resume Rebuild", line: "Both together, 20% less than buying them apart", price: "from ₹3,200" },
 ];
 
 // The hero's right-hand side: a short story and the three Edge services, with every row and the button leading to /edge.
