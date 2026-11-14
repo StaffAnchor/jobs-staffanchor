@@ -89,6 +89,15 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
   // "Applied" immediately instead of only after they open the apply panel --
   // Naukri shows this the instant the page loads, not after an extra click.
   const [appliedAlready, setAppliedAlready] = useState(false);
+  // Once the application form is on screen, the phone bar with the two apply buttons gets out of the way.
+  const [formInView, setFormInView] = useState(false);
+  useEffect(() => {
+    const el = document.getElementById("apply-form");
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setFormInView(e.isIntersecting), { rootMargin: "0px 0px -35% 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [signedIn]);
   // Anonymous visitor only: set once EmailGate has confirmed this email has
   // no existing profile, so ApplyForm can mount pre-filled instead of asking
   // for the email a second time.
@@ -485,12 +494,12 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
     {/* Always-visible WhatsApp button; lifted above the phone apply bar. */}
     <FloatingWhatsApp
       source="job_page_floating"
-      bottomClass={!(signedIn && appliedAlready) ? "bottom-24 md:bottom-6" : "bottom-6"}
+      bottomClass={!(signedIn && appliedAlready) && !formInView ? "bottom-24 md:bottom-6" : "bottom-6"}
       text={`Hi StaffAnchor, I'm interested in the ${job.role_title ?? "Sales"} role${jobCities.length ? ` in ${jobCities.join(", ")}` : ""}. Could you tell me more?`}
     />
 
     {/* Phone: the apply action stays within thumb reach while reading. */}
-    {!(signedIn && appliedAlready) && (
+    {!(signedIn && appliedAlready) && !formInView && (
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-3 pb-4 pt-3 backdrop-blur md:hidden">
         <div className="grid grid-cols-2 gap-2.5">
           <a

@@ -33,6 +33,7 @@ import {
   b2bSoldGroups,
   b2cSoldGroups,
   b2cMotionChoices,
+  b2cProductIndustry,
   industrySoldGroups,
   revenueTargetBandOptionsFor,
   type PickerGroup,
@@ -397,6 +398,9 @@ export default function CandidateIntakeForm({
   const levelDef = yourLevelOptions.find((l) => l.value === roleLevel);
   const isLeadLevel = !!levelDef?.lead;
   const hasSalesStep = isSalesCategory(category) && totalExperienceYears !== "0";
+  // B2C: the industries come from the products they picked, so we do not ask the same thing twice.
+  const derivedIndustries = Array.from(new Set([...soldNow, ...soldBefore].map((p) => b2cProductIndustry[p]).filter((x): x is string => !!x)));
+  const effectiveIndustries = category === "b2c_sales" ? (derivedIndustries.length ? derivedIndustries : industriesSold) : industriesSold;
   // Step ids: 0 you, 1 role now, 2 sales story (sales only), 3 next move.
   const stepIds = hasSalesStep ? [0, 1, 2, 3] : [0, 1, 3];
   const stepId = stepIds[Math.min(pos, stepIds.length - 1)];
@@ -423,7 +427,7 @@ export default function CandidateIntakeForm({
     if (id === 2) {
       if (category === "b2b_sales" && !sellingStyle) return "Are you a hunter, a farmer or a mix? Pick one.";
       if (motions.length === 0) return "Pick at least one way you sell.";
-      if (industriesSold.length === 0) return "Add at least one industry you've sold into.";
+      if (effectiveIndustries.length === 0) return "Add at least one industry you've sold into.";
       if (category === "b2b_sales" && segments.length === 0) return "Pick the customer segments you sell to.";
       if (!dealBand) return category === "b2c_sales" ? "Pick your typical ticket size." : "Pick your typical deal size.";
       if (!targetBand) return `Pick your ${quotaWord} target for last year.`;
@@ -505,7 +509,7 @@ export default function CandidateIntakeForm({
       !!workMode,
       !!offerInHand,
     ];
-    if (hasSalesStep) checks.push(motions.length > 0, industriesSold.length > 0, !!dealBand, !!targetBand, !!attainment);
+    if (hasSalesStep) checks.push(motions.length > 0, effectiveIndustries.length > 0, !!dealBand, !!targetBand, !!attainment);
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   })();
 
@@ -601,7 +605,7 @@ export default function CandidateIntakeForm({
         highest_qualification: extraction?.highest_qualification || null,
         linkedin_url: extraction?.linkedin_url || null,
         skills: skillList.length ? skillList.join(", ") : extraction?.skills?.length ? extraction.skills.join(", ") : null,
-        ...(hasSalesStep && industriesSold.length ? { industries: industriesSold } : {}),
+        ...(hasSalesStep && effectiveIndustries.length ? { industries: effectiveIndustries } : {}),
         consent: true,
         profile_stage: mandateId ? "applicant" : "lead",
       };
@@ -1031,9 +1035,11 @@ export default function CandidateIntakeForm({
                 <GroupedPicker groups={motionGroups} selected={motions} onChange={setMotions} placeholder="Search, e.g. channel, inside sales, field" />
               )}
             </Group>
-            <Group label="Industries you've sold into" required>
-              <GroupedPicker groups={industrySoldGroups} selected={industriesSold} onChange={setIndustriesSold} placeholder="Search, e.g. BFSI, pharma, FMCG" />
-            </Group>
+            {category !== "b2c_sales" && (
+              <Group label="Industries you've sold into" required>
+                <GroupedPicker groups={industrySoldGroups} selected={industriesSold} onChange={setIndustriesSold} placeholder="Search, e.g. BFSI, pharma, FMCG" />
+              </Group>
+            )}
             {category === "b2b_sales" && (
               <Group label="Who do you sell to?" required>
                 <Chips

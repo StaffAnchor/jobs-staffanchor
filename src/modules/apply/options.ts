@@ -1136,6 +1136,33 @@ export const industrySoldGroups: PickerGroup[] = [
   { group: "Public sector & other", options: ["Government / Public Sector", "Defence", "Agri & Food Processing", "Non-profit / Social Enterprise", "Other"] },
 ];
 
+// A B2C product maps to the industry it belongs to, so a B2C candidate is not asked for "industries sold into" a second time.
+export const b2cProductIndustry: Record<string, string> = {
+  "Life insurance": "Life Insurance",
+  "Health / general insurance": "Health / General Insurance",
+  "Personal & home loans": "Housing Finance",
+  "Credit cards & banking products": "Credit Cards / Lending",
+  "Mutual funds & wealth": "Mutual Funds / Wealth Management",
+  "Consumer fintech apps": "Fintech / Digital Payments",
+  "EdTech (K-12)": "K-12 / Schools",
+  "EdTech (test prep / coaching)": "Test Prep / Coaching",
+  "EdTech (upskilling / higher-ed)": "EdTech / Training & Skilling",
+  "Study abroad / overseas consulting": "Study Abroad / Overseas Education",
+  "Residential real estate": "Residential Real Estate",
+  "Cars & two-wheelers": "Automotive & Auto Components",
+  "Solar / home energy": "Renewable Energy / Solar",
+  "Electronics & appliances retail": "Consumer Electronics",
+  "Fashion, jewellery & lifestyle": "Fashion & Apparel",
+  "D2C / e-commerce": "E-commerce / Marketplaces",
+  "FMCG / consumer durables": "FMCG",
+  "Telecom, broadband & DTH": "Telecom & Networking",
+  "Healthcare & diagnostics": "Hospital & Healthcare Services",
+  "Wellness, fitness & beauty": "Beauty & Personal Care",
+  "Travel & hospitality": "Travel & Hospitality",
+  "Matrimony, classifieds & subscriptions": "Media & Entertainment",
+  "Other consumer sales": "Other",
+};
+
 export const b2cMotionChoices = [
   "Retail / Counter Sales", "Field / Door-to-door", "Telesales / Inside Sales", "Channel / Franchise-led",
   "Digital / Online leads", "Branch / Walk-in", "Agent / Partner network", "Events / Campus / Roadshows",
