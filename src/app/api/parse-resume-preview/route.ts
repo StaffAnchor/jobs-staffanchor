@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
 
 Rules:
 - Only include values you can actually find or confidently infer from the resume text below -- use null (or [] for skills) rather than guessing.
+- Today's date is ${new Date().toISOString().slice(0, 10)}.
 - total_experience_years should be your best estimate of total professional experience in whole years, based on the earliest job start date through today.
 - category_guess: "b2b_sales" if their most recent role sells to businesses, "b2c_sales" if selling to individual consumers, "non_sales" if the role isn't a sales role at all, "" if genuinely unclear.
 - skills: at most 8 short skill/tool names (e.g. "Salesforce", "Enterprise Sales", "SQL"), not full sentences.
