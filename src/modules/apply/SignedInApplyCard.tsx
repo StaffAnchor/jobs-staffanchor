@@ -12,6 +12,7 @@ import WhatsAppActivate from "@/components/WhatsAppActivate";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
 import EdgePromo from "@/components/edge/edge-promo";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
+import { APPLY_VOICE_ENABLED, voiceField } from "./applyVoice";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
 import { logApplicationSubmitted, logQuickApplyFormOpened } from "@/modules/jobs/api";
 import { authHeaders } from "@/lib/auth-headers";
@@ -113,7 +114,7 @@ export default function SignedInApplyCard({
   function handleApply() {
     // If this mandate has custom screening questions, collect answers first
     // -- submitApplication() (below) does the actual work either way.
-    if (questions.length > 0) {
+    if (questions.length > 0 || APPLY_VOICE_ENABLED) {
       setShowQuestions(true);
       return;
     }
@@ -134,6 +135,7 @@ export default function SignedInApplyCard({
           confirmDetails: true,
           mandateId,
           ...(screeningAnswers.length ? { screeningAnswers } : {}),
+          ...voiceField(mandateId),
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -258,6 +260,7 @@ export default function SignedInApplyCard({
         />
         {showQuestions && (
           <ApplicationQuestionsModal
+          mandateId={mandateId}
             mandateTitle={mandateTitle}
             questions={questions}
             submitting={applying}
@@ -340,6 +343,7 @@ export default function SignedInApplyCard({
 
       {showQuestions && (
         <ApplicationQuestionsModal
+          mandateId={mandateId}
           mandateTitle={mandateTitle}
           questions={questions}
           submitting={applying}

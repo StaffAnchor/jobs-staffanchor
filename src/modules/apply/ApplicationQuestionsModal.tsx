@@ -4,6 +4,8 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ApplicationQuestion } from "./applicationQuestions";
+import VoicePitch from "./VoicePitch";
+import { APPLY_VOICE_ENABLED } from "./applyVoice";
 
 // Shown right before the actual submit, on both the anonymous (ApplyForm)
 // and signed-in (SignedInApplyCard) Quick Apply paths -- a mandate with
@@ -11,12 +13,14 @@ import type { ApplicationQuestion } from "./applicationQuestions";
 // them first, instead of weaving them into either of those already-large
 // components' own step logic.
 export default function ApplicationQuestionsModal({
+  mandateId,
   mandateTitle,
   questions,
   submitting,
   onCancel,
   onSubmit,
 }: {
+  mandateId?: string;
   mandateTitle?: string;
   questions: ApplicationQuestion[];
   submitting: boolean;
@@ -49,14 +53,15 @@ export default function ApplicationQuestionsModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-1 flex items-start justify-between">
-          <h2 className="text-lg font-bold text-slate-950">A few quick questions</h2>
+          <h2 className="text-lg font-bold text-slate-950">{questions.length > 0 ? "A few quick questions" : "One last thing"}</h2>
           <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-600">
             <X className="h-4 w-4" />
           </button>
         </div>
         <p className="mb-4 text-sm text-slate-500">
-          {mandateTitle ? `Before you apply for ${mandateTitle}` : "Before you apply"}, the hiring team asked us to
-          collect a few details.
+          {questions.length > 0
+            ? `${mandateTitle ? `Before you apply for ${mandateTitle}` : "Before you apply"}, the hiring team asked us to collect a few details.`
+            : "Add a short voice note if you like. You can also apply without it."}
         </p>
 
         <div className="space-y-4">
@@ -96,6 +101,12 @@ export default function ApplicationQuestionsModal({
           ))}
         </div>
 
+        {APPLY_VOICE_ENABLED && mandateId && (
+          <div className={questions.length > 0 ? "mt-4" : ""}>
+            <VoicePitch mandateId={mandateId ?? ""} />
+          </div>
+        )}
+
         {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
 
         <div className="mt-5 flex justify-end gap-2">
@@ -103,7 +114,7 @@ export default function ApplicationQuestionsModal({
             Cancel
           </Button>
           <Button type="button" onClick={handleContinue} disabled={submitting}>
-            {submitting ? "Submitting..." : "Continue"}
+            {submitting ? "Submitting..." : questions.length > 0 ? "Continue" : "Apply"}
           </Button>
         </div>
       </div>

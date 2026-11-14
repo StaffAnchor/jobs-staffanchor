@@ -22,6 +22,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { authHeaders } from "@/lib/auth-headers";
 import { posthog } from "@/lib/posthog";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
+import { APPLY_VOICE_ENABLED, voiceField } from "./applyVoice";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion, type ApplicationAnswerPayload } from "./applicationQuestions";
 import { logApplicationSubmitted, logQuickApplyFormOpened } from "@/modules/jobs/api";
 import PaidCallCard from "@/components/paid-call/paid-call-card";
@@ -1929,7 +1930,7 @@ export default function ApplyForm({
       // collected yet for this submit -- pause here, show the modal, and
       // let its onSubmit re-invoke handleSubmit (with the same opts) once
       // screeningAnswersRef is populated, which skips this gate.
-      if (screeningQuestions.length > 0 && screeningAnswersRef.current === null) {
+      if ((screeningQuestions.length > 0 || (APPLY_VOICE_ENABLED && !!mandateId)) && screeningAnswersRef.current === null) {
         pendingSubmitOptsRef.current = opts;
         setShowScreeningModal(true);
         return;
@@ -2209,6 +2210,7 @@ export default function ApplyForm({
           // candidate editing their own profile is verified by their session.
           ...(existingProfile?.id ? { completionRef: existingProfile.id } : {}),
           ...(screeningAnswersRef.current?.length ? { screeningAnswers: screeningAnswersRef.current } : {}),
+          ...voiceField(mandateId),
         }),
       });
       const submitJson = await submitRes.json().catch(() => ({}));
@@ -4634,6 +4636,7 @@ export default function ApplyForm({
     )}
     {showScreeningModal && (
       <ApplicationQuestionsModal
+          mandateId={mandateId}
         mandateTitle={mandateTitle}
         questions={screeningQuestions}
         submitting={submitting}
