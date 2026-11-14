@@ -1333,7 +1333,7 @@ function Chips(props: ChipProps) {
             type="button"
             aria-pressed={on}
             onClick={() => (props.multi ? props.onToggle(o.value) : props.onChange(o.value))}
-            className={`rounded-full border px-3.5 py-1.5 text-left text-sm transition-all duration-150 active:scale-95 ${
+            className={`rounded-full border px-3.5 py-2 text-left text-sm transition-all duration-150 sm:py-1.5 active:scale-95 ${
               on
                 ? "border-slate-900 bg-slate-900 text-white shadow-sm"
                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
@@ -1467,7 +1467,7 @@ function GroupedPicker({
         aria-pressed={on}
         disabled={!on && full}
         onClick={() => toggle(o)}
-        className={`rounded-full border px-3 py-1.5 text-left text-[13.5px] transition-all duration-150 active:scale-95 disabled:opacity-40 ${
+        className={`rounded-full border px-3 py-2 text-left text-[13.5px] transition-all duration-150 sm:py-1.5 active:scale-95 disabled:opacity-40 ${
           on ? "border-slate-900 bg-slate-900 text-white shadow-sm" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
         }`}
       >
@@ -1512,7 +1512,7 @@ function GroupedPicker({
                   setSearching(false);
                   setQ("");
                 }}
-                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${on ? "bg-slate-100 text-slate-900 ring-1 ring-slate-300" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-[13px] font-medium transition-colors sm:py-1.5 ${on ? "bg-slate-100 text-slate-900 ring-1 ring-slate-300" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
               >
                 {g.group}
                 {n > 0 && <span className="ml-1.5 rounded-full bg-slate-900 px-1.5 text-[11px] text-white">{n}</span>}
@@ -1525,7 +1525,7 @@ function GroupedPicker({
           aria-label="Search the list"
           aria-pressed={searching}
           onClick={() => setSearching((v) => !v)}
-          className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-slate-500 transition-colors hover:text-slate-900 ${searching ? "border-slate-900 bg-slate-100" : "border-slate-200"}`}
+          className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg border text-slate-500 sm:h-8 sm:w-8 transition-colors hover:text-slate-900 ${searching ? "border-slate-900 bg-slate-100" : "border-slate-200"}`}
         >
           <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="9" r="5.5" /><path d="M13.5 13.5L17 17" strokeLinecap="round" /></svg>
         </button>
