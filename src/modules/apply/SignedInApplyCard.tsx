@@ -14,6 +14,7 @@ import EdgePromo from "@/components/edge/edge-promo";
 import ApplicationQuestionsModal from "./ApplicationQuestionsModal";
 import { APPLY_VOICE_ENABLED, voiceField } from "./applyVoice";
 import VoicePitch from "./VoicePitch";
+import SimilarRolesOneTap from "./SimilarRolesOneTap";
 import { fetchApplicationQuestions, buildAnswerPayload, type ApplicationQuestion } from "./applicationQuestions";
 import { logApplicationSubmitted, logQuickApplyFormOpened } from "@/modules/jobs/api";
 import { authHeaders } from "@/lib/auth-headers";
@@ -240,6 +241,7 @@ export default function SignedInApplyCard({
         {pipelineStage !== "rejected" && (
           <PaidCallCard candidateId={candidate.id} mandateId={mandateId} />
         )}
+        {candidate.email && <SimilarRolesOneTap currentMandateId={mandateId} email={candidate.email} />}
         <EdgePromo variant="after-apply" page="after-apply" roleTitle={mandateTitle} className="mt-4" />
       </div>
     );

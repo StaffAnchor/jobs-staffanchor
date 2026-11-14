@@ -23,7 +23,16 @@ export type ParsedResumePreview = {
   current_industry: string | null;
   skills: string[];
   category_guess: "b2b_sales" | "b2c_sales" | "non_sales" | "" | null;
+  // Only when the resume actually says so. Most resumes do not state pay or notice period.
+  current_location: string | null;
+  role_level_guess: string | null;
+  notice_period_days: number | null;
+  current_fixed_ctc_lakh: number | null;
+  expected_fixed_ctc_lakh: number | null;
 };
+
+const ROLE_LEVELS = ["IC – Sales Development", "IC – Account Executive", "IC", "Team Lead / Asst. Manager", "Manager", "Senior Manager", "Director", "VP / Head", "Founder / CXO"];
+const lakhOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 1 && v <= 120 ? Math.round(v * 10) / 10 : null);
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -72,7 +81,12 @@ export async function POST(req: NextRequest) {
   "highest_qualification": string | null,
   "current_industry": string | null,
   "skills": string[],
-  "category_guess": "b2b_sales" | "b2c_sales" | "non_sales" | ""
+  "category_guess": "b2b_sales" | "b2c_sales" | "non_sales" | "",
+  "current_location": string | null,
+  "role_level_guess": one of ${JSON.stringify(ROLE_LEVELS)}, or null,
+  "notice_period_days": number | null,
+  "current_fixed_ctc_lakh": number | null,
+  "expected_fixed_ctc_lakh": number | null
 }
 
 Rules:
@@ -80,6 +94,10 @@ Rules:
 - total_experience_years should be your best estimate of total professional experience in whole years, based on the earliest job start date through today.
 - category_guess: "b2b_sales" if their most recent role sells to businesses, "b2c_sales" if selling to individual consumers, "non_sales" if the role isn't a sales role at all, "" if genuinely unclear.
 - skills: at most 8 short skill/tool names (e.g. "Salesforce", "Enterprise Sales", "SQL"), not full sentences.
+- current_location: the city they live or work in now, only if the resume says so (for example from the address or latest job).
+- role_level_guess: the level of their most recent role, one of the listed values, or null if unclear.
+- notice_period_days: only if the resume states a notice period or availability ("immediate" is 0, "2 months" is 60).
+- current_fixed_ctc_lakh and expected_fixed_ctc_lakh: only if the resume states a current or expected fixed salary; convert to lakh per year (12 LPA is 12). Most resumes do not, so use null. Never guess.
 - current_industry: a short industry name (e.g. "SaaS", "BFSI", "EdTech"), not a company name.
 
 Resume text:
@@ -129,6 +147,11 @@ ${text.slice(0, 12000)}`;
             parsed.category_guess === "b2b_sales" || parsed.category_guess === "b2c_sales" || parsed.category_guess === "non_sales"
               ? parsed.category_guess
               : "",
+          current_location: typeof parsed.current_location === "string" && parsed.current_location.trim() ? parsed.current_location.trim().slice(0, 60) : null,
+          role_level_guess: typeof parsed.role_level_guess === "string" && ROLE_LEVELS.includes(parsed.role_level_guess) ? parsed.role_level_guess : null,
+          notice_period_days: typeof parsed.notice_period_days === "number" && parsed.notice_period_days >= 0 && parsed.notice_period_days <= 365 ? Math.round(parsed.notice_period_days) : null,
+          current_fixed_ctc_lakh: lakhOrNull(parsed.current_fixed_ctc_lakh),
+          expected_fixed_ctc_lakh: lakhOrNull(parsed.expected_fixed_ctc_lakh),
         };
         return NextResponse.json({ ok: true, fields });
       } catch (err) {

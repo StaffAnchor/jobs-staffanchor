@@ -83,6 +83,11 @@ type ResumeExtraction = {
   current_industry: string | null;
   skills: string[];
   category_guess: "b2b_sales" | "b2c_sales" | "non_sales" | "" | null;
+  current_location?: string | null;
+  role_level_guess?: string | null;
+  notice_period_days?: number | null;
+  current_fixed_ctc_lakh?: number | null;
+  expected_fixed_ctc_lakh?: number | null;
 };
 
 // Subset of a candidates row this form reads to pre-fill a signed-in candidate.
@@ -277,6 +282,8 @@ export default function CandidateIntakeForm({
   const [earlierOpen, setEarlierOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [readSummary, setReadSummary] = useState<string[]>([]);
+  // Which answers were filled from the CV, so each step can ask the candidate to check them.
+  const [fromCv, setFromCv] = useState<string[]>([]);
 
   const [noticePeriods, setNoticePeriods] = useState<string[]>(defaultNoticePeriods);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -341,6 +348,38 @@ export default function CandidateIntakeForm({
         );
         if (fields.category_guess) setCategory((prev) => prev || (fields.category_guess as CategoryValue));
         if (fields.skills?.length) setSkillList((prev) => (prev.length ? prev : fields.skills.slice(0, 12)));
+        // More from the CV where it says so: city, level, notice period, and pay if it is written there. Only blanks, never overwriting.
+        const filled: string[] = [];
+        if (fields.full_name) filled.push("Name");
+        if (fields.phone) filled.push("Phone");
+        if (fields.total_experience_years != null) filled.push("Experience");
+        if (fields.category_guess) filled.push("Profile type");
+        const cityKey = (fields.current_location ?? "").split(",")[0].trim();
+        if (cityKey) {
+          const known = Object.keys(cityStateMap).find((k) => k.toLowerCase() === cityKey.toLowerCase());
+          setCityChoice((prev) => prev || known || "Other");
+          if (!known) setCustomCity((prev) => prev || cityKey);
+          filled.push("City");
+        }
+        if (fields.role_level_guess && yourLevelOptions.some((l) => l.value === fields.role_level_guess)) {
+          setRoleLevel((prev) => prev || (fields.role_level_guess as string));
+          filled.push("Role level");
+        }
+        if (fields.notice_period_days != null) {
+          const d = fields.notice_period_days;
+          const label = d <= 0 ? "Immediate" : d <= 15 ? "15 days" : d <= 30 ? "30 days" : d <= 60 ? "60 days" : "90+ days";
+          setNoticePeriod((prev) => prev || label);
+          filled.push("Notice period");
+        }
+        if (fields.current_fixed_ctc_lakh != null) {
+          setCurrentFixedCtc((prev) => prev || String(fields.current_fixed_ctc_lakh));
+          filled.push("Current fixed CTC");
+        }
+        if (fields.expected_fixed_ctc_lakh != null) {
+          setExpectedFixedCtc((prev) => prev || String(fields.expected_fixed_ctc_lakh));
+          filled.push("Expected CTC");
+        }
+        setFromCv(filled);
         const found: string[] = [];
         if (fields.current_job_title) found.push(fields.current_job_title);
         if (fields.current_employer) found.push(fields.current_employer);
@@ -717,7 +756,7 @@ export default function CandidateIntakeForm({
     0: { label: "You", title: "Let's start with your CV", blurb: "Upload it and we'll fill in what we can. You just confirm." },
     1: { label: "Role", title: first ? `Nice to meet you, ${first}` : "Tell us about your role", blurb: "A few taps. This is how recruiters picture you." },
     2: { label: "Sales", title: "The part recruiters read first", blurb: "Be specific. Specific profiles get shortlisted." },
-    3: { label: "Move", title: "What you want next", blurb: "So we only bring you roles worth your time." },
+    3: { label: "Move", title: "What you want next", blurb: "Pay and notice period are what a CV never says, so we ask. It keeps us to roles worth your time." },
   };
   const copy = STEP_COPY[stepId];
   const dealBands = dealSizeBandsFor(category || null, dealCurrency);
@@ -755,21 +794,43 @@ export default function CandidateIntakeForm({
 
         <div>
           <div className="flex items-center justify-between gap-3">
-            <div className="flex gap-1.5" aria-hidden>
+            <ol className="flex min-w-0 flex-1 items-center" aria-label="Progress">
               {stepIds.map((id, i) => (
-                <span key={id} className="h-1 w-10 overflow-hidden rounded-full bg-slate-200">
-                  <span className={`block h-full rounded-full bg-slate-900 transition-[width] duration-500 ease-out ${i <= pos ? "w-full" : "w-0"}`} />
-                </span>
+                <li key={id} className={`flex items-center ${i < stepIds.length - 1 ? "flex-1" : ""}`}>
+                  <span className="flex items-center gap-2">
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${i < pos ? "bg-slate-900 text-white" : i === pos ? "bg-slate-900 text-white ring-4 ring-slate-900/10" : "bg-slate-100 text-slate-400"}`}>
+                      {i < pos ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                    </span>
+                    <span className={`text-sm font-medium ${i === pos ? "inline text-slate-900" : "hidden sm:inline " + (i < pos ? "text-slate-700" : "text-slate-400")}`}>{STEP_COPY[id].label}</span>
+                  </span>
+                  {i < stepIds.length - 1 && (
+                    <span className="mx-3 h-px flex-1 bg-slate-200">
+                      <span className={`block h-full bg-slate-900 transition-[width] duration-500 ease-out ${i < pos ? "w-full" : "w-0"}`} />
+                    </span>
+                  )}
+                </li>
               ))}
-            </div>
-            <span className="text-xs font-medium tabular-nums text-slate-400">Profile strength {ringPct}%</span>
+            </ol>
+            <span className="hidden shrink-0 text-xs font-medium tabular-nums text-slate-400 sm:inline">About 2 minutes</span>
           </div>
           <p className="mt-5 text-xs font-medium uppercase tracking-widest text-slate-400">
-            {pos + 1} of {stepIds.length} · {copy.label}
+            Step {pos + 1} of {stepIds.length}
           </p>
           <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{copy.title}</h2>
           <p className="mt-1 text-sm text-slate-500">{copy.blurb}</p>
         </div>
+
+        {(() => {
+          const here: Record<number, string[]> = { 0: ["Name", "Phone", "City"], 1: ["Experience", "Profile type", "Role level"], 3: ["Notice period", "Current fixed CTC", "Expected CTC"] };
+          const read = fromCv.filter((x) => (here[stepId] ?? []).includes(x));
+          if (read.length === 0) return null;
+          return (
+            <p className="flex items-start gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-sm leading-snug text-emerald-900">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>We read these from your CV: <span className="font-semibold">{read.join(", ")}</span>. They are filled in below. Please check them.</span>
+            </p>
+          );
+        })()}
 
         <div key={stepId} className="si-step grid gap-6">
         {stepId === 0 && (
@@ -1213,7 +1274,7 @@ export default function CandidateIntakeForm({
 
         {isLast && mandateId && APPLY_VOICE_ENABLED && <VoicePitch mandateId={mandateId} />}
 
-        <div className="flex items-center gap-3">
+        <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-3 border-t border-slate-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
           {pos > 0 && (
             <Button type="button" variant="outline" onClick={goBack} className="h-12 shrink-0 rounded-xl">
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
