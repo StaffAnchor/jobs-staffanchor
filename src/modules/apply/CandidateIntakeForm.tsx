@@ -783,8 +783,10 @@ export default function CandidateIntakeForm({
 .si-form input[type=checkbox]{accent-color:#0f172a}
 .si-form button{-webkit-tap-highlight-color:transparent}
 .si-form details>summary::-webkit-details-marker{display:none}
+.si-form{min-width:0;max-width:100%;overflow-x:clip}
+.si-form .grid>*{min-width:0}
 `}</style>
-      <form ref={formRef} onSubmit={handleSubmit} className="si-form mx-auto grid max-w-xl scroll-mt-24 gap-7">
+      <form ref={formRef} onSubmit={handleSubmit} className="si-form mx-auto grid w-full max-w-xl scroll-mt-24 gap-7">
         {signedIn && existing && (
           <p className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-800">
             <Sparkles className="h-3.5 w-3.5" />
@@ -1478,7 +1480,7 @@ function GroupedPicker({
     ? visibleGroups.flatMap((g) => g.options).filter((o) => o.toLowerCase().includes(ql)).slice(0, 16)
     : [];
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 gap-3">
       {selected.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           {selected.map((t, i) => (
@@ -1494,8 +1496,8 @@ function GroupedPicker({
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <div role="tablist" className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex min-w-0 items-start gap-2">
+        <div role="tablist" className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
           {visibleGroups.map((g) => {
             const n = g.options.filter((o) => selected.includes(o)).length;
             const on = !searching && active?.group === g.group;
