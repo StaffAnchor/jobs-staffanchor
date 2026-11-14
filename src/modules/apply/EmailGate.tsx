@@ -69,12 +69,17 @@ export default function EmailGate({
   if (existing) {
     // Return straight to this job (not a generic /candidate-portal) so a
     // returning candidate lands on Easy Apply with one click left.
-    const destination = mandateId ? `/jobs/${mandateId}` : "/candidate-portal";
+    // The #apply-form anchor lands them on the application itself, not the top of the job page.
+    const destination = mandateId ? `/jobs/${mandateId}#apply-form` : "/candidate-portal";
     return (
       <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <SignInPanel
           email={email.trim()}
-          onSignedIn={() => router.push(destination)}
+          onSignedIn={() => {
+            router.push(destination);
+            // Already on this job page: the address only gains a #, so scroll to the form once the signed-in card has replaced the code box.
+            if (mandateId) setTimeout(() => document.getElementById("apply-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 400);
+          }}
           onBack={() => {
             setExisting(null);
             setEmail("");
