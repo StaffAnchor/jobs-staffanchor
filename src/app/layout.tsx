@@ -4,7 +4,6 @@ import { Manrope, Space_Grotesk, Fraunces } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import GlobalWhatsApp from "@/components/GlobalWhatsApp";
 import AttributionTracker from "@/components/AttributionTracker";
 import "./globals.css";
 
@@ -62,10 +61,9 @@ export default function RootLayout({
             <div className="flex-1">{children}</div>
             <Footer />
           </div>
-          <GlobalWhatsApp />
           <AttributionTracker />
-          {/* The StaffAnchor assistant: greets visitors and points them to the right next step. The chat itself lives in the CRM project. */}
-          <Script src={`${process.env.NEXT_PUBLIC_CHAT_ORIGIN ?? "https://clients.staffanchor.com"}/sa-chat.js`} data-site="jobs" data-side="left" strategy="lazyOnload" />
+          {/* The StaffAnchor assistant is the one floating contact button: it greets visitors and sends job seekers and employers to the right WhatsApp chat. The chat itself lives in the CRM project. */}
+          <Script src={`${process.env.NEXT_PUBLIC_CHAT_ORIGIN ?? "https://clients.staffanchor.com"}/sa-chat.js`} data-site="jobs" strategy="lazyOnload" />
         </AppProviders>
       </body>
     </html>
