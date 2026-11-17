@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Manrope, Space_Grotesk, Fraunces } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
 import { Navbar } from "@/components/layout/navbar";
@@ -63,6 +64,8 @@ export default function RootLayout({
           </div>
           <GlobalWhatsApp />
           <AttributionTracker />
+          {/* The StaffAnchor assistant: greets visitors and points them to the right next step. The chat itself lives in the CRM project. */}
+          <Script src={`${process.env.NEXT_PUBLIC_CHAT_ORIGIN ?? "https://clients.staffanchor.com"}/sa-chat.js`} data-site="jobs" data-side="left" strategy="lazyOnload" />
         </AppProviders>
       </body>
     </html>
