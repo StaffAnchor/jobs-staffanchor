@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { PROFILE_CALL_MANDATE_ID, PAID_CALL_PAISE, dueDate } from "@/lib/paid-call";
 
 // The one place a ₹199 recruiter-call payment becomes "paid". Three things can call it, and any of them may arrive first:
-// the candidate's browser (/api/paid-call/verify), Razorpay's own message to us (/api/paid-call/webhook), and the daily
+// the candidate's browser (/api/paid-call/verify), Razorpay's own message to us (the existing /api/pro/webhook), and the daily
 // catch-up (/api/cron/paid-call-reconcile). Running it twice for the same payment changes nothing the second time.
 export type SettleResult = "paid" | "already_paid" | "order_not_found" | "amount_mismatch";
 
