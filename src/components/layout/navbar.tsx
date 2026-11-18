@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 import NotificationBell from "./notification-bell";
 import ReturnVisitStrip from "./return-visit-strip";
+import { WHATSAPP_CHANNEL_URL } from "@/components/WhatsAppChannel";
+import { posthog } from "@/lib/posthog";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -136,12 +138,34 @@ export function Navbar() {
               Job Portal
             </Link>
           </div>
-          <a
-            href="https://www.staffanchor.com/employers"
-            className="hidden items-center gap-1 font-medium text-blue-100/75 transition hover:text-white sm:flex"
-          >
-            Hiring? For employers <ArrowUpRight className="h-3 w-3" />
-          </a>
+          <div className="flex items-center gap-4">
+            {/* The WhatsApp channel, in the strip that is on every page: new roles without having to chat. */}
+            <a
+              href={WHATSAPP_CHANNEL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                try {
+                  posthog.capture("whatsapp_channel_click", { source: "top_strip" });
+                } catch {
+                  /* analytics must never block the link */
+                }
+              }}
+              className="flex items-center gap-1.5 font-semibold text-emerald-300 transition hover:text-emerald-200"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />
+              </svg>
+              <span className="sm:hidden">Roles on WhatsApp</span>
+              <span className="hidden sm:inline">New sales roles daily: join our WhatsApp channel</span>
+            </a>
+            <a
+              href="https://www.staffanchor.com/employers"
+              className="hidden items-center gap-1 font-medium text-blue-100/75 transition hover:text-white md:flex"
+            >
+              Hiring? For employers <ArrowUpRight className="h-3 w-3" />
+            </a>
+          </div>
         </div>
       </div>
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
