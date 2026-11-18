@@ -16,6 +16,7 @@ import { recordJobView } from "@/lib/recentlyViewed";
 import QuickInterest from "@/modules/jobs/QuickInterest";
 import WhyPrice from "@/components/paid-call/why-price";
 import EdgePromo from "@/components/edge/edge-promo";
+import WhatsAppChannel from "@/components/WhatsAppChannel";
 import { COPY, PAID_CALL_RUPEES } from "@/lib/paid-call";
 
 const MONOGRAM_GRADIENT: Record<string, string> = {
@@ -409,6 +410,8 @@ export default function JobDetail({ mandateId }: { mandateId: string }) {
 
           {/* Every job page, including each new mandate's: the interview prep for this role. */}
           <EdgePromo variant="job" page="job-page" roleTitle={job.role_title} />
+
+          <WhatsAppChannel source="job_page" variant="pill" />
         </aside>
       </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import WhatsAppChannel from "@/components/WhatsAppChannel";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -351,6 +352,10 @@ export default function JobsPage() {
                 </button>
               )}
             </div>
+          </div>
+
+          <div className="mt-5">
+            <WhatsAppChannel source="jobs_list" variant="pill-dark" />
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">

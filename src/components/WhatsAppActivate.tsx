@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { posthog } from "@/lib/posthog";
 import { whatsappChatLink } from "@/lib/whatsapp-chat";
+import WhatsAppChannel from "@/components/WhatsAppChannel";
 
 // "Activate WhatsApp alerts": one tap opens WhatsApp with the activation message already typed in. WhatsApp only delivers
 // our messages reliably to people who have messaged us first, so this is the moment the candidate says hello. The CRM
@@ -58,6 +59,9 @@ export default function WhatsAppActivate({ name, source, className = "", remembe
       >
         <MessageCircle className="h-4 w-4" /> Activate on WhatsApp
       </a>
+      <div className="mt-3">
+        <WhatsAppChannel source={`${source}_channel`} variant="inline" />
+      </div>
     </section>
   );
 }

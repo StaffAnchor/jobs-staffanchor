@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import EdgePromo from "@/components/edge/edge-promo";
+import { WHATSAPP_CHANNEL_URL } from "@/components/WhatsAppChannel";
+import { posthog } from "@/lib/posthog";
 
 // Authenticated app shells (candidate portal, client portal, legacy dashboard)
 // have their own in-app navigation/sign-out already, so the public marketing
@@ -29,7 +31,22 @@ export function Footer() {
       {promo && <EdgePromo variant="footer" page="footer" />}
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-5 text-sm text-slate-600 sm:px-6 lg:px-8">
         <p>© {new Date().getFullYear()} StaffAnchor</p>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <a
+            href={WHATSAPP_CHANNEL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              try {
+                posthog.capture("whatsapp_channel_click", { source: "footer" });
+              } catch {
+                /* analytics must never block the link */
+              }
+            }}
+            className="py-2 text-xs text-slate-500 hover:text-emerald-700"
+          >
+            WhatsApp channel
+          </a>
           <a href="https://www.staffanchor.com" className="py-2 text-xs text-slate-400 hover:text-slate-600">
             staffanchor.com
           </a>
